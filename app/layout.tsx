@@ -1,0 +1,46 @@
+import type { Metadata } from 'next'
+import Script from 'next/script'
+import { ADSENSE_CLIENT_ID, isAdsenseEnabled } from '@/lib/adsense-config'
+import AdBanner from './components/AdBanner'
+import './globals.css'
+
+export const metadata: Metadata = {
+  title: 'Kitwer26 - Gaming Hardware & Streaming Gear | Migliori Offerte',
+  description: 'Confronta prezzi e trova le migliori offerte su mouse gaming, monitor 144Hz, tastiere meccaniche, microfoni streaming e GPU. Aggiornato ogni giorno.',
+  keywords: 'gaming hardware, streaming gear, mouse gaming, monitor 144hz, tastiera meccanica, offerte gaming',
+  openGraph: {
+    title: 'Kitwer26 - Gaming Hardware & Streaming Gear',
+    description: 'Le migliori offerte su hardware gaming e streaming gear.',
+    type: 'website',
+  },
+}
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode
+}>) {
+  return (
+    <html lang="it">
+      <head>
+        {isAdsenseEnabled() && (
+          <Script
+            async
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT_ID}`}
+            crossOrigin="anonymous"
+            strategy="afterInteractive"
+          />
+        )}
+      </head>
+      <body className="antialiased">
+        {/* Top AdSense Bar */}
+        <div className="w-full bg-bg-dark px-4 py-2">
+          <div className="mx-auto max-w-7xl">
+            <AdBanner slot="topBar" format="leaderboard" />
+          </div>
+        </div>
+        {children}
+      </body>
+    </html>
+  )
+}
