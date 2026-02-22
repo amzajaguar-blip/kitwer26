@@ -169,16 +169,21 @@ export default async function Home() {
             <div>
               <h5 className="mb-3 font-semibold text-text-primary">Info</h5>
               <ul className="space-y-2 text-sm text-text-secondary">
-                <li className="cursor-pointer transition hover:text-accent">Chi Siamo</li>
                 <li>
-                  <a
-                    href="mailto:kitwer26@zohomail.eu"
-                    className="transition hover:text-accent"
-                  >
+                  <a href="mailto:kitwer26@zohomail.eu" className="transition hover:text-accent">
                     Assistenza: kitwer26@zohomail.eu
                   </a>
                 </li>
-                <li className="cursor-pointer transition hover:text-accent">Privacy Policy</li>
+                <li>
+                  <a href="/privacy" className="transition hover:text-accent">
+                    Privacy Policy
+                  </a>
+                </li>
+                <li>
+                  <a href="/terms" className="transition hover:text-accent">
+                    Termini e Condizioni
+                  </a>
+                </li>
               </ul>
             </div>
           </div>
