@@ -59,6 +59,7 @@ export default function StorefrontPage() {
     try {
       const formData = new FormData()
       formData.append('file', file)
+      formData.append('bucket', 'logos')
       const res = await fetch('/api/admin/upload-image', { method: 'POST', body: formData })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Errore upload logo'); return }

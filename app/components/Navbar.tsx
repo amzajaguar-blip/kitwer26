@@ -18,7 +18,7 @@ export default function Navbar({ logoUrl }: { logoUrl?: string }) {
   return (
     <nav className="sticky top-0 z-50 border-b border-border bg-bg-dark/95 backdrop-blur-md">
       <div className="mx-auto max-w-7xl px-4">
-        <div className="flex h-16 items-center justify-between">
+        <div className="flex h-[68px] items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex-shrink-0">
             {logoUrl ? (
@@ -26,20 +26,21 @@ export default function Navbar({ logoUrl }: { logoUrl?: string }) {
               <img
                 src={logoUrl}
                 alt="Kitwer26"
-                className="h-9 max-w-[160px] object-contain md:h-11"
+                className="h-[50px] max-w-[180px] object-contain md:h-[56px] md:max-w-[200px]"
+                style={{ display: 'block' }}
               />
             ) : (
               <div className="flex items-center gap-2.5">
                 {/* Icon mark */}
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/15 ring-1 ring-accent/30 md:h-9 md:w-9">
-                  <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 md:h-5 md:w-5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent/15 ring-1 ring-accent/30">
+                  <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
                     <path d="M6 12h12M12 6l6 6-6 6" stroke="#f59e0b" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
                     <circle cx="12" cy="12" r="10" stroke="#f59e0b" strokeWidth="1.5" opacity=".35"/>
                   </svg>
                 </div>
                 {/* Wordmark */}
                 <div className="flex flex-col leading-none">
-                  <span className="text-[17px] font-extrabold tracking-tight text-text-primary md:text-lg">
+                  <span className="text-[17px] font-extrabold tracking-tight text-text-primary">
                     Kitwer<span className="text-accent">26</span>
                   </span>
                   <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-text-secondary/70">

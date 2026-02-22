@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import Script from 'next/script'
 import { ADSENSE_CLIENT_ID, isAdsenseEnabled } from '@/lib/adsense-config'
-import AdBanner from './components/AdBanner'
 import { ThemeProvider } from './components/ThemeProvider'
 import './globals.css'
 
@@ -39,12 +38,6 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         <ThemeProvider>
-          {/* Top AdSense Bar */}
-          <div className="w-full bg-bg-dark px-4 py-2">
-            <div className="mx-auto max-w-7xl">
-              <AdBanner slot="topBar" format="leaderboard" />
-            </div>
-          </div>
           {children}
         </ThemeProvider>
       </body>

@@ -2,14 +2,15 @@ import { NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 
 const MAX_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
-const BUCKET = 'product-images'
+const ALLOWED_BUCKETS = ['product-images', 'logos'] as const
+type AllowedBucket = typeof ALLOWED_BUCKETS[number]
 
 /**
  * Tenta di creare il bucket se non esiste.
  * Ignora l'errore "already exists" — è normale.
  * Lancia un errore solo se la creazione fallisce per altra ragione.
  */
-async function ensureBucket(db: ReturnType<typeof getServiceClient>): Promise<void> {
+async function ensureBucket(db: ReturnType<typeof getServiceClient>, BUCKET: AllowedBucket): Promise<void> {
   const { error } = await db.storage.createBucket(BUCKET, {
     public: true,
     fileSizeLimit: MAX_SIZE_BYTES,
@@ -37,6 +38,12 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: 'Impossibile leggere il file' }, { status: 400 })
   }
+
+  // Bucket opzionale — default product-images, accetta anche 'logos'
+  const bucketParam = (formData.get('bucket') as string | null) ?? 'product-images'
+  const BUCKET: AllowedBucket = ALLOWED_BUCKETS.includes(bucketParam as AllowedBucket)
+    ? (bucketParam as AllowedBucket)
+    : 'product-images'
 
   const file = formData.get('file')
   if (!file || !(file instanceof Blob)) {
@@ -82,7 +89,7 @@ export async function POST(request: Request) {
 
     if (isBucketMissing) {
       try {
-        await ensureBucket(db)
+        await ensureBucket(db, BUCKET)
       } catch (createErr) {
         const msg = createErr instanceof Error ? createErr.message : 'Errore creazione bucket'
         return NextResponse.json(
