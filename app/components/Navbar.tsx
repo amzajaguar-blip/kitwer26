@@ -18,21 +18,21 @@ export default function Navbar({ logoUrl }: { logoUrl?: string }) {
   return (
     <nav className="sticky top-0 z-50 border-b border-border bg-bg-dark/95 backdrop-blur-md">
       <div className="mx-auto max-w-7xl px-4">
-        <div className="flex h-[68px] items-center justify-between">
+        <div className="flex h-[72px] items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex-shrink-0">
+          <Link href="/" className="flex-shrink-0 py-1">
             {logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={logoUrl}
                 alt="Kitwer26"
-                className="h-[50px] max-w-[180px] object-contain md:h-[56px] md:max-w-[200px]"
-                style={{ display: 'block' }}
+                className="h-[56px] w-auto object-contain md:h-[60px]"
+                style={{ display: 'block', maxHeight: '60px' }}
               />
             ) : (
               <div className="flex items-center gap-2.5">
                 {/* Icon mark */}
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent/15 ring-1 ring-accent/30">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/15 ring-1 ring-accent/30">
                   <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
                     <path d="M6 12h12M12 6l6 6-6 6" stroke="#f59e0b" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
                     <circle cx="12" cy="12" r="10" stroke="#f59e0b" strokeWidth="1.5" opacity=".35"/>

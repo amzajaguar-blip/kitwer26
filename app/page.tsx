@@ -61,7 +61,8 @@ export default async function Home() {
               <img
                 src={siteSettings.logo_url}
                 alt="Kitwer26"
-                className="h-14 max-w-[200px] object-contain md:h-16"
+                className="h-24 w-auto object-contain md:h-28"
+                style={{ maxHeight: '112px' }}
               />
             </div>
           )}

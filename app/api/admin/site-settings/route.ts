@@ -49,8 +49,10 @@ export async function POST(request: NextRequest) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    // Invalida la cache di Next.js → le modifiche appaiono subito
+    // Invalida la cache su tutte le pagine → logo e hero aggiornati subito
+    revalidatePath('/', 'layout')
     revalidatePath('/', 'page')
+    revalidatePath('/products/[slug]', 'page')
 
     return NextResponse.json({ settings: data })
   } catch (err) {
