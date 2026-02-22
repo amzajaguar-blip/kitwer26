@@ -4,6 +4,24 @@ import { useState, useEffect, useRef } from 'react'
 
 const MARGIN = 0.20 // 20% markup sul prezzo base
 
+const CATEGORIES = [
+  'Mouse Gaming',
+  'Tastiere Gaming',
+  'Monitor Gaming',
+  'Cuffie Gaming',
+  'Sedie da Gaming',
+  'Scrivanie Gaming',
+  'Microfoni',
+  'Webcam',
+  'Controller',
+  'Mousepad',
+  'Headset',
+  'Streaming',
+  'Illuminazione',
+  'Accessori',
+  'Setup Completo',
+]
+
 interface BundleItemForm {
   product_id: string
   title: string
@@ -588,7 +606,34 @@ export default function AdminPage() {
               <Field label="Slug (URL)" value={product.slug} onChange={(v) => handleFieldChange('slug', v)} />
 
               {/* Category */}
-              <Field label="Categoria" value={product.category} onChange={(v) => handleFieldChange('category', v)} />
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-text-secondary">Categoria</label>
+                <select
+                  value={CATEGORIES.includes(product.category) ? product.category : '__custom__'}
+                  onChange={(e) => {
+                    if (e.target.value !== '__custom__') handleFieldChange('category', e.target.value)
+                    else handleFieldChange('category', '')
+                  }}
+                  className="w-full rounded-lg border border-border bg-bg-dark px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
+                >
+                  <option value="" disabled>Scegli una categoria...</option>
+                  {CATEGORIES.map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                  <option value="__custom__">✏️ Personalizzata...</option>
+                </select>
+                {/* Input libero se la categoria non è nella lista */}
+                {!CATEGORIES.includes(product.category) && (
+                  <input
+                    type="text"
+                    value={product.category}
+                    onChange={(e) => handleFieldChange('category', e.target.value)}
+                    placeholder="Scrivi la categoria personalizzata..."
+                    className="mt-2 w-full rounded-lg border border-accent/40 bg-bg-dark px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary/50 focus:border-accent focus:outline-none"
+                    autoFocus
+                  />
+                )}
+              </div>
 
               {/* Prices */}
               <div className="rounded-lg border border-border bg-bg-dark p-4">
