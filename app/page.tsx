@@ -54,6 +54,17 @@ export default async function Home() {
       <section className="relative overflow-hidden border-b border-border bg-bg-dark px-4 py-14 md:py-24">
         <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-neon-purple/5" />
         <div className="relative mx-auto max-w-4xl text-center">
+          {/* Logo Hero — visibile se caricato dal CMS, altrimenti nascosto */}
+          {siteSettings.logo_url && (
+            <div className="mb-6 flex justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={siteSettings.logo_url}
+                alt="Kitwer26"
+                className="h-14 max-w-[200px] object-contain md:h-16"
+              />
+            </div>
+          )}
           <span className="mb-4 inline-block rounded-full border border-accent/30 bg-accent/10 px-4 py-1.5 text-xs font-semibold text-accent">
             Gaming Hardware &amp; Streaming Gear
           </span>
