@@ -29,6 +29,7 @@ export default function BundleCheckoutForm({
   const [city, setCity]       = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -192,11 +193,33 @@ export default function BundleCheckoutForm({
           </div>
         </div>
 
+        {/* ── Consenso Privacy & Termini ────────────────── */}
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-bg-dark/40 px-4 py-3">
+          <input
+            type="checkbox"
+            required
+            checked={acceptedTerms}
+            onChange={(e) => setAcceptedTerms(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-border accent-accent"
+          />
+          <span className="text-xs leading-relaxed text-text-secondary">
+            Ho letto e accetto i{' '}
+            <a href="/terms" target="_blank" className="font-semibold text-accent underline decoration-dotted hover:no-underline">
+              Termini e Condizioni
+            </a>{' '}
+            e la{' '}
+            <a href="/privacy" target="_blank" className="font-semibold text-accent underline decoration-dotted hover:no-underline">
+              Privacy Policy
+            </a>.
+            Confermo di avere almeno 18 anni. *
+          </span>
+        </label>
+
         {/* ── Bottone Pagamento ──────────────────────────── */}
         <div>
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !acceptedTerms}
             className="group relative w-full overflow-hidden rounded-xl bg-accent px-8 py-4 text-base font-bold text-bg-dark shadow-lg shadow-accent/25 transition-all hover:bg-accent-hover hover:shadow-accent/40 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
           >
             {/* Shimmer effect */}

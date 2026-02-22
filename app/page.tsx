@@ -151,45 +151,79 @@ export default async function Home() {
       {/* Footer */}
       <footer className="border-t border-border bg-bg-dark px-4 py-12">
         <div className="mx-auto max-w-7xl">
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-            <div>
+          <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
+            {/* Brand */}
+            <div className="col-span-2 md:col-span-1">
               <span className="text-xl font-bold text-accent">Kitwer26</span>
               <span className="ml-1 text-xs text-text-secondary">GAMING</span>
               <p className="mt-3 text-sm leading-relaxed text-text-secondary">
-                Il tuo punto di riferimento per le migliori offerte su hardware gaming e streaming gear.
+                Hardware gaming e streaming gear. Prezzi aggiornati, spedizione sicura.
               </p>
             </div>
+
+            {/* Categorie */}
             <div>
-              <h5 className="mb-3 font-semibold text-text-primary">Categorie</h5>
-              <ul className="space-y-2 text-sm text-text-secondary">
+              <h5 className="mb-4 text-xs font-bold uppercase tracking-wider text-text-secondary/60">Categorie</h5>
+              <ul className="space-y-3 text-sm">
                 {categories.slice(0, 5).map((cat) => (
-                  <li key={cat} className="cursor-pointer transition hover:text-accent">{cat}</li>
+                  <li key={cat}>
+                    <a href={`/?category=${encodeURIComponent(cat)}`}
+                      className="text-text-secondary transition hover:text-accent">
+                      {cat}
+                    </a>
+                  </li>
                 ))}
               </ul>
             </div>
+
+            {/* Supporto */}
             <div>
-              <h5 className="mb-3 font-semibold text-text-primary">Info</h5>
-              <ul className="space-y-2 text-sm text-text-secondary">
+              <h5 className="mb-4 text-xs font-bold uppercase tracking-wider text-text-secondary/60">Supporto</h5>
+              <ul className="space-y-3 text-sm">
                 <li>
-                  <a href="mailto:kitwer26@zohomail.eu" className="transition hover:text-accent">
-                    Assistenza: kitwer26@zohomail.eu
+                  <a href="/contact" className="text-text-secondary transition hover:text-accent">
+                    Contattaci
                   </a>
                 </li>
                 <li>
-                  <a href="/privacy" className="transition hover:text-accent">
-                    Privacy Policy
+                  <a href="mailto:kitwer26@zohomail.eu" className="text-text-secondary transition hover:text-accent">
+                    kitwer26@zohomail.eu
                   </a>
                 </li>
                 <li>
-                  <a href="/terms" className="transition hover:text-accent">
+                  <a href="tel:+393756443391" className="text-text-secondary transition hover:text-accent">
+                    +39 375 644 3391
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            {/* Legale */}
+            <div>
+              <h5 className="mb-4 text-xs font-bold uppercase tracking-wider text-text-secondary/60">Legale</h5>
+              <ul className="space-y-3 text-sm">
+                <li>
+                  <a href="/terms" className="text-text-secondary transition hover:text-accent">
                     Termini e Condizioni
+                  </a>
+                </li>
+                <li>
+                  <a href="/privacy" className="text-text-secondary transition hover:text-accent">
+                    Privacy Policy
                   </a>
                 </li>
               </ul>
             </div>
           </div>
-          <div className="mt-8 border-t border-border pt-6 text-center text-sm text-text-secondary">
-            &copy; 2026 Kitwer26 &middot; Gaming Hardware &amp; Streaming Gear
+
+          {/* Bottom bar */}
+          <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-border pt-6 text-xs text-text-secondary sm:flex-row">
+            <span>&copy; 2026 Kitwer26 &middot; Gaming Hardware &amp; Streaming Gear</span>
+            <div className="flex gap-4">
+              <a href="/privacy" className="transition hover:text-accent">Privacy</a>
+              <a href="/terms" className="transition hover:text-accent">Termini</a>
+              <a href="/contact" className="transition hover:text-accent">Contatti</a>
+            </div>
           </div>
         </div>
       </footer>
