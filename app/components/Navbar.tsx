@@ -1,17 +1,19 @@
 'use client'
 
-import { Menu, X, Search } from 'lucide-react'
+import { Menu, X, Search, Sun, Moon } from 'lucide-react'
 import { useState } from 'react'
 import Link from 'next/link'
+import { useTheme } from './ThemeProvider'
 
 const CATEGORIES = [
   'Mouse', 'Tastiera', 'Monitor 144hz', 'Cuffie',
   'Microfono', 'GPU', 'Stream Deck', 'Webcam',
 ]
 
-export default function Navbar() {
+export default function Navbar({ logoUrl }: { logoUrl?: string }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const { theme, toggle } = useTheme()
 
   return (
     <nav className="sticky top-0 z-50 border-b border-border bg-bg-dark/95 backdrop-blur-md">
@@ -19,8 +21,19 @@ export default function Navbar() {
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex-shrink-0">
-            <span className="text-2xl font-bold text-accent">Kitwer26</span>
-            <span className="ml-1.5 text-xs font-medium text-text-secondary">GAMING</span>
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={logoUrl}
+                alt="Kitwer26"
+                className="h-8 max-w-[140px] object-contain md:h-10"
+              />
+            ) : (
+              <>
+                <span className="text-2xl font-bold text-accent">Kitwer26</span>
+                <span className="ml-1.5 text-xs font-medium text-text-secondary">GAMING</span>
+              </>
+            )}
           </Link>
 
           {/* Desktop Categories */}
@@ -37,7 +50,7 @@ export default function Navbar() {
           </div>
 
           {/* Icons */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <button
               onClick={() => setIsSearchOpen(!isSearchOpen)}
               className="rounded-lg p-2 text-text-secondary transition hover:bg-bg-hover hover:text-text-primary"
@@ -45,6 +58,19 @@ export default function Navbar() {
             >
               <Search size={20} />
             </button>
+
+            {/* Theme Toggle */}
+            <button
+              onClick={toggle}
+              aria-label={theme === 'dark' ? 'Modalità chiara' : 'Modalità scura'}
+              className="rounded-lg p-2 text-text-secondary transition hover:bg-bg-hover hover:text-text-primary"
+            >
+              {theme === 'dark'
+                ? <Sun size={20} />
+                : <Moon size={20} />
+              }
+            </button>
+
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="rounded-lg p-2 text-text-secondary transition hover:bg-bg-hover hover:text-text-primary lg:hidden"

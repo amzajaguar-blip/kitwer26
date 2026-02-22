@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Script from 'next/script'
 import { ADSENSE_CLIENT_ID, isAdsenseEnabled } from '@/lib/adsense-config'
 import AdBanner from './components/AdBanner'
+import { ThemeProvider } from './components/ThemeProvider'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -21,8 +22,12 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="it">
+    <html lang="it" suppressHydrationWarning>
       <head>
+        {/* Prevent flash of wrong theme — runs before React hydration */}
+        <script dangerouslySetInnerHTML={{
+          __html: `(function(){try{var t=localStorage.getItem('theme');if(t==='light')document.documentElement.classList.add('light');}catch(e){}})();`
+        }} />
         {isAdsenseEnabled() && (
           <Script
             async
@@ -33,13 +38,15 @@ export default function RootLayout({
         )}
       </head>
       <body className="antialiased">
-        {/* Top AdSense Bar */}
-        <div className="w-full bg-bg-dark px-4 py-2">
-          <div className="mx-auto max-w-7xl">
-            <AdBanner slot="topBar" format="leaderboard" />
+        <ThemeProvider>
+          {/* Top AdSense Bar */}
+          <div className="w-full bg-bg-dark px-4 py-2">
+            <div className="mx-auto max-w-7xl">
+              <AdBanner slot="topBar" format="leaderboard" />
+            </div>
           </div>
-        </div>
-        {children}
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   )

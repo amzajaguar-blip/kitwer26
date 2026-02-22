@@ -7,7 +7,7 @@ export async function GET() {
 
     const { data, error } = await db
       .from('orders')
-      .select('*, products(title, price_current)')
+      .select('id, product_id, customer_name, customer_email, customer_phone, shipping_address, total_amount, payment_status, mollie_id, tracking_id, created_at, products(title, price_current)')
       .order('created_at', { ascending: false })
 
     if (error) {

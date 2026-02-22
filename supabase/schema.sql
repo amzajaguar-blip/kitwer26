@@ -6,6 +6,14 @@
 -- Enable UUID generation
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- ---------- DROP EXISTING (safe reset) ----------
+DROP TABLE IF EXISTS orders CASCADE;
+DROP TABLE IF EXISTS kit_items CASCADE;
+DROP TABLE IF EXISTS kits CASCADE;
+DROP TABLE IF EXISTS product_cache CASCADE;
+DROP TABLE IF EXISTS products CASCADE;
+DROP FUNCTION IF EXISTS update_updated_at CASCADE;
+
 -- ---------- PRODUCTS ----------
 CREATE TABLE products (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -150,3 +158,27 @@ ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Service role full access orders"
   ON orders FOR ALL USING (auth.role() = 'service_role');
+
+-- ---------- ANALYTICS ----------
+CREATE TABLE IF NOT EXISTS analytics (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  event_type TEXT NOT NULL CHECK (event_type IN ('page_view', 'click_buy')),
+  product_slug TEXT NOT NULL,
+  product_title TEXT NOT NULL,
+  product_id UUID REFERENCES products(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_analytics_event ON analytics(event_type, created_at DESC);
+
+ALTER TABLE analytics ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Analytics insert by anon"
+  ON analytics FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Analytics read by service"
+  ON analytics FOR SELECT USING (auth.role() = 'service_role');
+
+-- ---------- STORAGE ----------
+-- Run in Supabase dashboard: Storage → New Bucket → "product-images" (public)
+-- Or via Supabase CLI: supabase storage create product-images --public

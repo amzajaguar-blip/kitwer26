@@ -5,7 +5,7 @@ import ProductCard from './components/ProductCard'
 import QuizCard from './components/QuizCard'
 import type { Product } from '@/types/supabase'
 
-// ISR: rigenera homepage ogni ora
+// ISR: rigenera homepage ogni ora (revalidatePath() lo bypassa on-demand)
 export const revalidate = 3600
 
 async function getProducts(): Promise<Product[]> {
@@ -16,29 +16,61 @@ async function getProducts(): Promise<Product[]> {
   return data ?? []
 }
 
+interface SiteSettings {
+  logo_url: string
+  hero_title: string
+  hero_subtitle: string
+}
+
+async function getSiteSettings(): Promise<SiteSettings> {
+  try {
+    const { data } = await supabase
+      .from('site_settings')
+      .select('logo_url, hero_title, hero_subtitle')
+      .eq('id', 1)
+      .single()
+    return data ?? { logo_url: '', hero_title: '', hero_subtitle: '' }
+  } catch {
+    return { logo_url: '', hero_title: '', hero_subtitle: '' }
+  }
+}
+
+const HERO_DEFAULT = {
+  title: 'Le migliori offerte',
+  titleAccent: 'per il tuo setup',
+  subtitle: 'Confrontiamo i prezzi dei migliori prodotti gaming e streaming. Trova il deal perfetto per mouse, monitor, tastiere e tutto il gear che ti serve.',
+}
+
 export default async function Home() {
-  const products = await getProducts()
+  const [products, siteSettings] = await Promise.all([getProducts(), getSiteSettings()])
 
   const categories = Array.from(new Set(products.map((p) => p.category)))
 
   return (
     <div className="min-h-screen bg-bg-dark">
-      <Navbar />
+      <Navbar logoUrl={siteSettings.logo_url || undefined} />
 
       {/* Hero */}
-      <section className="relative overflow-hidden border-b border-border bg-bg-dark px-4 py-16 md:py-24">
+      <section className="relative overflow-hidden border-b border-border bg-bg-dark px-4 py-14 md:py-24">
         <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-neon-purple/5" />
         <div className="relative mx-auto max-w-4xl text-center">
           <span className="mb-4 inline-block rounded-full border border-accent/30 bg-accent/10 px-4 py-1.5 text-xs font-semibold text-accent">
-            Gaming Hardware & Streaming Gear
+            Gaming Hardware &amp; Streaming Gear
           </span>
-          <h1 className="mb-6 text-4xl font-bold leading-tight text-text-primary md:text-6xl">
-            Le migliori offerte
-            <span className="block text-accent">per il tuo setup</span>
-          </h1>
-          <p className="mx-auto mb-8 max-w-2xl text-lg text-text-secondary">
-            Confrontiamo i prezzi dei migliori prodotti gaming e streaming.
-            Trova il deal perfetto per mouse, monitor, tastiere e tutto il gear che ti serve.
+          {siteSettings.hero_title ? (
+            /* Titolo personalizzato dal CMS — una sola riga, scaling aggressivo mobile-first */
+            <h1 className="mb-5 text-[clamp(1.75rem,6vw,3.75rem)] font-bold leading-tight text-text-primary">
+              {siteSettings.hero_title}
+            </h1>
+          ) : (
+            /* Default fallback con accent su seconda riga */
+            <h1 className="mb-5 text-[clamp(1.75rem,6vw,3.75rem)] font-bold leading-tight text-text-primary">
+              {HERO_DEFAULT.title}
+              <span className="block text-accent">{HERO_DEFAULT.titleAccent}</span>
+            </h1>
+          )}
+          <p className="mx-auto mb-8 max-w-2xl text-[clamp(0.9rem,2.5vw,1.125rem)] leading-relaxed text-text-secondary">
+            {siteSettings.hero_subtitle || HERO_DEFAULT.subtitle}
           </p>
         </div>
       </section>
@@ -127,7 +159,14 @@ export default async function Home() {
               <h5 className="mb-3 font-semibold text-text-primary">Info</h5>
               <ul className="space-y-2 text-sm text-text-secondary">
                 <li className="cursor-pointer transition hover:text-accent">Chi Siamo</li>
-                <li className="cursor-pointer transition hover:text-accent">Contatti</li>
+                <li>
+                  <a
+                    href="mailto:kitwer26@zohomail.eu"
+                    className="transition hover:text-accent"
+                  >
+                    Assistenza: kitwer26@zohomail.eu
+                  </a>
+                </li>
                 <li className="cursor-pointer transition hover:text-accent">Privacy Policy</li>
               </ul>
             </div>
