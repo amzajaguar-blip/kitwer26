@@ -104,6 +104,13 @@ export default function AdminPage() {
   const [kitError, setKitError] = useState('')
   const [kitSuccess, setKitSuccess] = useState('')
 
+  // CSV import
+  const [csvFile, setCsvFile] = useState<File | null>(null)
+  const [csvImporting, setCsvImporting] = useState(false)
+  const [csvResult, setCsvResult] = useState<{ imported?: number; total?: number; errors?: string[]; error?: string } | null>(null)
+  const [csvDragging, setCsvDragging] = useState(false)
+  const csvInputRef = useRef<HTMLInputElement>(null)
+
   useEffect(() => {
     fetchTop3()
   }, [])
@@ -341,6 +348,24 @@ export default function AdminPage() {
       setKitError('Errore di rete')
     } finally {
       setKitSaving(false)
+    }
+  }
+
+  async function handleCsvImport() {
+    if (!csvFile) return
+    setCsvImporting(true)
+    setCsvResult(null)
+    try {
+      const formData = new FormData()
+      formData.append('file', csvFile)
+      const res = await fetch('/api/admin/import-csv', { method: 'POST', body: formData })
+      const data = await res.json()
+      setCsvResult(data)
+      if (res.ok && data.imported > 0) setCsvFile(null)
+    } catch (e) {
+      setCsvResult({ error: String(e) })
+    } finally {
+      setCsvImporting(false)
     }
   }
 
@@ -1076,6 +1101,132 @@ export default function AdminPage() {
               </div>
             </div>
           )}
+        </section>
+
+        {/* ─── Importazione Massiva CSV ─── */}
+        <section className="mb-8 rounded-xl border border-border bg-bg-card p-6">
+          <h2 className="mb-1 text-sm font-semibold text-accent">Importazione Massiva</h2>
+          <p className="mb-4 text-lg font-bold text-text-primary">Carica Prodotti via CSV</p>
+
+          {/* Drop zone */}
+          <div
+            onClick={() => csvInputRef.current?.click()}
+            onDragOver={(e) => { e.preventDefault(); setCsvDragging(true) }}
+            onDragLeave={() => setCsvDragging(false)}
+            onDrop={(e) => {
+              e.preventDefault()
+              setCsvDragging(false)
+              const file = e.dataTransfer.files?.[0]
+              if (file) setCsvFile(file)
+            }}
+            className={`relative mb-4 flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed py-8 transition-colors ${
+              csvDragging
+                ? 'border-accent bg-accent/5'
+                : 'border-border bg-bg-dark hover:border-accent/50'
+            }`}
+          >
+            {csvFile ? (
+              <div className="text-center">
+                <p className="text-sm font-semibold text-accent">📄 {csvFile.name}</p>
+                <p className="mt-1 text-xs text-text-secondary">
+                  {(csvFile.size / 1024).toFixed(1)} KB · clicca per cambiare
+                </p>
+              </div>
+            ) : (
+              <>
+                <svg className="h-10 w-10 text-text-secondary/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                </svg>
+                <p className="text-sm font-medium text-text-primary">
+                  Trascina il CSV qui o clicca per selezionarlo
+                </p>
+                <p className="text-xs text-text-secondary">Formato .csv supportato</p>
+              </>
+            )}
+            <input
+              ref={csvInputRef}
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) setCsvFile(f) }}
+            />
+          </div>
+
+          <button
+            onClick={handleCsvImport}
+            disabled={!csvFile || csvImporting}
+            className="mb-5 flex items-center gap-2 rounded-xl bg-accent px-6 py-3 text-sm font-bold text-bg-dark transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {csvImporting ? (
+              <>
+                <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Importando...
+              </>
+            ) : 'Importa CSV'}
+          </button>
+
+          {/* Result */}
+          {csvResult && (
+            <div className={`mb-5 rounded-lg border px-4 py-3 text-sm ${
+              csvResult.error
+                ? 'border-badge-red/30 bg-badge-red/10 text-badge-red'
+                : 'border-badge-green/30 bg-badge-green/10 text-badge-green'
+            }`}>
+              {csvResult.error ? (
+                <p>Errore: {csvResult.error}</p>
+              ) : (
+                <>
+                  <p className="font-semibold">
+                    ✓ {csvResult.imported}/{csvResult.total} prodotti importati/aggiornati
+                  </p>
+                  {csvResult.errors && csvResult.errors.length > 0 && (
+                    <ul className="mt-2 space-y-1 text-xs text-badge-red">
+                      {csvResult.errors.map((e, i) => <li key={i}>· {e}</li>)}
+                    </ul>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Format guide */}
+          <div className="rounded-lg border border-border bg-bg-dark p-4">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-secondary">
+              Formato CSV
+            </p>
+            <div className="mb-3 grid gap-1.5 text-xs">
+              {[
+                { col: 'title', note: 'Nome prodotto (obbligatorio)', required: true },
+                { col: 'slug', note: 'Slug URL (auto-generato dal title se assente)' },
+                { col: 'price / price_current', note: 'Prezzo (es: 29.99)' },
+                { col: 'price_original', note: 'Prezzo barrato originale' },
+                { col: 'category', note: 'Categoria — es: KIT, SINGLE, ACCESSORY, Mouse...' },
+                { col: 'description', note: 'Descrizione prodotto' },
+                { col: 'image_url', note: 'URL immagine (più URL separati da virgola)' },
+                { col: 'sizes / varianti', note: 'Varianti generiche. Con prezzo: "M:20, L:30" oppure "Rosso, Verde"' },
+                { col: 'colors / colori', note: 'Colori separati da virgola' },
+              ].map(({ col, note, required }) => (
+                <div key={col} className="flex gap-2">
+                  <code className={`shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px] ${required ? 'bg-accent/20 text-accent' : 'bg-border/50 text-text-secondary'}`}>
+                    {col}
+                  </code>
+                  <span className="text-text-secondary">{note}</span>
+                </div>
+              ))}
+            </div>
+            <pre className="overflow-x-auto rounded bg-bg-card p-3 text-[10px] leading-relaxed text-text-secondary">
+{`title,price,category,sizes,description
+"Mousepad XL",29.99,SINGLE,"350mm:25, 450mm:35","Gaming mousepad"
+"Kit Streaming",149.99,KIT,,"Bundle per streamer"
+"Cavo USB-C",12.99,ACCESSORY,,"Cavo intrecciato"`}
+            </pre>
+            <p className="mt-3 text-xs text-text-secondary">
+              <strong className="text-text-primary">Duplicati:</strong> se lo slug esiste già, il prodotto viene <em>aggiornato</em> (upsert).
+            </p>
+          </div>
         </section>
       </main>
     </div>

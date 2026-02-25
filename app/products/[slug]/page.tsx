@@ -11,7 +11,7 @@ import ProductGallery from '@/app/components/ProductGallery'
 import AddToCartButton from '@/app/components/AddToCartButton'
 import VariantSelector from '@/app/components/VariantSelector'
 import type { ProductVariant } from '@/app/components/VariantSelector'
-import ProductVariantControls from '@/app/components/ProductVariantControls'
+import ProductVariantPriceSection from '@/app/components/ProductVariantPriceSection'
 import { ProductGalleryProvider } from '@/app/context/ProductGalleryContext'
 import type { Metadata } from 'next'
 import { Star, Truck, ShieldCheck, RotateCcw, CheckCircle2 } from 'lucide-react'
@@ -141,31 +141,23 @@ export default async function ProductPage({ params }: PageProps) {
   // Prima immagine — usata nei componenti che accettano una sola URL
   const firstImageUrl = product.image_url?.split(',')[0]?.trim() || undefined
 
-  // Parse colonna 'sizes': può essere string[] (JSONB/text[]) o stringa CSV
-  const rawSizes = product.sizes
-  const sizes: string[] = Array.isArray(rawSizes)
-    ? (rawSizes as string[]).filter(Boolean)
-    : typeof rawSizes === 'string' && rawSizes.trim()
-      ? rawSizes.split(',').map((s: string) => s.trim()).filter(Boolean)
-      : []
+  // Raw variant/color strings from DB (TEXT column)
+  const rawSizes: string | null = product.sizes ?? null
+  const rawColors: string | null = product.colors ?? null
 
-  // Parse colonna 'colors': stesso formato di sizes
-  const rawColors = product.colors
-  const colors: string[] = Array.isArray(rawColors)
-    ? (rawColors as string[]).filter(Boolean)
-    : typeof rawColors === 'string' && rawColors.trim()
-      ? rawColors.split(',').map((c: string) => c.trim()).filter(Boolean)
-      : []
-
-  // imageUrls già parsato — serve a ProductVariantControls per la sincronizzazione gallery
+  // imageUrls parsed for gallery sync
   const imageUrls = product.image_url
     ? product.image_url.split(',').map((u: string) => u.trim()).filter(Boolean)
     : []
 
-  const price = price ?? 0
+  const price = product.price_current ?? 0
   const discount = product.price_original && price
     ? Math.round((1 - price / product.price_original) * 100)
     : 0
+
+  // Use the new dynamic section when no DB variants exist but raw sizes/colors do
+  const useNewVariantSection =
+    variants.length === 0 && (!!rawSizes || !!rawColors)
 
   const avgRating = 4.8
   const totalReviews = REVIEWS.length
@@ -225,120 +217,151 @@ export default async function ProductPage({ params }: PageProps) {
               </div>
             </div>
 
-            {/* ── Price block ── */}
-            <div className="rounded-xl border border-border bg-bg-card p-4">
-              {product.is_direct_sell && (
-                <>
-                  <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-badge-green/15 px-3 py-1">
-                    <span className="h-2 w-2 animate-pulse rounded-full bg-badge-green" />
-                    <span className="text-xs font-semibold text-badge-green">Disponibilità Immediata</span>
-                  </div>
-                  {/* Stock scarcity bar */}
-                  <div className="mb-3">
-                    <div className="mb-1 flex items-center justify-between text-[11px]">
-                      <span className="font-semibold text-badge-red">⚠ Solo pochi pezzi disponibili</span>
-                      <span className="text-text-secondary">Magazzino quasi esaurito</span>
-                    </div>
-                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-border">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-badge-red to-accent transition-all"
-                        style={{ width: '28%' }}
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-              {!product.is_direct_sell && (
-                <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-badge-green/15 px-3 py-1">
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-badge-green" />
-                  <span className="text-xs font-semibold text-badge-green">Disponibilità Immediata</span>
+            {/* ── VARIANTI DINAMICHE + PREZZO ────────────────────── */}
+            {/* New dynamic section: handles price + variants in one client component */}
+            {useNewVariantSection ? (
+              <>
+                <ProductVariantPriceSection
+                  basePrice={price}
+                  priceOriginal={product.price_original ?? null}
+                  sizesRaw={rawSizes}
+                  colorsRaw={rawColors}
+                  imageUrls={imageUrls}
+                  productId={product.id}
+                  productTitle={product.title}
+                  productSlug={product.slug}
+                  isDirectSell={product.is_direct_sell}
+                />
+                {/* FOMO */}
+                {product.is_direct_sell && <FomoBar productId={product.id} />}
+                {/* Description */}
+                <div className="text-sm leading-relaxed text-text-secondary">
+                  {product.description}
                 </div>
-              )}
-
-              <div className="flex items-baseline gap-3">
-                <span className="text-4xl font-bold text-accent">
-                  {price > 0 ? `${price.toFixed(2)}€` : 'Prezzo su richiesta'}
-                </span>
-                {product.price_original && product.price_original > price && (
-                  <>
-                    <span className="text-lg text-text-secondary line-through">
-                      {product.price_original.toFixed(2)}€
+                {/* Trust pills */}
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { icon: ShieldCheck, text: 'Garanzia 30 giorni' },
+                    { icon: RotateCcw, text: 'Reso gratuito 14gg' },
+                    { icon: CheckCircle2, text: 'Qualità verificata' },
+                  ].map(({ icon: Icon, text }) => (
+                    <span
+                      key={text}
+                      className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[11px] font-medium text-text-secondary"
+                    >
+                      <Icon size={12} className="text-accent" />
+                      {text}
                     </span>
-                    <span className="rounded-full bg-badge-green px-2.5 py-0.5 text-sm font-bold text-white">
-                      -{discount}%
-                    </span>
-                  </>
-                )}
-              </div>
-              <p className="mt-1 text-xs text-text-secondary">Prezzo aggiornato · IVA inclusa</p>
-
-              {/* Shipping badge — TASK 3 text */}
-              <div className="mt-3 flex items-start gap-2 rounded-lg border border-neon-green/20 bg-neon-green/5 px-3 py-2.5">
-                <Truck className="mt-0.5 h-4 w-4 shrink-0 text-neon-green" />
-                <div>
-                  <p className="text-xs font-semibold text-neon-green">
-                    Spedizione Standard Assicurata: 7–14 giorni lavorativi
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-text-secondary">
-                    Controllo qualità incluso prima della partenza
-                  </p>
+                  ))}
                 </div>
-              </div>
-            </div>
-
-            {/* FOMO — social proof + urgency */}
-            {product.is_direct_sell && <FomoBar productId={product.id} />}
-
-            {/* Description */}
-            <div className="text-sm leading-relaxed text-text-secondary">
-              {product.description}
-            </div>
-
-            {/* Trust pills */}
-            <div className="flex flex-wrap gap-2">
-              {[
-                { icon: ShieldCheck, text: 'Garanzia 30 giorni' },
-                { icon: RotateCcw, text: 'Reso gratuito 14gg' },
-                { icon: CheckCircle2, text: 'Qualità verificata' },
-              ].map(({ icon: Icon, text }) => (
-                <span
-                  key={text}
-                  className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[11px] font-medium text-text-secondary"
-                >
-                  <Icon size={12} className="text-accent" />
-                  {text}
-                </span>
-              ))}
-            </div>
-
-            {/* ── VARIANTI / MISURE / COLORI / ADD TO CART ── */}
-            {variants.length > 0 ? (
-              <VariantSelector
-                variants={variants}
-                basePrice={price}
-                productId={product.id}
-                productTitle={product.title}
-                productSlug={product.slug}
-                productImageUrl={firstImageUrl}
-              />
-            ) : (sizes.length > 0 || colors.length > 0) ? (
-              <ProductVariantControls
-                sizes={sizes}
-                colors={colors}
-                imageUrls={imageUrls}
-                productId={product.id}
-                productTitle={product.title}
-                productPrice={price}
-                productSlug={product.slug}
-              />
+              </>
             ) : (
-              <AddToCartButton
-                productId={product.id}
-                productTitle={product.title}
-                productPrice={price}
-                productImageUrl={firstImageUrl}
-                productSlug={product.slug}
-              />
+              <>
+                {/* ── Static Price block (no variants, or DB variants) ── */}
+                <div className="rounded-xl border border-border bg-bg-card p-4">
+                  {product.is_direct_sell && (
+                    <>
+                      <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-badge-green/15 px-3 py-1">
+                        <span className="h-2 w-2 animate-pulse rounded-full bg-badge-green" />
+                        <span className="text-xs font-semibold text-badge-green">Disponibilità Immediata</span>
+                      </div>
+                      {/* Stock scarcity bar */}
+                      <div className="mb-3">
+                        <div className="mb-1 flex items-center justify-between text-[11px]">
+                          <span className="font-semibold text-badge-red">⚠ Solo pochi pezzi disponibili</span>
+                          <span className="text-text-secondary">Magazzino quasi esaurito</span>
+                        </div>
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-border">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-badge-red to-accent transition-all"
+                            style={{ width: '28%' }}
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  {!product.is_direct_sell && (
+                    <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-badge-green/15 px-3 py-1">
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-badge-green" />
+                      <span className="text-xs font-semibold text-badge-green">Disponibilità Immediata</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-baseline gap-3">
+                    <span className="text-4xl font-bold text-accent">
+                      {price > 0 ? `${price.toFixed(2)}€` : 'Prezzo su richiesta'}
+                    </span>
+                    {product.price_original && product.price_original > price && (
+                      <>
+                        <span className="text-lg text-text-secondary line-through">
+                          {product.price_original.toFixed(2)}€
+                        </span>
+                        <span className="rounded-full bg-badge-green px-2.5 py-0.5 text-sm font-bold text-white">
+                          -{discount}%
+                        </span>
+                      </>
+                    )}
+                  </div>
+                  <p className="mt-1 text-xs text-text-secondary">Prezzo aggiornato · IVA inclusa</p>
+
+                  <div className="mt-3 flex items-start gap-2 rounded-lg border border-neon-green/20 bg-neon-green/5 px-3 py-2.5">
+                    <Truck className="mt-0.5 h-4 w-4 shrink-0 text-neon-green" />
+                    <div>
+                      <p className="text-xs font-semibold text-neon-green">
+                        Spedizione Standard Assicurata: 7–14 giorni lavorativi
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-text-secondary">
+                        Controllo qualità incluso prima della partenza
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* FOMO — social proof + urgency */}
+                {product.is_direct_sell && <FomoBar productId={product.id} />}
+
+                {/* Description */}
+                <div className="text-sm leading-relaxed text-text-secondary">
+                  {product.description}
+                </div>
+
+                {/* Trust pills */}
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { icon: ShieldCheck, text: 'Garanzia 30 giorni' },
+                    { icon: RotateCcw, text: 'Reso gratuito 14gg' },
+                    { icon: CheckCircle2, text: 'Qualità verificata' },
+                  ].map(({ icon: Icon, text }) => (
+                    <span
+                      key={text}
+                      className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[11px] font-medium text-text-secondary"
+                    >
+                      <Icon size={12} className="text-accent" />
+                      {text}
+                    </span>
+                  ))}
+                </div>
+
+                {/* DB-based variant selector or plain add to cart */}
+                {variants.length > 0 ? (
+                  <VariantSelector
+                    variants={variants}
+                    basePrice={price}
+                    productId={product.id}
+                    productTitle={product.title}
+                    productSlug={product.slug}
+                    productImageUrl={firstImageUrl}
+                  />
+                ) : (
+                  <AddToCartButton
+                    productId={product.id}
+                    productTitle={product.title}
+                    productPrice={price}
+                    productImageUrl={firstImageUrl}
+                    productSlug={product.slug}
+                  />
+                )}
+              </>
             )}
 
             {/* Buy Now form — solo se is_direct_sell */}

@@ -23,6 +23,37 @@ const MACRO_LABELS: Record<string, string> = {
   accessori:  'Accessori',
 }
 
+// ── Hierarchy sections (shown when no filter/search active) ────────────────────
+const HIERARCHY_SECTIONS = [
+  {
+    key: 'KIT',
+    label: 'Kit Completi',
+    description: 'Setup pronti all\'uso — tutto il necessario in un unico acquisto',
+    emoji: '🎯',
+    categories: ['KIT'],
+  },
+  {
+    key: 'SINGLE',
+    label: 'Prodotti Singoli',
+    description: 'Scegli il componente perfetto per il tuo setup',
+    emoji: '📦',
+    categories: ['SINGLE'],
+  },
+  {
+    key: 'ACCESSORY',
+    label: 'Accessori',
+    description: 'Complementi e upgrade per completare la tua postazione',
+    emoji: '🔧',
+    categories: ['ACCESSORY'],
+  },
+]
+
+// Detect if any product has the pyramid categories (KIT/SINGLE/ACCESSORY)
+function hasPyramidProducts(products: Product[]): boolean {
+  const pyramidCats = new Set(['KIT', 'SINGLE', 'ACCESSORY'])
+  return products.some((p) => pyramidCats.has(p.category))
+}
+
 interface Props {
   initialProducts: Product[]
 }
@@ -81,6 +112,25 @@ export default function HomeClient({ initialProducts }: Props) {
 
   const hasFilter = !!query.trim() || !!macro
 
+  // Pyramid mode: show 3 sections when no filter is active and pyramid products exist
+  const pyramidMode = !hasFilter && hasPyramidProducts(initialProducts)
+
+  // Group products by hierarchy section
+  const pyramidGroups = useMemo(() => {
+    if (!pyramidMode) return []
+    return HIERARCHY_SECTIONS.map((section) => ({
+      ...section,
+      products: initialProducts.filter((p) => section.categories.includes(p.category)),
+    })).filter((g) => g.products.length > 0)
+  }, [pyramidMode, initialProducts])
+
+  // Products not belonging to any pyramid category (shown in a fallback section)
+  const flatProducts = useMemo(() => {
+    if (!pyramidMode) return displayProducts
+    const pyramidCats = new Set(['KIT', 'SINGLE', 'ACCESSORY'])
+    return initialProducts.filter((p) => !pyramidCats.has(p.category))
+  }, [pyramidMode, initialProducts, displayProducts])
+
   return (
     <section className="mx-auto max-w-7xl px-4 py-8">
       {/* ── Live Search Bar ─────────────────────────────────────────── */}
@@ -98,7 +148,7 @@ export default function HomeClient({ initialProducts }: Props) {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Cerca tastiere, microfoni, smart home..."
+            placeholder="Cerca kit, prodotti, accessori..."
             className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-secondary/55 focus:outline-none md:text-base"
             autoComplete="off"
           />
@@ -117,50 +167,99 @@ export default function HomeClient({ initialProducts }: Props) {
         </div>
       </div>
 
-      {/* ── Section header ────────────────────────────────────────────── */}
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary/60">
-            {loading
-              ? 'Ricerca in corso…'
-              : `${displayProducts.length} prodott${displayProducts.length === 1 ? 'o' : 'i'}`}
-          </p>
-          <h2 className="text-lg font-bold text-text-primary">{activeLabel}</h2>
-        </div>
-        {hasFilter && (
-          <a
-            href="/"
-            className="rounded-lg border border-border px-3 py-1.5 text-xs text-text-secondary transition hover:border-accent hover:text-accent"
-          >
-            Rimuovi filtro ×
-          </a>
-        )}
-      </div>
+      {/* ── PYRAMID MODE: 3 hierarchy sections ───────────────────── */}
+      {pyramidMode && !loading ? (
+        <div className="space-y-14">
+          {pyramidGroups.map((section) => (
+            <div key={section.key}>
+              {/* Section header */}
+              <div className="mb-6">
+                <div className="mb-1 flex items-center gap-2">
+                  <span className="text-2xl">{section.emoji}</span>
+                  <h2 className="text-xl font-bold text-text-primary">{section.label}</h2>
+                </div>
+                <p className="text-sm text-text-secondary">{section.description}</p>
+              </div>
 
-      {/* ── Product grid / Empty state ─────────────────────────────── */}
-      {displayProducts.length > 0 ? (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 md:gap-4">
-          {displayProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 md:gap-4">
+                {section.products.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            </div>
           ))}
+
+          {/* Flat products (non-pyramid categories) shown after */}
+          {flatProducts.length > 0 && (
+            <div>
+              <div className="mb-6">
+                <h2 className="text-xl font-bold text-text-primary">Altri Prodotti</h2>
+              </div>
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 md:gap-4">
+                {flatProducts.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {pyramidGroups.length === 0 && flatProducts.length === 0 && (
+            <EmptyState query={query} />
+          )}
         </div>
-      ) : !loading ? (
-        <div className="flex flex-col items-center py-16 text-center">
-          <p className="text-4xl">🔍</p>
-          <p className="mt-3 font-semibold text-text-primary">Nessun prodotto trovato</p>
-          <p className="mt-1 text-sm text-text-secondary">
-            {query.trim()
-              ? 'Nessun prodotto trovato per la tua ricerca, prova con un altro setup!'
-              : 'Nessun prodotto in questa categoria'}
-          </p>
-          <a
-            href="/"
-            className="mt-5 rounded-xl border border-border px-5 py-2.5 text-sm text-text-secondary transition hover:border-accent hover:text-accent"
-          >
-            Vedi tutti i prodotti
-          </a>
-        </div>
-      ) : null}
+      ) : (
+        /* ── FLAT MODE: search results / macro filter ─────────── */
+        <>
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary/60">
+                {loading
+                  ? 'Ricerca in corso…'
+                  : `${displayProducts.length} prodott${displayProducts.length === 1 ? 'o' : 'i'}`}
+              </p>
+              <h2 className="text-lg font-bold text-text-primary">{activeLabel}</h2>
+            </div>
+            {hasFilter && (
+              <a
+                href="/"
+                className="rounded-lg border border-border px-3 py-1.5 text-xs text-text-secondary transition hover:border-accent hover:text-accent"
+              >
+                Rimuovi filtro ×
+              </a>
+            )}
+          </div>
+
+          {displayProducts.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 md:gap-4">
+              {displayProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          ) : !loading ? (
+            <EmptyState query={query} />
+          ) : null}
+        </>
+      )}
     </section>
+  )
+}
+
+function EmptyState({ query }: { query: string }) {
+  return (
+    <div className="flex flex-col items-center py-16 text-center">
+      <p className="text-4xl">🔍</p>
+      <p className="mt-3 font-semibold text-text-primary">Nessun prodotto trovato</p>
+      <p className="mt-1 text-sm text-text-secondary">
+        {query.trim()
+          ? 'Nessun prodotto trovato per la tua ricerca, prova con un altro termine!'
+          : 'Nessun prodotto in questa categoria'}
+      </p>
+      <a
+        href="/"
+        className="mt-5 rounded-xl border border-border px-5 py-2.5 text-sm text-text-secondary transition hover:border-accent hover:text-accent"
+      >
+        Vedi tutti i prodotti
+      </a>
+    </div>
   )
 }

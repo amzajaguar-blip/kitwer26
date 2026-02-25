@@ -56,15 +56,22 @@ export interface Product {
   specs: ProductSpecs
   meta_title: string | null
   meta_description: string | null
+  // Generic variants / sizes — format: "Name:Price, Name, Name:Price"
+  // Added via migration 007_sizes_variants.sql
+  sizes: string | null
+  // Colors — comma-separated list (e.g. "Nero, Bianco, Rosso")
+  colors: string | null
   created_at: string
   updated_at: string
 }
 
 export type ProductInsert =
-  Omit<Product, 'id' | 'created_at' | 'updated_at' | 'is_direct_sell' | 'is_bundle' | 'bundle_items'> & {
+  Omit<Product, 'id' | 'created_at' | 'updated_at' | 'is_direct_sell' | 'is_bundle' | 'bundle_items' | 'sizes' | 'colors'> & {
     is_direct_sell?: boolean
     is_bundle?: boolean
     bundle_items?: BundleItem[]
+    sizes?: string | null
+    colors?: string | null
   }
 export type ProductUpdate = Partial<ProductInsert>
 
