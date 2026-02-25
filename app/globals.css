@@ -4,8 +4,8 @@
   --color-bg-dark: #0f0f13;
   --color-bg-card: #1a1a24;
   --color-bg-hover: #252536;
-  --color-accent: #f59e0b;
-  --color-accent-hover: #d97706;
+  --color-accent: #FFC107;
+  --color-accent-hover: #FFB300;
   --color-neon-green: #22d3ee;
   --color-neon-purple: #a855f7;
   --color-text-primary: #f1f5f9;
@@ -34,6 +34,18 @@ body {
   transition: background-color 0.2s, color 0.2s;
 }
 
+/* SVG mai con sfondo bianco — regola globale di sicurezza */
+svg {
+  background-color: transparent !important;
+  overflow: visible;
+}
+
+/* Navbar sempre scura anche in light mode */
+.navbar-always-dark {
+  background-color: rgba(15, 15, 19, 0.95) !important;
+  border-color: rgba(45, 45, 61, 1) !important;
+}
+
 /* Mobile-first: cursor e niente double-tap zoom su iOS Safari */
 button, a {
   cursor: pointer;
@@ -46,10 +58,42 @@ button {
   min-width: 44px;
 }
 
-/* Applica 44px solo agli anchor inline, non ai block/grid-item che coprono già tutta la card */
-a:not(.block):not(.flex):not(.inline-flex) {
+/* Touch target 44px — solo per link che NON hanno già dimensioni esplicite */
+a:not([style]):not(.block):not(.flex):not(.inline-flex):not([class*="h-"]) {
   min-height: 44px;
 }
+
+/* ---- Page transitions ---- */
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.page-transition {
+  animation: pageIn 0.22s ease-out both;
+}
+
+/* ---- Add-to-cart: subtle breath pulse every 3s ---- */
+@keyframes btn-breath {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0), 0 8px 30px rgba(255, 193, 7, 0.25); }
+  50%       { box-shadow: 0 0 0 6px rgba(255, 193, 7, 0.12), 0 8px 30px rgba(255, 193, 7, 0.35); }
+}
+.btn-breath {
+  animation: btn-breath 3s ease-in-out infinite;
+}
+
+/* ---- Fly-to-cart icon animation ---- */
+@keyframes fly-to-cart {
+  0%   { opacity: 1; transform: translateY(0) scale(1); }
+  60%  { opacity: 0.7; transform: translateY(-32px) scale(0.75); }
+  100% { opacity: 0; transform: translateY(-56px) scale(0.4); }
+}
+.fly-to-cart {
+  animation: fly-to-cart 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+/* ---- Scrollbar hide utility ---- */
+.scrollbar-none { scrollbar-width: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
 
 /* Scrollbar gaming style */
 ::-webkit-scrollbar { width: 6px; }

@@ -7,6 +7,10 @@ const DEFAULTS = {
   logo_url: '',
   hero_title: 'Il Setup dei Tuoi Sogni',
   hero_subtitle: 'Periferiche premium per veri gamer. Confrontiamo i migliori prezzi su mouse, monitor, tastiere e tutto il gear che ti serve.',
+  promo_banner_enabled: false,
+  promo_banner_image: '',
+  promo_banner_link: '/',
+  promo_banner_text: '',
   updated_at: new Date().toISOString(),
 }
 
@@ -29,7 +33,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { logo_url, hero_title, hero_subtitle } = await request.json()
+    const { logo_url, hero_title, hero_subtitle, promo_banner_enabled, promo_banner_image, promo_banner_link, promo_banner_text } = await request.json()
 
     if (hero_title !== undefined && hero_title.length > 80) {
       return NextResponse.json({ error: 'hero_title troppo lungo (max 80 caratteri)' }, { status: 400 })
@@ -43,6 +47,10 @@ export async function POST(request: NextRequest) {
         logo_url: logo_url ?? '',
         hero_title: hero_title ?? '',
         hero_subtitle: hero_subtitle ?? '',
+        promo_banner_enabled: promo_banner_enabled ?? false,
+        promo_banner_image: promo_banner_image ?? '',
+        promo_banner_link: promo_banner_link ?? '/',
+        promo_banner_text: promo_banner_text ?? '',
       })
       .select()
       .single()

@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
-import Script from 'next/script'
-import { ADSENSE_CLIENT_ID, isAdsenseEnabled } from '@/lib/adsense-config'
 import { ThemeProvider } from './components/ThemeProvider'
+import ClientProviders from './components/ClientProviders'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -27,18 +26,12 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{
           __html: `(function(){try{var t=localStorage.getItem('theme');if(t==='light')document.documentElement.classList.add('light');}catch(e){}})();`
         }} />
-        {isAdsenseEnabled() && (
-          <Script
-            async
-            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT_ID}`}
-            crossOrigin="anonymous"
-            strategy="afterInteractive"
-          />
-        )}
       </head>
       <body className="antialiased">
         <ThemeProvider>
-          {children}
+          <ClientProviders>
+            {children}
+          </ClientProviders>
         </ThemeProvider>
       </body>
     </html>

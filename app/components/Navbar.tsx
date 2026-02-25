@@ -1,54 +1,34 @@
 'use client'
 
-import { Menu, X, Search, Sun, Moon } from 'lucide-react'
+import { Menu, X, Search, Sun, Moon, ShoppingCart } from 'lucide-react'
 import { useState } from 'react'
 import Link from 'next/link'
 import { useTheme } from './ThemeProvider'
+import { useCart } from '@/app/context/CartContext'
 
 const CATEGORIES = [
   'Mouse', 'Tastiera', 'Monitor 144hz', 'Cuffie',
   'Microfono', 'GPU', 'Stream Deck', 'Webcam',
 ]
 
-export default function Navbar({ logoUrl }: { logoUrl?: string }) {
+export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const { theme, toggle } = useTheme()
+  const { itemCount, openDrawer } = useCart()
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-border bg-bg-dark/95 backdrop-blur-md">
+    <nav className="navbar-always-dark sticky top-0 z-50 border-b border-border backdrop-blur-md">
       <div className="mx-auto max-w-7xl px-4">
         <div className="flex h-[72px] items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex-shrink-0 py-1">
-            {logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={logoUrl}
-                alt="Kitwer26"
-                className="h-[56px] w-auto object-contain md:h-[60px]"
-                style={{ display: 'block', maxHeight: '60px' }}
-              />
-            ) : (
-              <div className="flex items-center gap-2.5">
-                {/* Icon mark */}
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/15 ring-1 ring-accent/30">
-                  <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
-                    <path d="M6 12h12M12 6l6 6-6 6" stroke="#f59e0b" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <circle cx="12" cy="12" r="10" stroke="#f59e0b" strokeWidth="1.5" opacity=".35"/>
-                  </svg>
-                </div>
-                {/* Wordmark */}
-                <div className="flex flex-col leading-none">
-                  <span className="text-[17px] font-extrabold tracking-tight text-text-primary">
-                    Kitwer<span className="text-accent">26</span>
-                  </span>
-                  <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-text-secondary/70">
-                    Gaming Gear
-                  </span>
-                </div>
-              </div>
-            )}
+          <Link href="/" aria-label="Kitwer26 — Homepage">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="https://layehkivpxlscamgfive.supabase.co/storage/v1/object/public/logos/logo1-removebg-preview.png"
+              alt="Kitwer26"
+              className="h-12 w-12 cursor-pointer object-contain"
+            />
           </Link>
 
           {/* Desktop Categories */}
@@ -80,10 +60,21 @@ export default function Navbar({ logoUrl }: { logoUrl?: string }) {
               aria-label={theme === 'dark' ? 'Modalità chiara' : 'Modalità scura'}
               className="rounded-lg p-2 text-text-secondary transition hover:bg-bg-hover hover:text-text-primary"
             >
-              {theme === 'dark'
-                ? <Sun size={20} />
-                : <Moon size={20} />
-              }
+              {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
+
+            {/* Cart icon */}
+            <button
+              onClick={openDrawer}
+              className="relative rounded-lg p-2 text-text-secondary transition hover:bg-bg-hover hover:text-text-primary"
+              aria-label={`Carrello${itemCount > 0 ? ` (${itemCount} articoli)` : ''}`}
+            >
+              <ShoppingCart size={20} />
+              {itemCount > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-bg-dark">
+                  {itemCount > 9 ? '9+' : itemCount}
+                </span>
+              )}
             </button>
 
             <button

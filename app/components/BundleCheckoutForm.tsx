@@ -267,7 +267,7 @@ export default function BundleCheckoutForm({
         <div className="flex flex-col items-center gap-1.5 rounded-xl border border-neon-green/20 bg-neon-green/5 px-2 py-3 text-center">
           <Truck size={15} className="text-neon-green" />
           <span className="text-[10px] font-semibold text-neon-green">Spedizione</span>
-          <span className="text-[9px] text-text-secondary">7-12 giorni lavorativi</span>
+          <span className="text-[9px] text-text-secondary">7-14 giorni lavorativi</span>
         </div>
       </div>
 

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 190 52" aria-label="Kitwer26" role="img" style="display:block;overflow:visible">
+  <!-- Yellow hexagon -->
+  <polygon points="28,4 49,16 49,36 28,48 7,36 7,16" fill="#FFC107"/>
+  <!-- K — pure geometric path, no text rendering -->
+  <path d="M21,15 L21,37 M21,27 L34,15 M21,27 L34,38"
+    stroke="#111116" stroke-width="4.2"
+    stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Wordmark -->
+  <text x="60" y="27" dominant-baseline="middle"
+    font-family="system-ui,-apple-system,Arial,Helvetica,sans-serif"
+    font-size="15" font-weight="700" fill="#f1f5f9" letter-spacing="0.8">ITWER</text>
+  <text x="120" y="27" dominant-baseline="middle"
+    font-family="system-ui,-apple-system,Arial,Helvetica,sans-serif"
+    font-size="15" font-weight="900" fill="#FFC107">26</text>
+</svg>

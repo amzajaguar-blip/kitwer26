@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import AdminVariantManager from '@/app/components/AdminVariantManager'
 
 const MARGIN = 0.20 // 20% markup sul prezzo base
 
@@ -830,6 +831,9 @@ export default function AdminPage() {
             </div>
           </section>
         )}
+
+        {/* Step 4: Varianti */}
+        <AdminVariantManager />
 
         {/* Step 3: Crea Kit */}
         <section className="rounded-xl border border-border bg-bg-card">

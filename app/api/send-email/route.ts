@@ -10,8 +10,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 const FROM =
   process.env.RESEND_FROM ?? 'Kitwer26 <onboarding@resend.dev>'
 
@@ -22,6 +20,9 @@ export async function POST(request: NextRequest) {
       { status: 503 }
     )
   }
+
+  // Lazy instantiation — evita crash durante il build senza RESEND_API_KEY
+  const resend = new Resend(process.env.RESEND_API_KEY)
 
   let body: { to: string; subject: string; html: string; text?: string }
   try {

@@ -45,13 +45,15 @@ export default function TermsPage() {
           <section>
             <h2 className="mb-3 text-lg font-bold text-text-primary">2. Processo d&apos;Acquisto e Disponibilità</h2>
             <p className="mb-3">
-              Kitwer26 opera con un modello di approvvigionamento <strong className="text-text-primary">Just-in-Time</strong>.
-              Una volta ricevuto l&apos;ordine dal cliente, Kitwer26 provvede all&apos;acquisto del prodotto presso il fornitore.
+              Ogni ordine viene preso in carico dal nostro team entro <strong className="text-text-primary">48–72 ore</strong> dalla
+              conferma del pagamento. Prima dell&apos;affidamento al corriere internazionale, ogni prodotto
+              viene sottoposto a una fase di <strong className="text-text-primary">test e controllo qualità</strong> presso
+              il nostro magazzino centrale, per garantire che arrivi al cliente in condizioni perfette.
             </p>
             <div className="rounded-xl border border-accent/20 bg-accent/5 px-5 py-4">
               <p className="text-sm text-text-primary">
-                ⚠️ In caso di improvvisa indisponibilità del fornitore, il cliente verrà rimborsato
-                integralmente entro <strong>24-48 ore</strong>.
+                ✅ In caso di eccezionale indisponibilità del prodotto selezionato, il cliente verrà
+                contattato e rimborsato integralmente entro <strong>24–48 ore</strong>.
               </p>
             </div>
           </section>
@@ -60,13 +62,26 @@ export default function TermsPage() {
           <section>
             <h2 className="mb-3 text-lg font-bold text-text-primary">3. Tempi di Elaborazione e Spedizione</h2>
             <p className="mb-4">
-              Data la natura del modello logistico, i tempi di consegna sono così suddivisi:
+              I nostri tempi di consegna sono strutturati per garantire la massima qualità del prodotto ricevuto:
             </p>
             <div className="space-y-2">
               {[
-                { label: 'Elaborazione ordine', value: '2–4 giorni lavorativi', desc: 'acquisto e controllo qualità' },
-                { label: 'Spedizione', value: '5–8 giorni lavorativi', desc: 'dalla presa in carico del corriere' },
-                { label: 'Totale stimato', value: '8–12 giorni lavorativi', desc: 'dalla conferma d\'ordine', highlight: true },
+                {
+                  label: 'Elaborazione ordine',
+                  value: '48–72 ore',
+                  desc: 'presa in carico e verifica disponibilità',
+                },
+                {
+                  label: 'Test & Controllo Qualità',
+                  value: '1–2 giorni lavorativi',
+                  desc: 'ispezione prima della spedizione',
+                },
+                {
+                  label: 'Spedizione internazionale',
+                  value: '7–14 giorni lavorativi',
+                  desc: 'dalla presa in carico del corriere',
+                  highlight: true,
+                },
               ].map((row) => (
                 <div
                   key={row.label}
@@ -88,9 +103,21 @@ export default function TermsPage() {
                 </div>
               ))}
             </div>
-            <p className="mt-3 text-sm text-text-secondary/70">
-              Le date di consegna sono stime e non scadenze tassative.
-            </p>
+
+            {/* Shipping summary highlight */}
+            <div className="mt-4 flex items-start gap-3 rounded-xl border border-neon-green/25 bg-neon-green/5 px-5 py-4">
+              <svg className="mt-0.5 h-5 w-5 shrink-0 text-neon-green" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
+              </svg>
+              <div>
+                <p className="text-sm font-semibold text-neon-green">
+                  Spedizione Standard Assicurata: 7–14 giorni lavorativi
+                </p>
+                <p className="mt-0.5 text-xs text-text-secondary">
+                  Controllo qualità incluso prima della partenza &middot; Le date di consegna sono stime indicative.
+                </p>
+              </div>
+            </div>
           </section>
 
           {/* 4 */}
@@ -99,7 +126,7 @@ export default function TermsPage() {
             <p className="mb-3">
               Tutti i prezzi sono espressi in <strong className="text-text-primary">Euro (€)</strong> e
               includono le tasse applicabili. Il pagamento avviene tramite circuiti sicuri gestiti da
-              <strong className="text-text-primary"> Mollie</strong> (Carte di Credito, PayPal, etc.).
+              <strong className="text-text-primary"> Mollie</strong> (Carte di Credito, PayPal, Apple Pay, Google Pay).
             </p>
             <div className="flex items-start gap-3 rounded-xl border border-badge-green/20 bg-badge-green/5 px-5 py-4">
               <svg className="mt-0.5 h-5 w-5 shrink-0 text-badge-green" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -123,6 +150,7 @@ export default function TermsPage() {
               {[
                 'Il prodotto deve essere integro, nella confezione originale e non utilizzato.',
                 'Le spese di spedizione per la restituzione sono a carico del cliente, salvo diversa indicazione.',
+                'Il rimborso verrà effettuato entro 14 giorni dalla ricezione della merce restituita.',
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2.5 text-sm">
                   <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
@@ -137,8 +165,8 @@ export default function TermsPage() {
             <h2 className="mb-3 text-lg font-bold text-text-primary">6. Garanzia</h2>
             <p>
               Tutti i prodotti godono della <strong className="text-text-primary">garanzia legale di conformità</strong> secondo
-              la normativa vigente. In caso di difetto di fabbrica, il cliente è tenuto a contattare
-              l&apos;assistenza all&apos;indirizzo email dedicato.
+              la normativa vigente. Ogni articolo viene verificato prima della spedizione. In caso di difetto
+              di fabbrica, il cliente è tenuto a contattare l&apos;assistenza all&apos;indirizzo email dedicato.
             </p>
           </section>
 

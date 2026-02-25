@@ -9,7 +9,11 @@
 
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Lazy: istanziato solo quando serve, non al caricamento del modulo.
+// Evita crash durante il build se RESEND_API_KEY non è definita.
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY)
+}
 
 const FROM = process.env.RESEND_FROM ?? 'Kitwer26 <noreply@kitwer26.com>'
 const ADMIN_NAME = process.env.KITWER_ADMIN_NAME ?? 'Marco'
@@ -156,7 +160,7 @@ export async function sendOrderPurchased(opts: {
     </p>
   `
 
-  const { error } = await resend.emails.send({
+  const { error } = await getResend().emails.send({
     from: FROM,
     to: opts.to,
     subject: `Ottime notizie per il tuo ordine #${shortId}! 📦`,
@@ -268,7 +272,7 @@ export async function sendOrderShipped(opts: {
     </p>
   `
 
-  const { error } = await resend.emails.send({
+  const { error } = await getResend().emails.send({
     from: FROM,
     to: opts.to,
     subject: `Il tuo ordine #${shortId} è in viaggio verso di te 🚚`,

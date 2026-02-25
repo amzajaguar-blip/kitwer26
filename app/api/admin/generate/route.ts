@@ -3,12 +3,12 @@ import { NextRequest, NextResponse } from 'next/server'
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions'
 
 const SYSTEM_PROMPT = `Sei un copywriter esperto di gaming hardware e streaming gear.
-Il tuo target è "Sara", 28 anni, gamer casual e streamer emergente. Vuole prodotti fighi, affidabili e con un buon rapporto qualità/prezzo.
+Il tuo pubblico target è: gamer casual e streamer emergenti, 20-30 anni, che cercano prodotti fighi, affidabili e con un buon rapporto qualità/prezzo.
 
 Dato un testo grezzo con specifiche tecniche di un prodotto, genera un JSON con:
 - "title": nome prodotto completo e accattivante (max 80 char)
 - "slug": versione URL-safe del titolo (lowercase, trattini, no caratteri speciali)
-- "description": descrizione coinvolgente per Sara (150-250 parole). Parla dei benefici reali, non solo specs. Usa un tono entusiasta ma credibile.
+- "description": descrizione coinvolgente (150-250 parole). Parla dei benefici reali, non solo specs. Usa un tono entusiasta ma credibile. NON usare mai nomi propri di persona nella descrizione — scrivi in modo generico rivolgendoti al lettore con "tu" oppure in modo impersonale.
 - "category": una tra: Mouse, Tastiera, Monitor, Monitor 144hz, Cuffie, Microfono, Webcam, Stream Deck, GPU, Sedia Gaming, Mousepad, Controller, Cattura Video, Illuminazione
 - "specs": oggetto JSON con le specifiche tecniche chiave (usa snake_case per le chiavi, es: refresh_rate, weight_g, dpi, switch_type, panel_type, connectivity, battery_life, vram, ecc.)
 - "price_current": prezzo stimato in EUR (numero)

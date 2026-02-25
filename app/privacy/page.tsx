@@ -68,7 +68,7 @@ export default function PrivacyPage() {
             <p className="mb-3">I dati vengono utilizzati per:</p>
             <ul className="space-y-2">
               {[
-                'Elaborare l\'ordine e acquistare il prodotto dal fornitore',
+                'Elaborare l\'ordine e gestire la preparazione e il controllo qualità del prodotto',
                 'Inviare aggiornamenti sullo stato della spedizione (tramite Resend)',
                 'Assistenza clienti post-vendita',
               ].map(item => (
@@ -113,6 +113,27 @@ export default function PrivacyPage() {
                 kitwer26@zohomail.eu
               </a>.
               Risponderemo entro <strong className="text-text-primary">48 ore</strong>.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="mb-3 text-lg font-bold text-text-primary">6. Cookie</h2>
+            <p className="mb-3">
+              Questo sito utilizza esclusivamente cookie tecnici necessari al funzionamento:
+            </p>
+            <ul className="space-y-2">
+              <li className="flex items-start gap-2.5 text-sm">
+                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
+                <span>
+                  <strong className="text-text-primary">Cookie di sessione tecnico:</strong>{' '}
+                  utilizziamo un cookie di sessione essenziale per autenticare gli amministratori
+                  del sito. Non richiede consenso in quanto tecnico e strettamente necessario al
+                  funzionamento dell&apos;area riservata.
+                </span>
+              </li>
+            </ul>
+            <p className="mt-3 text-sm">
+              Non utilizziamo cookie di profilazione, tracciamento o marketing di terze parti.
             </p>
           </section>
 

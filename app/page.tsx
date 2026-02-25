@@ -1,12 +1,13 @@
 import { supabase } from '@/lib/supabase'
-import { Truck, Shield, RotateCcw } from 'lucide-react'
+import { Truck, ShieldCheck, RotateCcw } from 'lucide-react'
 import Navbar from './components/Navbar'
-import ProductCard from './components/ProductCard'
 import QuizCard from './components/QuizCard'
+import HomeClient from './components/HomeClient'
+import { Suspense } from 'react'
 import type { Product } from '@/types/supabase'
 
-// ISR: rigenera homepage ogni ora (revalidatePath() lo bypassa on-demand)
-export const revalidate = 3600
+// No cache — dati sempre freschi da Supabase
+export const revalidate = 0
 
 async function getProducts(): Promise<Product[]> {
   const { data } = await supabase
@@ -17,7 +18,6 @@ async function getProducts(): Promise<Product[]> {
 }
 
 interface SiteSettings {
-  logo_url: string
   hero_title: string
   hero_subtitle: string
 }
@@ -26,150 +26,215 @@ async function getSiteSettings(): Promise<SiteSettings> {
   try {
     const { data } = await supabase
       .from('site_settings')
-      .select('logo_url, hero_title, hero_subtitle')
+      .select('hero_title, hero_subtitle')
       .eq('id', 1)
       .single()
-    return data ?? { logo_url: '', hero_title: '', hero_subtitle: '' }
+    return data ?? { hero_title: '', hero_subtitle: '' }
   } catch {
-    return { logo_url: '', hero_title: '', hero_subtitle: '' }
+    return { hero_title: '', hero_subtitle: '' }
   }
 }
 
-const HERO_DEFAULT = {
-  title: 'Le migliori offerte',
-  titleAccent: 'per il tuo setup',
-  subtitle: 'Confrontiamo i prezzi dei migliori prodotti gaming e streaming. Trova il deal perfetto per mouse, monitor, tastiere e tutto il gear che ti serve.',
-}
+const MACRO_CATEGORIES = [
+  {
+    key: 'audio',
+    emoji: '🎧',
+    label: 'AUDIO',
+    sub: 'Cuffie, Mic, DAC',
+    gradient: 'from-violet-500/20 to-violet-500/0',
+    border: 'hover:border-violet-500/50',
+  },
+  {
+    key: 'streaming',
+    emoji: '🎥',
+    label: 'STREAMING',
+    sub: 'Webcam, Deck, Luci',
+    gradient: 'from-sky-500/20 to-sky-500/0',
+    border: 'hover:border-sky-500/50',
+  },
+  {
+    key: 'gaming',
+    emoji: '🎮',
+    label: 'GAMING',
+    sub: 'Tastiere, Mouse, Sedie',
+    gradient: 'from-emerald-500/20 to-emerald-500/0',
+    border: 'hover:border-emerald-500/50',
+  },
+  {
+    key: 'smarthome',
+    emoji: '🏠',
+    label: 'SMART HOME',
+    sub: 'LED, Sensori, Robot',
+    gradient: 'from-orange-500/20 to-orange-500/0',
+    border: 'hover:border-orange-500/50',
+  },
+  {
+    key: 'accessori',
+    emoji: '🔌',
+    label: 'ACCESSORI',
+    sub: 'Cavi, Hub, Stand',
+    gradient: 'from-rose-500/20 to-rose-500/0',
+    border: 'hover:border-rose-500/50',
+  },
+]
 
 export default async function Home() {
   const [products, siteSettings] = await Promise.all([getProducts(), getSiteSettings()])
 
-  const categories = Array.from(new Set(products.map((p) => p.category)))
-
   return (
     <div className="min-h-screen bg-bg-dark">
-      <Navbar logoUrl={siteSettings.logo_url || undefined} />
+      <Navbar />
 
-      {/* Hero */}
-      <section className="relative overflow-hidden border-b border-border bg-bg-dark px-4 py-14 md:py-24">
-        <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-neon-purple/5" />
-        <div className="relative mx-auto max-w-4xl text-center">
-          {/* Logo Hero — visibile se caricato dal CMS, altrimenti nascosto */}
-          {siteSettings.logo_url && (
-            <div className="mb-6 flex justify-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={siteSettings.logo_url}
-                alt="Kitwer26"
-                className="h-24 w-auto object-contain md:h-28"
-                style={{ maxHeight: '112px' }}
-              />
-            </div>
-          )}
-          <span className="mb-4 inline-block rounded-full border border-accent/30 bg-accent/10 px-4 py-1.5 text-xs font-semibold text-accent">
+      {/* ── HERO ──────────────────────────────────────── */}
+      <section className="relative overflow-hidden border-b border-border bg-bg-dark px-4 py-10 md:py-16">
+        {/* Ambient gradient background */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-20 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-accent/8 blur-[80px]" />
+          <div className="absolute -bottom-10 right-1/4 h-48 w-48 rounded-full bg-neon-purple/8 blur-[60px]" />
+        </div>
+
+        <div className="relative mx-auto max-w-3xl text-center">
+          {/* Logo mark — compact, hero */}
+          <div className="mb-4 flex justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="https://layehkivpxlscamgfive.supabase.co/storage/v1/object/public/logos/logo1-removebg-preview.png"
+              alt="Kitwer26"
+              className="h-16 w-16 object-contain"
+            />
+          </div>
+
+          {/* Eyebrow pill */}
+          <span className="mb-4 inline-block rounded-full border border-accent/30 bg-accent/10 px-4 py-1 text-[11px] font-semibold uppercase tracking-wider text-accent">
             Gaming Hardware &amp; Streaming Gear
           </span>
+
+          {/* Headline — punchy & impactful */}
           {siteSettings.hero_title ? (
-            /* Titolo personalizzato dal CMS — una sola riga, scaling aggressivo mobile-first */
-            <h1 className="mb-5 text-[clamp(1.75rem,6vw,3.75rem)] font-bold leading-tight text-text-primary">
+            <h1 className="mb-3 text-[clamp(1.85rem,6vw,3.5rem)] font-black leading-[1.1] tracking-tight text-text-primary">
               {siteSettings.hero_title}
             </h1>
           ) : (
-            /* Default fallback con accent su seconda riga */
-            <h1 className="mb-5 text-[clamp(1.75rem,6vw,3.75rem)] font-bold leading-tight text-text-primary">
-              {HERO_DEFAULT.title}
-              <span className="block text-accent">{HERO_DEFAULT.titleAccent}</span>
+            <h1 className="mb-3 text-[clamp(1.85rem,6vw,3.5rem)] font-black leading-[1.1] tracking-tight text-text-primary">
+              Potenzia il Tuo Setup.
+              <span className="block text-accent">Domina il Gioco.</span>
             </h1>
           )}
-          <p className="mx-auto mb-8 max-w-2xl text-[clamp(0.9rem,2.5vw,1.125rem)] leading-relaxed text-text-secondary">
-            {siteSettings.hero_subtitle || HERO_DEFAULT.subtitle}
+
+          <p className="mx-auto mb-7 max-w-xl text-[clamp(0.875rem,2.5vw,1.05rem)] leading-relaxed text-text-secondary">
+            {siteSettings.hero_subtitle ||
+              'Mouse, monitor, microfoni e streaming gear ai prezzi migliori. Spedizione assicurata — qualità verificata prima della partenza.'}
           </p>
+
         </div>
       </section>
 
-      {/* Category Pills */}
-      <section className="border-b border-border bg-bg-dark">
-        <div className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 py-4 scrollbar-none">
-          <span className="flex-shrink-0 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-bg-dark">
-            Tutti
-          </span>
-          {categories.map((cat) => (
-            <span
-              key={cat}
-              className="flex-shrink-0 cursor-pointer rounded-full border border-border px-4 py-2 text-sm text-text-secondary transition hover:border-accent hover:text-accent"
-            >
-              {cat}
+      {/* ── 5 MACRO-CATEGORIE ─────────────────────────── */}
+      <section className="border-b border-border bg-bg-dark px-4 py-6">
+        <div className="mx-auto max-w-7xl">
+          <p className="mb-4 text-center text-xs font-semibold uppercase tracking-wider text-text-secondary/50">
+            Esplora per Categoria
+          </p>
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-5 md:gap-3">
+            {MACRO_CATEGORIES.map((cat) => (
+              <a
+                key={cat.key}
+                href={`/?macro=${cat.key}`}
+                className={[
+                  'group relative flex flex-col items-center gap-2 overflow-hidden rounded-2xl border border-border p-4 text-center',
+                  'transition-all duration-200',
+                  'hover:scale-[1.03] hover:shadow-[0_4px_20px_rgba(0,0,0,0.4)]',
+                  cat.border,
+                  'md:p-5',
+                ].join(' ')}
+                style={{ background: '#111116' }}
+              >
+                {/* Gradient bg */}
+                <div className={`pointer-events-none absolute inset-0 bg-gradient-to-b ${cat.gradient} opacity-0 transition-opacity duration-200 group-hover:opacity-100`} />
+
+                <span className="relative text-3xl leading-none md:text-4xl">{cat.emoji}</span>
+                <div className="relative">
+                  <p className="text-[11px] font-black uppercase tracking-widest text-text-primary">
+                    {cat.label}
+                  </p>
+                  <p className="mt-0.5 hidden text-[10px] text-text-secondary/60 sm:block">
+                    {cat.sub}
+                  </p>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── TRUST BADGES ──────────────────────────────── */}
+      <section className="border-b border-border bg-bg-card/30">
+        <div className="mx-auto flex max-w-7xl flex-wrap justify-center gap-6 px-4 py-3.5 md:gap-12">
+          {[
+            { icon: Truck,       text: 'Spedizione Assicurata' },
+            { icon: ShieldCheck, text: 'Pagamento Sicuro SSL' },
+            { icon: RotateCcw,   text: 'Reso 14 Giorni' },
+          ].map(({ icon: Icon, text }) => (
+            <span key={text} className="flex items-center gap-2 text-xs font-medium text-text-secondary">
+              <Icon className="h-3.5 w-3.5 text-accent" />
+              {text}
             </span>
           ))}
         </div>
       </section>
 
-      {/* Trust Badges */}
-      <section className="border-b border-border bg-bg-card/50">
-        <div className="mx-auto flex max-w-7xl flex-wrap justify-center gap-6 px-4 py-4 md:gap-10">
-          <span className="flex items-center gap-2 text-xs font-medium text-text-secondary">
-            <Truck className="h-4 w-4 text-accent" /> Spedizione Gratuita
-          </span>
-          <span className="flex items-center gap-2 text-xs font-medium text-text-secondary">
-            <Shield className="h-4 w-4 text-accent" /> Pagamento Sicuro
-          </span>
-          <span className="flex items-center gap-2 text-xs font-medium text-text-secondary">
-            <RotateCcw className="h-4 w-4 text-accent" /> Reso Facile 14 Giorni
-          </span>
-        </div>
-      </section>
-
-      {/* Products Grid */}
-      <section className="mx-auto max-w-7xl px-4 py-12">
-        {products.length > 0 ? (
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-            {products.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-              />
-            ))}
+      {/* ── PRODUCT GRID (live search + client-side filter) ─────────── */}
+      <Suspense
+        fallback={
+          <div className="mx-auto max-w-7xl px-4 py-10">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="aspect-square animate-pulse rounded-2xl" style={{ background: '#111116' }} />
+              ))}
+            </div>
           </div>
-        ) : (
-          <div className="py-20 text-center">
-            <p className="mb-2 text-2xl font-bold text-text-primary">Nessun prodotto ancora</p>
-            <p className="text-text-secondary">
-              Esegui lo script di seed per popolare il database.
-            </p>
-            <code className="mt-4 inline-block rounded-lg bg-bg-card px-4 py-2 text-sm text-accent">
-              npx tsx scripts/seed-gaming.ts
-            </code>
-          </div>
-        )}
-      </section>
+        }
+      >
+        <HomeClient initialProducts={products} />
+      </Suspense>
 
-      {/* Quiz CTA */}
+      {/* ── QUIZ CTA ──────────────────────────────────── */}
       <section className="mx-auto max-w-7xl px-4 pb-16">
         <QuizCard />
       </section>
 
-      {/* Footer */}
+      {/* ── FOOTER ────────────────────────────────────── */}
       <footer className="border-t border-border bg-bg-dark px-4 py-12">
         <div className="mx-auto max-w-7xl">
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
             {/* Brand */}
             <div className="col-span-2 md:col-span-1">
-              <span className="text-xl font-bold text-accent">Kitwer26</span>
-              <span className="ml-1 text-xs text-text-secondary">GAMING</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="https://layehkivpxlscamgfive.supabase.co/storage/v1/object/public/logos/logo1-removebg-preview.png"
+                alt="Kitwer26"
+                className="h-10 w-10 object-contain"
+              />
               <p className="mt-3 text-sm leading-relaxed text-text-secondary">
                 Hardware gaming e streaming gear. Prezzi aggiornati, spedizione sicura.
               </p>
+              <div className="mt-3 flex items-start gap-2 rounded-lg border border-neon-green/20 bg-neon-green/5 px-3 py-2.5">
+                <Truck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neon-green" />
+                <div>
+                  <p className="text-[11px] font-semibold text-neon-green">Spedizione Standard: 7–14 giorni lavorativi</p>
+                  <p className="text-[10px] text-text-secondary">Controllo qualità incluso prima della partenza</p>
+                </div>
+              </div>
             </div>
 
             {/* Categorie */}
             <div>
               <h5 className="mb-4 text-xs font-bold uppercase tracking-wider text-text-secondary/60">Categorie</h5>
               <ul className="space-y-3 text-sm">
-                {categories.slice(0, 5).map((cat) => (
-                  <li key={cat}>
-                    <a href={`/?category=${encodeURIComponent(cat)}`}
-                      className="text-text-secondary transition hover:text-accent">
-                      {cat}
+                {MACRO_CATEGORIES.map((cat) => (
+                  <li key={cat.key}>
+                    <a href={`/?macro=${cat.key}`} className="text-text-secondary transition hover:text-accent">
+                      {cat.emoji} {cat.label}
                     </a>
                   </li>
                 ))}
@@ -180,21 +245,9 @@ export default async function Home() {
             <div>
               <h5 className="mb-4 text-xs font-bold uppercase tracking-wider text-text-secondary/60">Supporto</h5>
               <ul className="space-y-3 text-sm">
-                <li>
-                  <a href="/contact" className="text-text-secondary transition hover:text-accent">
-                    Contattaci
-                  </a>
-                </li>
-                <li>
-                  <a href="mailto:kitwer26@zohomail.eu" className="text-text-secondary transition hover:text-accent">
-                    kitwer26@zohomail.eu
-                  </a>
-                </li>
-                <li>
-                  <a href="tel:+393756443391" className="text-text-secondary transition hover:text-accent">
-                    +39 375 644 3391
-                  </a>
-                </li>
+                <li><a href="/contact" className="text-text-secondary transition hover:text-accent">Contattaci</a></li>
+                <li><a href="mailto:kitwer26@zohomail.eu" className="text-text-secondary transition hover:text-accent">kitwer26@zohomail.eu</a></li>
+                <li><a href="tel:+393756443391" className="text-text-secondary transition hover:text-accent">+39 375 644 3391</a></li>
               </ul>
             </div>
 
@@ -202,21 +255,12 @@ export default async function Home() {
             <div>
               <h5 className="mb-4 text-xs font-bold uppercase tracking-wider text-text-secondary/60">Legale</h5>
               <ul className="space-y-3 text-sm">
-                <li>
-                  <a href="/terms" className="text-text-secondary transition hover:text-accent">
-                    Termini e Condizioni
-                  </a>
-                </li>
-                <li>
-                  <a href="/privacy" className="text-text-secondary transition hover:text-accent">
-                    Privacy Policy
-                  </a>
-                </li>
+                <li><a href="/terms" className="text-text-secondary transition hover:text-accent">Termini e Condizioni</a></li>
+                <li><a href="/privacy" className="text-text-secondary transition hover:text-accent">Privacy Policy</a></li>
               </ul>
             </div>
           </div>
 
-          {/* Bottom bar */}
           <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-border pt-6 text-xs text-text-secondary sm:flex-row">
             <span>&copy; 2026 Kitwer26 &middot; Gaming Hardware &amp; Streaming Gear</span>
             <div className="flex gap-4">
