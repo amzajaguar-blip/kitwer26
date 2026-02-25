@@ -162,8 +162,9 @@ export default async function ProductPage({ params }: PageProps) {
     ? product.image_url.split(',').map((u: string) => u.trim()).filter(Boolean)
     : []
 
-  const discount = product.price_original
-    ? Math.round((1 - product.price_current / product.price_original) * 100)
+  const price = price ?? 0
+  const discount = product.price_original && price
+    ? Math.round((1 - price / product.price_original) * 100)
     : 0
 
   const avgRating = 4.8
@@ -181,7 +182,7 @@ export default async function ProductPage({ params }: PageProps) {
       <StickyBuyBar
         productId={product.id}
         title={product.title}
-        price={product.price_current}
+        price={price}
         imageUrl={firstImageUrl}
         slug={product.slug}
         targetId={product.is_direct_sell ? 'buy-form' : undefined}
@@ -256,9 +257,9 @@ export default async function ProductPage({ params }: PageProps) {
 
               <div className="flex items-baseline gap-3">
                 <span className="text-4xl font-bold text-accent">
-                  {product.price_current.toFixed(2)}€
+                  {price > 0 ? `${price.toFixed(2)}€` : 'Prezzo su richiesta'}
                 </span>
-                {product.price_original && product.price_original > product.price_current && (
+                {product.price_original && product.price_original > price && (
                   <>
                     <span className="text-lg text-text-secondary line-through">
                       {product.price_original.toFixed(2)}€
@@ -314,7 +315,7 @@ export default async function ProductPage({ params }: PageProps) {
             {variants.length > 0 ? (
               <VariantSelector
                 variants={variants}
-                basePrice={product.price_current}
+                basePrice={price}
                 productId={product.id}
                 productTitle={product.title}
                 productSlug={product.slug}
@@ -327,14 +328,14 @@ export default async function ProductPage({ params }: PageProps) {
                 imageUrls={imageUrls}
                 productId={product.id}
                 productTitle={product.title}
-                productPrice={product.price_current}
+                productPrice={price}
                 productSlug={product.slug}
               />
             ) : (
               <AddToCartButton
                 productId={product.id}
                 productTitle={product.title}
-                productPrice={product.price_current}
+                productPrice={price}
                 productImageUrl={firstImageUrl}
                 productSlug={product.slug}
               />
@@ -485,8 +486,10 @@ export default async function ProductPage({ params }: PageProps) {
                     </h3>
                     <p className="mb-3 line-clamp-2 text-xs text-text-secondary">{kit.description}</p>
                     <div className="flex items-center gap-2">
-                      <span className="text-lg font-bold text-accent">{kit.price_current.toFixed(2)}€</span>
-                      {kit.price_original && (
+                      <span className="text-lg font-bold text-accent">
+                        {kit.price_current != null ? `${kit.price_current.toFixed(2)}€` : 'Prezzo su richiesta'}
+                      </span>
+                      {kit.price_original != null && (
                         <span className="text-sm text-text-secondary line-through">{kit.price_original.toFixed(2)}€</span>
                       )}
                     </div>

@@ -7,8 +7,12 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
-  const discount = product.price_original
-    ? Math.round((1 - product.price_current / product.price_original) * 100)
+  const imageUrls = product.image_url ? product.image_url.split(',') : []
+  const mainImage = imageUrls.length > 0 ? imageUrls[0].trim() : '/placeholder.png'
+
+  const price = product.price_current ?? 0
+  const discount = product.price_original && price
+    ? Math.round((1 - price / product.price_original) * 100)
     : 0
 
   return (
@@ -27,8 +31,8 @@ export default function ProductCard({ product }: ProductCardProps) {
       {/* ── Image — 1:1 forced aspect ratio ─────── */}
       <div className="relative aspect-square overflow-hidden" style={{ background: '#0c0c10' }}>
         <ProductImage
-          src={product.image_url?.split(',')[0]?.trim()}
-          alt={product.title}
+          src={mainImage}
+          alt={product.title ?? ''}
           className="h-full w-full object-contain p-4 transition-transform duration-300 md:group-hover:scale-105"
         />
 
@@ -57,9 +61,9 @@ export default function ProductCard({ product }: ProductCardProps) {
         <div className="mt-2.5 flex items-baseline gap-2">
           {/* White bold price — massima leggibilità su sfondo scuro */}
           <span className="text-[17px] font-bold leading-none text-white">
-            {product.price_current.toFixed(2)}€
+            {price > 0 ? `${price.toFixed(2)}€` : 'Prezzo su richiesta'}
           </span>
-          {product.price_original && product.price_original > product.price_current && (
+          {product.price_original && product.price_original > price && (
             <span className="text-xs text-text-secondary/50 line-through">
               {product.price_original.toFixed(2)}€
             </span>
