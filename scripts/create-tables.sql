@@ -71,6 +71,19 @@ CREATE POLICY IF NOT EXISTS "auth_read_order_items"
 CREATE POLICY IF NOT EXISTS "auth_update_orders"
   ON orders FOR UPDATE TO authenticated USING (true);
 
+-- ── Colonne aggiuntive (Mollie + Provincia) ─────────────────────────────────
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_province  TEXT;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS mollie_payment_id  TEXT;
+
+-- Fix CHECK constraint status: include tutti gli stati Mollie
+ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_status_check;
+ALTER TABLE orders ADD CONSTRAINT orders_status_check
+  CHECK (status IN (
+    'pending', 'pending_payment', 'pending_mollie_payment',
+    'processing', 'shipped', 'delivered',
+    'cancelled', 'confirmed', 'mollie_error'
+  ));
+
 -- ═══════════════════════════════════════════════════════════════════════════
 --  SICUREZZA: product_url contiene link fornitore.
 --  RLS garantisce che solo utenti autenticati (admin) possano leggerlo.

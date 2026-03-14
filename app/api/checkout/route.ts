@@ -33,6 +33,8 @@ export async function POST(req: NextRequest) {
     quantity           = 1,
     currency           = 'EUR',
     marketplace_locale = 'it',
+    customer           = null,
+    cartItems          = null,
   } = body as {
     productId?:          string | null;
     productName:         string;
@@ -40,6 +42,13 @@ export async function POST(req: NextRequest) {
     quantity?:           number;
     currency?:           string;
     marketplace_locale?: string;
+    customer?: {
+      name: string; surname: string; email: string; phone: string;
+      address: string; cap: string; city: string; province: string;
+    } | null;
+    cartItems?: Array<{
+      productId: string | null; productName: string; finalPrice: number; quantity: number;
+    }> | null;
   };
 
   const locale: AmazonLocale = VALID_LOCALES.has(marketplace_locale as AmazonLocale)
@@ -91,23 +100,24 @@ export async function POST(req: NextRequest) {
     localAffiliateUrl = `https://${market.domain}/?tag=${market.tag}`;
   }
 
-  // ── 1. Log ordine su Supabase ───────────────────────────────────────────────
+  // ── 1. Salva ordine su Supabase con dati cliente completi ───────────────────
   let orderId: string | null = null;
 
   try {
     const { data: orderData, error: orderErr } = await supabase
       .from('orders')
       .insert({
-        status:           'pending_mollie_payment',
-        total_amount:     parseFloat(totalAmount),
-        customer_name:    'Mollie Checkout',
-        customer_surname: '',
-        customer_address: '',
-        customer_cap:     '',
-        customer_city:    '',
-        customer_phone:   '',
-        customer_email:   null,
-        customer_country: locale,
+        status:            'pending_mollie_payment',
+        total_amount:      parseFloat(totalAmount),
+        customer_name:     customer?.name     ?? '',
+        customer_surname:  customer?.surname  ?? '',
+        customer_address:  customer?.address  ?? '',
+        customer_cap:      customer?.cap      ?? '',
+        customer_city:     customer?.city     ?? '',
+        customer_province: customer?.province ?? '',
+        customer_phone:    customer?.phone    ?? '',
+        customer_email:    customer?.email    ?? null,
+        customer_country:  locale,
       })
       .select()
       .single();
@@ -117,21 +127,29 @@ export async function POST(req: NextRequest) {
     } else if (orderData) {
       orderId = String(orderData.id);
 
-      const { error: itemErr } = await supabase
-        .from('order_items')
-        .insert({
-          order_id:          orderId,
-          product_id:        productId,
-          product_title:     productName,
-          product_variant:   null,
-          quantity,
-          price_at_purchase: parseFloat(totalAmount),
-          product_url:       localAffiliateUrl,
-        });
+      // Inserisci tutti gli item (carrello multi-prodotto o singolo)
+      const itemsToInsert = cartItems && cartItems.length > 0
+        ? cartItems.map((item) => ({
+            order_id:          orderId!,
+            product_id:        item.productId ?? null,
+            product_title:     item.productName,
+            product_variant:   null,
+            quantity:          item.quantity,
+            price_at_purchase: item.finalPrice * item.quantity,
+            product_url:       localAffiliateUrl,
+          }))
+        : [{
+            order_id:          orderId,
+            product_id:        productId ?? null,
+            product_title:     productName,
+            product_variant:   null,
+            quantity,
+            price_at_purchase: parseFloat(totalAmount),
+            product_url:       localAffiliateUrl,
+          }];
 
-      if (itemErr) {
-        console.error('[checkout] DB insert order_item:', itemErr.message);
-      }
+      const { error: itemErr } = await supabase.from('order_items').insert(itemsToInsert);
+      if (itemErr) console.error('[checkout] DB insert order_items:', itemErr.message);
     }
   } catch (dbErr) {
     console.error('[checkout] DB error:', dbErr);
@@ -146,24 +164,26 @@ export async function POST(req: NextRequest) {
       subject: `⚠️ Nuovo pagamento Mollie: ${productName} — ${mollieCurrency} ${totalAmount}`,
       html: `
         <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#111;color:#eee;padding:24px;border-radius:8px;">
-          <h2 style="color:#f97316;margin-top:0;">⚠️ Nuovo tentativo di pagamento Mollie</h2>
+          <h2 style="color:#f97316;margin-top:0;">⚠️ Pagamento avviato — in attesa conferma Mollie</h2>
           <table style="width:100%;border-collapse:collapse;">
             <tr><td style="padding:6px 0;color:#aaa;">Prodotto</td><td style="padding:6px 0;font-weight:bold;">${productName}</td></tr>
-            <tr><td style="padding:6px 0;color:#aaa;">Prezzo pagato</td><td style="padding:6px 0;font-weight:bold;color:#f97316;">${mollieCurrency} ${totalAmount}</td></tr>
-            <tr><td style="padding:6px 0;color:#aaa;">Quantità</td><td style="padding:6px 0;">${quantity}</td></tr>
-            <tr><td style="padding:6px 0;color:#aaa;">Paese utente</td><td style="padding:6px 0;">${market.flag} ${market.label}</td></tr>
-            <tr>
-              <td style="padding:6px 0;color:#aaa;">Link Amazon</td>
-              <td style="padding:6px 0;">
-                <a href="${localAffiliateUrl}" style="color:#00D4FF;word-break:break-all;">${localAffiliateUrl}</a>
-                <span style="display:block;font-size:11px;color:#666;">Tag: ${market.tag}</span>
-              </td>
+            <tr><td style="padding:6px 0;color:#aaa;">Importo</td><td style="padding:6px 0;font-weight:bold;color:#f97316;">${mollieCurrency} ${totalAmount}</td></tr>
+            <tr><td style="padding:6px 0;color:#aaa;">Paese</td><td style="padding:6px 0;">${market.flag} ${market.label}</td></tr>
+            ${customer ? `
+            <tr style="border-top:1px solid #333;"><td colspan="2" style="padding:10px 0 4px;font-weight:bold;color:#aaa;">📦 Dati Spedizione</td></tr>
+            <tr><td style="padding:4px 0;color:#aaa;">Cliente</td><td style="padding:4px 0;">${customer.name} ${customer.surname}</td></tr>
+            <tr><td style="padding:4px 0;color:#aaa;">Email</td><td style="padding:4px 0;">${customer.email}</td></tr>
+            <tr><td style="padding:4px 0;color:#aaa;">Telefono</td><td style="padding:4px 0;">${customer.phone}</td></tr>
+            <tr><td style="padding:4px 0;color:#aaa;">Indirizzo</td><td style="padding:4px 0;">${customer.address}, ${customer.cap} ${customer.city} (${customer.province})</td></tr>
+            ` : ''}
+            <tr style="border-top:1px solid #333;"><td style="padding:10px 0 4px;color:#aaa;">Link Amazon</td>
+              <td style="padding:10px 0 4px;"><a href="${localAffiliateUrl}" style="color:#00D4FF;word-break:break-all;">${localAffiliateUrl}</a><span style="display:block;font-size:11px;color:#666;">Tag: ${market.tag}</span></td>
             </tr>
-            <tr><td style="padding:6px 0;color:#aaa;">ID Ordine</td><td style="padding:6px 0;font-family:monospace;font-size:12px;">${orderId ?? 'N/A'}</td></tr>
-            <tr><td style="padding:6px 0;color:#aaa;">Timestamp</td><td style="padding:6px 0;">${new Date().toLocaleString('it-IT')}</td></tr>
+            <tr><td style="padding:4px 0;color:#aaa;">ID Ordine</td><td style="padding:4px 0;font-family:monospace;font-size:12px;">${orderId ?? 'N/A'}</td></tr>
+            <tr><td style="padding:4px 0;color:#aaa;">Timestamp</td><td style="padding:4px 0;">${new Date().toLocaleString('it-IT')}</td></tr>
           </table>
           <p style="margin-top:20px;font-size:12px;color:#666;">
-            Controlla il pannello admin per visualizzare l'ordine completo.
+            Riceverai una seconda notifica quando Mollie confermerà il pagamento.
           </p>
         </div>
       `,

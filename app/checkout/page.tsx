@@ -1,37 +1,38 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState, useMemo } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle } from 'lucide-react';
+import { ArrowLeft, CreditCard, ShieldCheck, Truck } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useIntl } from '@/context/InternationalizationContext';
 
+// ── Tipi ──────────────────────────────────────────────────────────────────────
 interface ShippingForm {
-  name: string;
-  surname: string;
-  address: string;
-  cap: string;
-  city: string;
-  phone: string;
-  email: string;
+  name:     string;
+  surname:  string;
+  email:    string;
+  phone:    string;
+  address:  string;
+  cap:      string;
+  city:     string;
+  province: string;
 }
 
+const EMPTY: ShippingForm = {
+  name: '', surname: '', email: '', phone: '',
+  address: '', cap: '', city: '', province: '',
+};
+
+// ── Componente Field ──────────────────────────────────────────────────────────
 function Field({
-  label,
-  value,
-  onChange,
-  required,
-  type = 'text',
-  inputMode,
-  placeholder,
+  label, value, onChange, required = true, type = 'text',
+  inputMode, placeholder, pattern, maxLength,
 }: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  required?: boolean;
-  type?: string;
+  label: string; value: string; onChange: (v: string) => void;
+  required?: boolean; type?: string;
   inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
-  placeholder?: string;
+  placeholder?: string; pattern?: string; maxLength?: number;
 }) {
   return (
     <div className="flex flex-col gap-1">
@@ -46,32 +47,70 @@ function Field({
         required={required}
         inputMode={inputMode}
         placeholder={placeholder}
+        pattern={pattern}
+        maxLength={maxLength}
+        autoComplete={type === 'email' ? 'email' : undefined}
         className="h-11 px-3.5 rounded-xl border text-sm transition-colors focus:outline-none focus:border-[#00D4FF] focus:ring-1 focus:ring-[#00D4FF]/30"
-        style={{
-          background: 'var(--th-input)',
-          color: 'var(--th-text)',
-          borderColor: 'var(--th-border)',
-        }}
+        style={{ background: 'var(--th-input)', color: 'var(--th-text)', borderColor: 'var(--th-border)' }}
       />
     </div>
   );
 }
 
-export default function CheckoutPage() {
-  const { items, totalPrice, clearCart } = useCart();
-  const { locale } = useIntl();
+// ── Checkout Form (inner — usa useSearchParams) ───────────────────────────────
+function CheckoutForm() {
+  const searchParams = useSearchParams();
+  const { locale }   = useIntl();
+  const { items: cartItems, totalPrice: cartTotal, clearCart } = useCart();
+
+  // ── Modalità: prodotto singolo (da ProductDrawer) o carrello ──────────────
+  const pid      = searchParams.get('pid')   ?? '';
+  const pname    = searchParams.get('pname') ?? '';
+  const priceRaw = parseFloat(searchParams.get('price') ?? '0');
+  const currency = (searchParams.get('currency') ?? 'EUR') as 'EUR' | 'GBP' | 'USD';
+  const loc      = searchParams.get('loc')   ?? locale.marketplace;
+
+  const isSingleProduct = !!pname && !isNaN(priceRaw) && priceRaw > 0;
+
+  // In modalità carrello usa gli item esistenti
+  const items = isSingleProduct
+    ? [{ productId: pid || null, productName: pname, finalPrice: priceRaw, quantity: 1 }]
+    : cartItems.map((i) => ({
+        productId:   String(i.product.id ?? ''),
+        productName: i.product.title ?? i.product.name ?? '',
+        finalPrice:  i.finalPrice,
+        quantity:    i.quantity,
+      }));
+
+  const total = isSingleProduct
+    ? priceRaw
+    : cartTotal;
+
+  // ── Form state ─────────────────────────────────────────────────────────────
+  const [form, setForm] = useState<ShippingForm>(EMPTY);
+  const set = (k: keyof ShippingForm) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
+
   const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess]       = useState(false);
   const [error, setError]           = useState('');
 
-  const [form, setForm] = useState<ShippingForm>({
-    name: '', surname: '', address: '', cap: '', city: '', phone: '', email: '',
-  });
+  // ── Validazione (tutto obbligatorio, email formato base) ──────────────────
+  const isValid = useMemo(() => {
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
+    const capOk   = /^\d{5}$/.test(form.cap.trim());
+    return (
+      form.name.trim()     &&
+      form.surname.trim()  &&
+      emailOk              &&
+      form.phone.trim()    &&
+      form.address.trim()  &&
+      capOk                &&
+      form.city.trim()     &&
+      form.province.trim().length >= 2
+    );
+  }, [form]);
 
-  const set = (key: keyof ShippingForm) => (v: string) =>
-    setForm((f) => ({ ...f, [key]: v }));
-
-  if (items.length === 0 && !success) {
+  // ── Carrello vuoto e non in modalità prodotto singolo ─────────────────────
+  if (!isSingleProduct && cartItems.length === 0) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center" style={{ background: 'var(--th-bg)' }}>
         <p className="mb-6 text-sm" style={{ color: 'var(--th-muted)' }}>Il carrello è vuoto.</p>
@@ -87,57 +126,54 @@ export default function CheckoutPage() {
     );
   }
 
-  if (success) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center" style={{ background: 'var(--th-bg)' }}>
-        <CheckCircle size={64} className="text-[#00FF94] mb-6" strokeWidth={1.5} />
-        <h1 className="text-2xl font-black mb-2" style={{ color: 'var(--th-text)' }}>Ordine Confermato!</h1>
-        <p className="text-sm mb-8 max-w-xs" style={{ color: 'var(--th-muted)' }}>
-          Grazie per il tuo acquisto. Ti contatteremo presto al numero fornito per confermare la spedizione.
-        </p>
-        <Link
-          href="/"
-          className="px-8 h-12 bg-[#00D4FF] text-[#0A0A0A] font-bold rounded-2xl flex items-center gap-2 active:scale-95 transition-transform"
-        >
-          Continua lo shopping
-        </Link>
-      </div>
-    );
-  }
-
+  // ── Submit → Supabase → Mollie ─────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isValid) return;
     setSubmitting(true);
     setError('');
 
     try {
-      const res = await fetch('/api/orders', {
-        method: 'POST',
+      const res = await fetch('/api/checkout', {
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          customer: form,
-          items: items.map((i) => ({
-            product_id:        i.product.id ?? null,
-            product_title:     i.product.title,
-            product_variant:   i.product.variantAttributes ?? null,
-            quantity:          i.quantity,
-            price_at_purchase: i.finalPrice,
-          })),
-          total_amount:     totalPrice,
-          customer_country: locale.marketplace,
+          // Prodotto principale (per Mollie description)
+          productId:          items[0]?.productId ?? null,
+          productName:        items.length === 1
+            ? items[0].productName
+            : `Ordine Kitwer26 (${items.length} articoli)`,
+          finalPrice:         total,
+          quantity:           1,
+          currency,
+          marketplace_locale: loc,
+          // Dati spedizione cliente
+          customer: {
+            name:     form.name.trim(),
+            surname:  form.surname.trim(),
+            email:    form.email.trim(),
+            phone:    form.phone.trim(),
+            address:  form.address.trim(),
+            cap:      form.cap.trim(),
+            city:     form.city.trim(),
+            province: form.province.trim().toUpperCase(),
+          },
+          // Tutti gli item del carrello (salvati in order_items)
+          cartItems: items,
         }),
       });
 
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error ?? 'Errore server');
-      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Errore server');
 
-      clearCart();
-      setSuccess(true);
+      // Se siamo in modalità carrello, svuotiamo il carrello
+      if (!isSingleProduct) clearCart();
+
+      // Redirect a Mollie
+      window.location.href = data.checkoutUrl;
+
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Errore durante l'invio. Riprova.");
-    } finally {
+      setError(err instanceof Error ? err.message : "Errore durante l'avvio del pagamento. Riprova.");
       setSubmitting(false);
     }
   };
@@ -149,24 +185,34 @@ export default function CheckoutPage() {
         className="fixed top-0 left-0 right-0 z-40 h-16 flex items-center px-4 border-b backdrop-blur-sm"
         style={{ background: 'var(--th-bg)', borderColor: 'var(--th-border)' }}
       >
-        <Link href="/" className="p-1 -ml-1" style={{ color: 'var(--th-muted)' }}>
+        <button
+          onClick={() => window.history.back()}
+          className="p-1 -ml-1"
+          style={{ color: 'var(--th-muted)' }}
+          aria-label="Indietro"
+        >
           <ArrowLeft size={20} />
-        </Link>
-        <h1 className="text-sm font-bold ml-3" style={{ color: 'var(--th-text)' }}>Checkout</h1>
+        </button>
+        <h1 className="text-sm font-bold ml-3" style={{ color: 'var(--th-text)' }}>
+          Checkout Sicuro
+        </h1>
+        <ShieldCheck size={14} className="ml-1.5 text-[#00FF94]" />
       </div>
 
-      <div className="pt-16 pb-10">
-        {/* Riepilogo */}
-        <div className="border-b px-4 py-4" style={{ background: 'var(--th-card)', borderColor: 'var(--th-border)' }}>
+      <div className="pt-16 pb-24">
+        {/* ── Riepilogo ordine ── */}
+        <div
+          className="border-b px-4 py-4"
+          style={{ background: 'var(--th-card)', borderColor: 'var(--th-border)' }}
+        >
           <p className="text-[10px] uppercase tracking-widest font-bold mb-3" style={{ color: 'var(--th-faint)' }}>
             Riepilogo ordine ({items.length} {items.length === 1 ? 'prodotto' : 'prodotti'})
           </p>
           <div className="space-y-2">
-            {items.map((item) => (
-              <div key={item.product.id ?? item.product.title} className="flex justify-between items-center">
+            {items.map((item, i) => (
+              <div key={i} className="flex justify-between items-center">
                 <span className="text-xs flex-1 mr-3 line-clamp-1" style={{ color: 'var(--th-muted)' }}>
-                  {item.product.title}
-                  {item.product.variantAttributes ? ` — ${item.product.variantAttributes}` : ''}
+                  {item.productName}
                   {item.quantity > 1 && (
                     <span style={{ color: 'var(--th-faint)' }}> ×{item.quantity}</span>
                   )}
@@ -180,31 +226,70 @@ export default function CheckoutPage() {
           <div className="flex justify-between items-center mt-3 pt-3 border-t" style={{ borderColor: 'var(--th-border)' }}>
             <span className="text-sm font-semibold" style={{ color: 'var(--th-text)' }}>Totale</span>
             <span className="text-lg font-black text-[#00D4FF]">
-              €{totalPrice.toFixed(2).replace('.', ',')}
+              €{total.toFixed(2).replace('.', ',')}
             </span>
           </div>
         </div>
 
-        {/* Form */}
+        {/* ── Form spedizione ── */}
         <form onSubmit={handleSubmit} className="px-4 py-6 space-y-4">
-          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--th-text)' }}>
-            Dati di Spedizione
-          </p>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Nome"    value={form.name}    onChange={set('name')}    required placeholder="Mario" />
-            <Field label="Cognome" value={form.surname} onChange={set('surname')} required placeholder="Rossi" />
+          <div className="flex items-center gap-2 mb-1">
+            <Truck size={14} style={{ color: 'var(--th-faint)' }} />
+            <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--th-text)' }}>
+              Dati di Spedizione
+            </p>
           </div>
 
-          <Field label="Indirizzo completo" value={form.address} onChange={set('address')} required placeholder="Via Roma 1, Interno 3" />
-
           <div className="grid grid-cols-2 gap-3">
-            <Field label="CAP"    value={form.cap}  onChange={set('cap')}  required inputMode="numeric" placeholder="00100" />
-            <Field label="Città"  value={form.city} onChange={set('city')} required placeholder="Roma" />
+            <Field label="Nome"    value={form.name}    onChange={set('name')}    placeholder="Mario" />
+            <Field label="Cognome" value={form.surname} onChange={set('surname')} placeholder="Rossi" />
           </div>
 
-          <Field label="Cellulare"         value={form.phone} onChange={set('phone')} required type="tel" inputMode="tel" placeholder="+39 333 1234567" />
-          <Field label="Email (opzionale)" value={form.email} onChange={set('email')} type="email" placeholder="mario@email.com" />
+          <Field
+            label="Email"
+            value={form.email}
+            onChange={set('email')}
+            type="email"
+            inputMode="email"
+            placeholder="mario@email.com"
+          />
+
+          <Field
+            label="Cellulare"
+            value={form.phone}
+            onChange={set('phone')}
+            type="tel"
+            inputMode="tel"
+            placeholder="+39 333 1234567"
+          />
+
+          <Field
+            label="Via / Piazza e numero civico"
+            value={form.address}
+            onChange={set('address')}
+            placeholder="Via Roma 1, interno 3"
+          />
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field
+              label="CAP"
+              value={form.cap}
+              onChange={set('cap')}
+              inputMode="numeric"
+              placeholder="00100"
+              maxLength={5}
+            />
+            <Field label="Città" value={form.city} onChange={set('city')} placeholder="Roma" />
+          </div>
+
+          <Field
+            label="Provincia (es. RM)"
+            value={form.province}
+            onChange={set('province')}
+            placeholder="RM"
+            maxLength={2}
+          />
 
           {error && (
             <p className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-xl px-3 py-2">
@@ -212,25 +297,57 @@ export default function CheckoutPage() {
             </p>
           )}
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full h-14 bg-[#00D4FF] text-[#0A0A0A] font-black text-sm rounded-2xl mt-2 active:scale-95 transition-transform disabled:opacity-40 flex items-center justify-center gap-2"
-          >
-            {submitting ? (
-              <>
-                <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                Invio in corso...
-              </>
-            ) : (
-              `Conferma Ordine — €${totalPrice.toFixed(2).replace('.', ',')}`
-            )}
-          </button>
+          {/* Badge info */}
+          <p className="text-[11px] text-center" style={{ color: 'var(--th-faint)' }}>
+            I tuoi dati saranno utilizzati esclusivamente per la spedizione.
+          </p>
         </form>
       </div>
+
+      {/* ── Footer CTA fisso ── */}
+      <div
+        className="fixed bottom-0 left-0 right-0 px-4 py-4 border-t backdrop-blur-sm"
+        style={{ background: 'var(--th-card)', borderColor: 'var(--th-border)' }}
+      >
+        <button
+          onClick={handleSubmit as unknown as React.MouseEventHandler}
+          disabled={!isValid || submitting}
+          className="w-full h-14 bg-orange-500 hover:bg-orange-400 text-black font-black text-sm rounded-2xl active:scale-95 transition-all hover:shadow-[0_0_20px_rgba(249,115,22,0.4)] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
+          {submitting ? (
+            <>
+              <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Reindirizzamento a Mollie...
+            </>
+          ) : (
+            <>
+              <CreditCard size={18} />
+              Paga €{total.toFixed(2).replace('.', ',')} con Mollie
+            </>
+          )}
+        </button>
+        <p className="text-[10px] text-center mt-2" style={{ color: 'var(--th-faint)' }}>
+          Pagamento sicuro gestito da Mollie · SSL
+        </p>
+      </div>
     </div>
+  );
+}
+
+// ── Export page — Suspense boundary per useSearchParams ───────────────────────
+export default function CheckoutPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--th-bg)' }}>
+          <div className="w-8 h-8 border-2 border-[#00D4FF] border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <CheckoutForm />
+    </Suspense>
   );
 }

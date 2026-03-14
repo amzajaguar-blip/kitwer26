@@ -14,7 +14,7 @@ interface Props {
 
 export default function ProductDrawer({ product, onClose }: Props) {
   const { locale, formatPrice, getExchangeRate } = useIntl();
-  const [mollieLoading, setMollieLoading]   = useState(false);
+  const [mollieLoading]   = useState(false); // kept for UI compat
   const [imgIndex, setImgIndex]             = useState(0);
   const [failedImages, setFailedImages]     = useState<Set<number>>(new Set());
   const [isZoomed, setIsZoomed]             = useState(false);
@@ -56,31 +56,16 @@ export default function ProductDrawer({ product, onClose }: Props) {
   const goPrev = () => setImgIndex((p) => (p === 0 ? images.length - 1 : p - 1));
   const goNext = () => setImgIndex((p) => (p === images.length - 1 ? 0 : p + 1));
 
-  const handleMollieCheckout = async () => {
+  const handleMollieCheckout = () => {
     if (finalPriceNum === null) return;
-    setMollieLoading(true);
-    try {
-      const res = await fetch('/api/checkout', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          productId:          product.id ?? null,
-          productName:        product.name,
-          finalPrice:         finalPriceNum,
-          quantity:           1,
-          currency:           locale.currency,
-          marketplace_locale: locale.marketplace,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Errore checkout');
-      window.location.href = data.checkoutUrl;
-    } catch (err) {
-      console.error('[Mollie checkout]', err);
-      alert("Errore durante l'avvio del pagamento. Riprova.");
-    } finally {
-      setMollieLoading(false);
-    }
+    const params = new URLSearchParams({
+      pid:      String(product.id ?? ''),
+      pname:    product.name,
+      price:    String(finalPriceNum),
+      currency: locale.currency,
+      loc:      locale.marketplace,
+    });
+    window.location.href = `/checkout?${params.toString()}`;
   };
 
   return (
