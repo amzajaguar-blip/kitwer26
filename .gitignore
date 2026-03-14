@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Environment variables (NEVER commit these)
+.env
+.env.local
+.env*.local
+
+# Next.js build output
+.next/
+out/
+
+# Misc
+*.tsbuildinfo
+.DS_Store
+
+# Debug
+*.log
+npm-debug.log*
+
+# Data / archives (not needed in repo)
+ARCHIVIO.PROD/
+MAGAZZINO/
+output/
+da_revisionare.txt
+check_gallery.mjs
+check_products.mjs
+b3fb9712-21a3-4a5f-a3cf-d689882f5b20.jpg

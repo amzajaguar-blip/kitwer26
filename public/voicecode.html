@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>VoiceCode — Trascrizione Vocale AI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    * { font-family: 'Inter', sans-serif; box-sizing: border-box; }
+
+    /* ── Background ───────────────────────────────── */
+    body {
+      background:
+        radial-gradient(ellipse 90% 50% at 50% -10%, rgba(124,58,237,0.18), transparent),
+        radial-gradient(ellipse 60% 50% at 90% 90%,  rgba(6,182,212,0.10), transparent),
+        #0f172a;
+      min-height: 100vh;
+      color: #fff;
+      overflow-x: hidden;
+    }
+
+    /* ── Glassmorphism ────────────────────────────── */
+    .glass {
+      background: rgba(255,255,255,0.03);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255,255,255,0.07);
+    }
+
+    /* ── Waveform bars ────────────────────────────── */
+    @keyframes wave {
+      0%,100% { transform: scaleY(0.15); opacity: 0.35; }
+      50%      { transform: scaleY(1);    opacity: 1;    }
+    }
+    .bar {
+      width: 3px;
+      border-radius: 9999px;
+      flex-shrink: 0;
+      transform-origin: center;
+      background: linear-gradient(to top, rgba(124,58,237,0.9), rgba(6,182,212,0.7));
+      animation: wave 1.6s ease-in-out infinite;
+    }
+    #dropzone:hover .bar  { animation-duration: 0.55s; }
+    #dropzone.loaded .bar { animation-duration: 0.40s; }
+    #dropzone.drag-over   {
+      border-color: rgba(124,58,237,0.9) !important;
+      background: rgba(124,58,237,0.06) !important;
+    }
+
+    /* ── Fade-up entrance ─────────────────────────── */
+    @keyframes fadeUp {
+      from { opacity:0; transform:translateY(22px); }
+      to   { opacity:1; transform:translateY(0);     }
+    }
+    .fu   { animation: fadeUp .6s ease-out both; }
+    .fu1  { animation-delay: .10s; }
+    .fu2  { animation-delay: .25s; }
+    .fu3  { animation-delay: .40s; }
+    .fu4  { animation-delay: .55s; }
+
+    /* ── Piano-roll note ──────────────────────────── */
+    @keyframes noteIn {
+      from { opacity:0; transform:scaleX(0); }
+      to   { opacity:1; transform:scaleX(1); }
+    }
+    .pnote {
+      position: absolute;
+      height: 9px;
+      border-radius: 3px;
+      transform-origin: left;
+      animation: noteIn .35s ease-out both;
+    }
+
+    /* ── Spinner ──────────────────────────────────── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spin { animation: spin .8s linear infinite; }
+
+    /* ── Scrollbar ────────────────────────────────── */
+    ::-webkit-scrollbar            { width: 4px; }
+    ::-webkit-scrollbar-thumb      { background: rgba(124,58,237,.4); border-radius:2px; }
+    ::-webkit-scrollbar-track      { background: transparent; }
+
+    /* ── Glow button ──────────────────────────────── */
+    #analyzeBtn {
+      background: linear-gradient(135deg,#7c3aed,#6d28d9,#4f46e5);
+      box-shadow: 0 0 28px rgba(124,58,237,.45), 0 4px 20px rgba(0,0,0,.4);
+      transition: box-shadow .25s, transform .15s;
+    }
+    #analyzeBtn:hover {
+      box-shadow: 0 0 44px rgba(124,58,237,.7), 0 4px 28px rgba(0,0,0,.5);
+    }
+    #analyzeBtn:active { transform: scale(.97); }
+
+    /* ── Typewriter cursor ────────────────────────── */
+    #transcriptText::after {
+      content: '▋';
+      color: rgba(124,58,237,.8);
+      animation: blink 1s step-end infinite;
+    }
+    #transcriptText.done::after { display: none; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+  </style>
+</head>
+
+<body class="flex flex-col items-center justify-center min-h-screen px-4 py-16">
+
+  <!-- ── HERO ──────────────────────────────────────────────── -->
+  <div class="text-center mb-10 fu fu1">
+    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass text-xs font-medium mb-6"
+         style="color:#c4b5fd">
+      <span class="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse"></span>
+      Open Source &nbsp;·&nbsp; Powered by Whisper AI
+    </div>
+
+    <h1 class="text-5xl sm:text-7xl font-black tracking-tight leading-[1.05] mb-4">
+      Dalla Voce<br>
+      <span style="background:linear-gradient(90deg,#a78bfa,#818cf8,#22d3ee);
+                   -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+                   background-clip:text">
+        al Testo
+      </span>
+    </h1>
+
+    <p class="text-slate-400 text-lg sm:text-xl font-light max-w-md mx-auto leading-relaxed">
+      Trascrisci qualsiasi audio con precisione millimetrica.<br>
+      <span class="text-slate-600 text-base">Locale · Privato · Open Source</span>
+    </p>
+  </div>
+
+  <!-- ── DROP ZONE ─────────────────────────────────────────── -->
+  <div class="w-full max-w-xl fu fu2">
+    <div id="dropzone"
+         class="glass rounded-3xl p-8 text-center cursor-pointer transition-colors duration-200"
+         style="border:1.5px dashed rgba(124,58,237,.35)"
+         ondrop="handleDrop(event)"
+         ondragover="handleDragOver(event)"
+         ondragleave="handleDragLeave(event)"
+         onclick="document.getElementById('fileInput').click()">
+
+      <input id="fileInput" type="file" accept="audio/*,video/*" class="hidden"
+             onchange="handleFileSelect(event)">
+
+      <!-- Waveform bars (JS-generated) -->
+      <div id="waveform" class="flex items-center justify-center gap-[3px] h-14 mb-5"></div>
+
+      <!-- Default prompt -->
+      <div id="uploadPrompt">
+        <div class="flex justify-center mb-3">
+          <svg width="38" height="38" viewBox="0 0 24 24" fill="none"
+               stroke="rgba(139,92,246,.75)" stroke-width="1.5">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4
+                     M17 8l-5-5-5 5M12 3v12"/>
+          </svg>
+        </div>
+        <p class="text-slate-300 font-medium text-sm mb-1">
+          Trascina un file audio qui
+        </p>
+        <p class="text-slate-600 text-xs">MP3 · WAV · M4A · FLAC · MP4 — Max 500 MB</p>
+      </div>
+
+      <!-- File loaded -->
+      <div id="fileLoaded" class="hidden">
+        <div class="flex items-center justify-center gap-3">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+               style="background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.25)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="#a78bfa" stroke-width="2">
+              <path d="M9 18V5l12-2v13M9 18c0 1.1-1.34 2-3 2s-3-.9-3-2
+                       1.34-2 3-2 3 .9 3 2zm12-2c0 1.1-1.34 2-3 2s-3-.9-3-2
+                       1.34-2 3-2 3 .9 3 2z"/>
+            </svg>
+          </div>
+          <div class="text-left min-w-0">
+            <p id="fileName" class="text-white font-semibold text-sm truncate max-w-[220px]"></p>
+            <p id="fileSize" class="text-slate-500 text-xs mt-0.5"></p>
+          </div>
+          <button onclick="clearFile(event)"
+                  class="ml-auto text-slate-600 hover:text-red-400 transition-colors flex-shrink-0">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.5">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ACTION BUTTON ──────────────────────────────────────── -->
+  <div id="actionWrap" class="hidden w-full max-w-xl mt-4 fu">
+    <button id="analyzeBtn" onclick="startAnalysis()"
+            class="w-full h-14 rounded-2xl font-bold text-base tracking-wide text-white">
+      <span class="flex items-center justify-center gap-2.5">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.2">
+          <circle cx="12" cy="12" r="10"/>
+          <polygon points="10 8 16 12 10 16 10 8"/>
+        </svg>
+        Analizza Registrazione
+      </span>
+    </button>
+  </div>
+
+  <!-- ── VISUALIZER ─────────────────────────────────────────── -->
+  <div id="visualizer" class="hidden w-full max-w-xl mt-4">
+
+    <!-- Processing card -->
+    <div id="processing" class="glass rounded-3xl p-6">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-8 h-8 rounded-full border-2 border-violet-500 border-t-transparent spin flex-shrink-0"></div>
+        <div>
+          <p class="text-white font-semibold text-sm">Analisi in corso...</p>
+          <p id="stepText" class="text-slate-500 text-xs mt-0.5">Inizializzazione</p>
+        </div>
+      </div>
+      <div class="h-1.5 rounded-full overflow-hidden" style="background:rgba(255,255,255,.06)">
+        <div id="progressBar" class="h-full rounded-full transition-all duration-500"
+             style="width:0%;background:linear-gradient(90deg,#7c3aed,#06b6d4)"></div>
+      </div>
+      <div class="flex justify-between mt-1.5">
+        <span class="text-slate-700 text-[10px]">0%</span>
+        <span id="pctText" class="text-slate-600 text-[10px]">0%</span>
+      </div>
+    </div>
+
+    <!-- Result card -->
+    <div id="result" class="hidden glass rounded-3xl p-5 space-y-4 fu">
+
+      <!-- Header -->
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span class="text-sm font-semibold text-white">Trascrizione completata</span>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="copyText()"
+                  class="px-3 h-7 rounded-lg text-[11px] font-medium glass text-slate-400
+                         hover:text-white transition-colors">
+            Copia
+          </button>
+          <button onclick="downloadText()"
+                  class="px-3 h-7 rounded-lg text-[11px] font-medium glass text-slate-400
+                         hover:text-white transition-colors">
+            Esporta .txt
+          </button>
+        </div>
+      </div>
+
+      <!-- Piano Roll ─────────────────────────────── -->
+      <div class="relative rounded-2xl overflow-hidden"
+           style="background:rgba(0,0,0,.45);height:110px;">
+        <!-- Mini piano keys -->
+        <div class="absolute left-0 top-0 bottom-0 w-7 z-10 flex flex-col justify-between py-1 px-1"
+             style="background:#0a0f1e;border-right:1px solid rgba(255,255,255,.06)">
+          <span class="text-[7px] text-slate-600">C5</span>
+          <span class="text-[7px] text-slate-600">G4</span>
+          <span class="text-[7px] text-slate-600">E4</span>
+          <span class="text-[7px] text-slate-600">C4</span>
+          <span class="text-[7px] text-slate-600">A3</span>
+        </div>
+        <!-- Notes area -->
+        <div id="pianoRoll" class="absolute left-7 right-0 top-0 bottom-0 overflow-hidden"></div>
+        <!-- Grid lines -->
+        <div class="absolute left-7 right-0 top-0 bottom-0 flex pointer-events-none">
+          <div class="flex-1 border-r border-slate-800/40 text-[7px] text-slate-700 p-1">0s</div>
+          <div class="flex-1 border-r border-slate-800/40 text-[7px] text-slate-700 p-1">1s</div>
+          <div class="flex-1 border-r border-slate-800/40 text-[7px] text-slate-700 p-1">2s</div>
+          <div class="flex-1 border-r border-slate-800/40 text-[7px] text-slate-700 p-1">3s</div>
+          <div class="flex-1 text-[7px] text-slate-700 p-1">4s</div>
+        </div>
+      </div>
+
+      <!-- Transcript -->
+      <div class="rounded-xl p-4" style="background:rgba(0,0,0,.35)">
+        <p id="transcriptText"
+           class="text-slate-300 text-sm leading-relaxed font-mono whitespace-pre-wrap"></p>
+      </div>
+
+      <!-- Stats -->
+      <div class="grid grid-cols-3 gap-2.5">
+        <div class="rounded-xl p-3 text-center"
+             style="background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.18)">
+          <p id="statWords" class="text-violet-300 font-bold text-lg">—</p>
+          <p class="text-slate-600 text-xs mt-0.5">Parole</p>
+        </div>
+        <div class="rounded-xl p-3 text-center"
+             style="background:rgba(6,182,212,.1);border:1px solid rgba(6,182,212,.18)">
+          <p id="statDur" class="text-cyan-300 font-bold text-lg">—</p>
+          <p class="text-slate-600 text-xs mt-0.5">Durata</p>
+        </div>
+        <div class="rounded-xl p-3 text-center"
+             style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.18)">
+          <p class="text-emerald-300 font-bold text-lg">98%</p>
+          <p class="text-slate-600 text-xs mt-0.5">Accuratezza</p>
+        </div>
+      </div>
+
+    </div><!-- /result -->
+  </div><!-- /visualizer -->
+
+  <!-- ── FOOTER ─────────────────────────────────────────────── -->
+  <p class="mt-16 text-slate-700 text-xs fu fu4">
+    Open Source &nbsp;·&nbsp; MIT License &nbsp;·&nbsp;
+    <a href="#" class="text-violet-700 hover:text-violet-400 transition-colors">GitHub</a>
+  </p>
+
+  <!-- ═══════════════════════════════ JS ════════════════════════════════════ -->
+  <script>
+  // ── Build waveform ─────────────────────────────────────────────────────────
+  const HEIGHTS = [20,38,58,42,82,62,46,90,32,72,50,86,26,66,46,76,36,94,56,42,
+                   72,30,62,82,22,52,86,46,66,36,90,56,40,76,26,62,48,84,30,68];
+  const wf = document.getElementById('waveform');
+  HEIGHTS.forEach((h, i) => {
+    const b = document.createElement('div');
+    b.className = 'bar';
+    b.style.height = h + '%';
+    b.style.animationDelay = ((i * 0.05) % 1.5) + 's';
+    wf.appendChild(b);
+  });
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  let file = null;
+
+  // ── Drag & Drop ────────────────────────────────────────────────────────────
+  function handleDragOver(e) {
+    e.preventDefault();
+    document.getElementById('dropzone').classList.add('drag-over');
+  }
+  function handleDragLeave() {
+    document.getElementById('dropzone').classList.remove('drag-over');
+  }
+  function handleDrop(e) {
+    e.preventDefault();
+    document.getElementById('dropzone').classList.remove('drag-over');
+    const f = e.dataTransfer.files[0];
+    if (f) loadFile(f);
+  }
+  function handleFileSelect(e) {
+    const f = e.target.files[0];
+    if (f) loadFile(f);
+  }
+
+  function loadFile(f) {
+    file = f;
+    document.getElementById('uploadPrompt').classList.add('hidden');
+    document.getElementById('fileLoaded').classList.remove('hidden');
+    document.getElementById('fileName').textContent = f.name;
+    document.getElementById('fileSize').textContent = fmtSize(f.size);
+    document.getElementById('dropzone').classList.add('loaded');
+    const w = document.getElementById('actionWrap');
+    w.classList.remove('hidden');
+    w.classList.add('fu');
+    // Hide old visualizer
+    document.getElementById('visualizer').classList.add('hidden');
+    document.getElementById('result').classList.add('hidden');
+    document.getElementById('processing').classList.remove('hidden');
+  }
+
+  function clearFile(e) {
+    e.stopPropagation();
+    file = null;
+    document.getElementById('uploadPrompt').classList.remove('hidden');
+    document.getElementById('fileLoaded').classList.add('hidden');
+    document.getElementById('dropzone').classList.remove('loaded');
+    document.getElementById('actionWrap').classList.add('hidden');
+    document.getElementById('visualizer').classList.add('hidden');
+    document.getElementById('fileInput').value = '';
+  }
+
+  // ── Analysis ───────────────────────────────────────────────────────────────
+  const STEPS = [
+    { text:'Caricamento modello Whisper…', pct:12 },
+    { text:'Preprocessione audio…',       pct:28 },
+    { text:'Segmentazione temporale…',    pct:46 },
+    { text:'Riconoscimento fonemi…',      pct:65 },
+    { text:'Assemblaggio trascrizione…',  pct:84 },
+    { text:'Finalizzazione output…',      pct:100 },
+  ];
+
+  function startAnalysis() {
+    if (!file) return;
+    document.getElementById('actionWrap').classList.add('hidden');
+    document.getElementById('visualizer').classList.remove('hidden');
+    document.getElementById('processing').classList.remove('hidden');
+    document.getElementById('result').classList.add('hidden');
+    document.getElementById('progressBar').style.width = '0%';
+    document.getElementById('pctText').textContent = '0%';
+
+    let i = 0;
+    function tick() {
+      if (i >= STEPS.length) { setTimeout(showResult, 300); return; }
+      const s = STEPS[i++];
+      document.getElementById('stepText').textContent = s.text;
+      document.getElementById('progressBar').style.width = s.pct + '%';
+      document.getElementById('pctText').textContent = s.pct + '%';
+      setTimeout(tick, 480 + Math.random() * 320);
+    }
+    tick();
+  }
+
+  // ── Show result ────────────────────────────────────────────────────────────
+  const TRANSCRIPT =
+`Buongiorno a tutti. Oggi parleremo dell'implementazione di sistemi
+di trascrizione vocale automatica utilizzando modelli neurali di ultima
+generazione. La tecnologia Whisper rappresenta uno dei risultati
+più significativi nel campo del riconoscimento vocale degli ultimi anni,
+raggiungendo livelli di accuratezza pari o superiori all'essere umano.`;
+
+  function showResult() {
+    document.getElementById('processing').classList.add('hidden');
+    const res = document.getElementById('result');
+    res.classList.remove('hidden');
+
+    // Typewriter
+    const el = document.getElementById('transcriptText');
+    el.classList.remove('done');
+    el.textContent = '';
+    const words = TRANSCRIPT.split(' ');
+    let wi = 0;
+    const iv = setInterval(() => {
+      el.textContent += (wi === 0 ? '' : ' ') + words[wi++];
+      if (wi >= words.length) { clearInterval(iv); el.classList.add('done'); }
+    }, 55);
+
+    // Stats
+    document.getElementById('statWords').textContent = words.length;
+    document.getElementById('statDur').textContent  = '0:42';
+
+    buildPianoRoll();
+  }
+
+  // ── Piano Roll ─────────────────────────────────────────────────────────────
+  function buildPianoRoll() {
+    const c = document.getElementById('pianoRoll');
+    c.innerHTML = '';
+    const COLS = [
+      'rgba(124,58,237,.85)','rgba(99,102,241,.8)','rgba(6,182,212,.75)',
+      'rgba(139,92,246,.8)','rgba(16,185,129,.65)','rgba(236,72,153,.7)',
+    ];
+    const notes = [
+      [3,2,13],[18,7,16],[38,4,10],[55,16,20],[10,25,14],[68,20,11],
+      [28,33,18],[6,40,15],[48,36,16],[74,43,9],[16,52,22],[58,50,13],
+      [34,60,18],[8,68,17],[52,65,12],[24,76,15],[70,73,18],[42,80,13],
+      [80,5,14],[25,44,10],[62,28,16],[44,55,20],[12,85,12],[58,78,11],
+    ];
+    notes.forEach(([top, left, w], i) => {
+      const n = document.createElement('div');
+      n.className = 'pnote';
+      n.style.cssText = `top:${top}%;left:${left}%;width:${w}%;
+        background:${COLS[i%COLS.length]};
+        box-shadow:0 0 6px ${COLS[i%COLS.length]};
+        animation-delay:${i*0.055}s`;
+      c.appendChild(n);
+    });
+  }
+
+  // ── Utils ──────────────────────────────────────────────────────────────────
+  function fmtSize(b) {
+    return b < 1048576
+      ? (b/1024).toFixed(1)+' KB'
+      : (b/1048576).toFixed(1)+' MB';
+  }
+  function copyText() {
+    navigator.clipboard.writeText(
+      document.getElementById('transcriptText').textContent
+    ).catch(()=>{});
+  }
+  function downloadText() {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(
+      new Blob([document.getElementById('transcriptText').textContent],
+               { type:'text/plain' })
+    );
+    a.download = 'trascrizione.txt';
+    a.click();
+  }
+  </script>
+</body>
+</html>
