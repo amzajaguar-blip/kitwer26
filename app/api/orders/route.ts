@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { MARKETPLACE, buildAffiliateUrl, extractAsinFromUrl } from '@/lib/marketplace';
 import type { AmazonLocale } from '@/lib/marketplace';
+import { sendAdminEmail } from '@/lib/email';
 
 const VALID_LOCALES = new Set<AmazonLocale>(['it', 'de', 'fr', 'es', 'uk', 'us']);
 
@@ -129,72 +130,54 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Notifica email admin ────────────────────────────────────────────────────
-  const resendKey  = process.env.RESEND_API_KEY;
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@kitwer26.com';
-  const fromEmail  = process.env.FROM_EMAIL  || 'notifiche@kitwer26.com';
-  const market     = MARKETPLACE[locale];
+  const market = MARKETPLACE[locale];
 
-  if (resendKey) {
-    try {
-      const itemsHtml = orderItems
-        .map((item) => {
-          const linkHtml = item.product_url
-            ? `<a href="${item.product_url}" style="color:#00D4FF;font-size:11px;word-break:break-all;">${item.product_url}</a>`
-            : '<span style="color:#666;font-size:11px;">N/A</span>';
-          return `<tr>
-            <td style="padding:6px 0;color:#aaa;vertical-align:top;">${item.product_title}${item.product_variant ? ` — ${item.product_variant}` : ''}<br>${linkHtml}</td>
-            <td style="padding:6px 0;text-align:right;vertical-align:top;">x${item.quantity}</td>
-            <td style="padding:6px 0;text-align:right;font-weight:bold;vertical-align:top;">€${item.price_at_purchase.toFixed(2)}</td>
-          </tr>`;
-        })
-        .join('');
+  try {
+    const itemsHtml = orderItems
+      .map((item) => {
+        const linkHtml = item.product_url
+          ? `<a href="${item.product_url}" style="color:#00D4FF;font-size:11px;word-break:break-all;">${item.product_url}</a>`
+          : '<span style="color:#666;font-size:11px;">N/A</span>';
+        return `<tr>
+          <td style="padding:6px 0;color:#aaa;vertical-align:top;">${item.product_title}${item.product_variant ? ` — ${item.product_variant}` : ''}<br>${linkHtml}</td>
+          <td style="padding:6px 0;text-align:right;vertical-align:top;">x${item.quantity}</td>
+          <td style="padding:6px 0;text-align:right;font-weight:bold;vertical-align:top;">€${item.price_at_purchase.toFixed(2)}</td>
+        </tr>`;
+      })
+      .join('');
 
-      await fetch('https://api.resend.com/emails', {
-        method:  'POST',
-        headers: {
-          Authorization:  `Bearer ${resendKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from:    `Kitwer26 <${fromEmail}>`,
-          to:      [adminEmail],
-          subject: `🛒 Nuovo Ordine — ${customer.name} ${customer.surname} — €${total_amount.toFixed(2)}`,
-          html: `
-            <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#111;color:#eee;padding:24px;border-radius:8px;">
-              <h2 style="color:#00D4FF;margin-top:0;">🛒 Nuovo Ordine Ricevuto</h2>
-
-              <p style="margin:0 0 4px;"><strong>Ordine:</strong> <span style="font-family:monospace;font-size:12px;">${order.id}</span></p>
-              <p style="margin:0 0 4px;"><strong>Cliente:</strong> ${customer.name} ${customer.surname}</p>
-              ${customer.email ? `<p style="margin:0 0 4px;"><strong>Email:</strong> ${customer.email}</p>` : ''}
-              <p style="margin:0 0 4px;"><strong>Telefono:</strong> ${customer.phone}</p>
-              <p style="margin:0 0 16px;"><strong>Indirizzo:</strong> ${customer.address}, ${customer.cap} ${customer.city}</p>
-
-              <table style="width:100%;border-collapse:collapse;margin:16px 0;">
-                ${itemsHtml}
-                <tr style="border-top:1px solid #333;">
-                  <td colspan="2" style="padding:8px 0;font-weight:bold;text-align:right;">Totale pagato:</td>
-                  <td style="padding:8px 0;text-align:right;font-weight:bold;color:#00D4FF;">€${total_amount.toFixed(2)}</td>
-                </tr>
-              </table>
-
-              <div style="background:#1a1a2e;border:1px solid #333;border-radius:6px;padding:12px;margin-top:12px;">
-                <p style="margin:0 0 4px;font-size:13px;font-weight:bold;">
-                  ${market.flag} Marketplace: ${market.label}
-                  <span style="font-weight:normal;color:#aaa;margin-left:8px;">Tag: ${market.tag}</span>
-                </p>
-              </div>
-
-              <p style="margin-top:20px;font-size:12px;color:#666;">
-                Accedi al pannello admin per visualizzare i dettagli completi e procedere con l'evasione.
-              </p>
-            </div>
-          `,
-        }),
-      });
-    } catch (emailErr) {
-      console.error('[orders] Email send error:', emailErr);
-      // Non blocca la risposta
-    }
+    await sendAdminEmail({
+      subject: `🛒 Nuovo Ordine — ${customer.name} ${customer.surname} — €${total_amount.toFixed(2)}`,
+      html: `
+        <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#111;color:#eee;padding:24px;border-radius:8px;">
+          <h2 style="color:#00D4FF;margin-top:0;">🛒 Nuovo Ordine Ricevuto</h2>
+          <p style="margin:0 0 4px;"><strong>Ordine:</strong> <span style="font-family:monospace;font-size:12px;">${order.id}</span></p>
+          <p style="margin:0 0 4px;"><strong>Cliente:</strong> ${customer.name} ${customer.surname}</p>
+          ${customer.email ? `<p style="margin:0 0 4px;"><strong>Email:</strong> ${customer.email}</p>` : ''}
+          <p style="margin:0 0 4px;"><strong>Telefono:</strong> ${customer.phone}</p>
+          <p style="margin:0 0 16px;"><strong>Indirizzo:</strong> ${customer.address}, ${customer.cap} ${customer.city}</p>
+          <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+            ${itemsHtml}
+            <tr style="border-top:1px solid #333;">
+              <td colspan="2" style="padding:8px 0;font-weight:bold;text-align:right;">Totale pagato:</td>
+              <td style="padding:8px 0;text-align:right;font-weight:bold;color:#00D4FF;">€${total_amount.toFixed(2)}</td>
+            </tr>
+          </table>
+          <div style="background:#1a1a2e;border:1px solid #333;border-radius:6px;padding:12px;margin-top:12px;">
+            <p style="margin:0 0 4px;font-size:13px;font-weight:bold;">
+              ${market.flag} Marketplace: ${market.label}
+              <span style="font-weight:normal;color:#aaa;margin-left:8px;">Tag: ${market.tag}</span>
+            </p>
+          </div>
+          <p style="margin-top:20px;font-size:12px;color:#666;">
+            Accedi al pannello admin per visualizzare i dettagli completi e procedere con l'evasione.
+          </p>
+        </div>
+      `,
+    });
+  } catch (emailErr) {
+    console.error('[orders] Email send error:', emailErr);
+    // Non blocca la risposta
   }
 
   console.log(`[orders] Ordine creato con successo: ${order.id}`);

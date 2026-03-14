@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { MARKETPLACE, buildAffiliateUrl, extractAsinFromUrl } from '@/lib/marketplace';
 import type { AmazonLocale } from '@/lib/marketplace';
+import { sendAdminEmail } from '@/lib/email';
 
 const MOLLIE_API = 'https://api.mollie.com/v2';
 const VALID_LOCALES = new Set<AmazonLocale>(['it', 'de', 'fr', 'es', 'uk', 'us']);
@@ -138,59 +139,38 @@ export async function POST(req: NextRequest) {
   }
 
   // ── 2. Notifica email admin ─────────────────────────────────────────────────
-  const resendKey  = process.env.RESEND_API_KEY;
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@kitwer26.com';
-  const fromEmail  = process.env.FROM_EMAIL  || 'notifiche@kitwer26.com';
-  const market     = MARKETPLACE[locale];
+  const market = MARKETPLACE[locale];
 
-  if (resendKey) {
-    try {
-      const emailRes = await fetch('https://api.resend.com/emails', {
-        method:  'POST',
-        headers: {
-          Authorization:  `Bearer ${resendKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from:    `Kitwer26 <${fromEmail}>`,
-          to:      [adminEmail],
-          subject: `⚠️ Nuovo pagamento Mollie: ${productName} — ${mollieCurrency} ${totalAmount}`,
-          html: `
-            <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#111;color:#eee;padding:24px;border-radius:8px;">
-              <h2 style="color:#f97316;margin-top:0;">⚠️ Nuovo tentativo di pagamento Mollie</h2>
-              <table style="width:100%;border-collapse:collapse;">
-                <tr><td style="padding:6px 0;color:#aaa;">Prodotto</td><td style="padding:6px 0;font-weight:bold;">${productName}</td></tr>
-                <tr><td style="padding:6px 0;color:#aaa;">Prezzo pagato</td><td style="padding:6px 0;font-weight:bold;color:#f97316;">${mollieCurrency} ${totalAmount}</td></tr>
-                <tr><td style="padding:6px 0;color:#aaa;">Quantità</td><td style="padding:6px 0;">${quantity}</td></tr>
-                <tr><td style="padding:6px 0;color:#aaa;">Paese utente</td><td style="padding:6px 0;">${market.flag} ${market.label}</td></tr>
-                <tr>
-                  <td style="padding:6px 0;color:#aaa;">Link Amazon</td>
-                  <td style="padding:6px 0;">
-                    <a href="${localAffiliateUrl}" style="color:#00D4FF;word-break:break-all;">${localAffiliateUrl}</a>
-                    <span style="display:block;font-size:11px;color:#666;">Tag: ${market.tag}</span>
-                  </td>
-                </tr>
-                <tr><td style="padding:6px 0;color:#aaa;">ID Ordine</td><td style="padding:6px 0;font-family:monospace;font-size:12px;">${orderId ?? 'N/A'}</td></tr>
-                <tr><td style="padding:6px 0;color:#aaa;">Timestamp</td><td style="padding:6px 0;">${new Date().toLocaleString('it-IT')}</td></tr>
-              </table>
-              <p style="margin-top:20px;font-size:12px;color:#666;">
-                Controlla il pannello admin per visualizzare l'ordine completo.
-              </p>
-            </div>
-          `,
-        }),
-      });
-
-      if (!emailRes.ok) {
-        const errBody = await emailRes.json().catch(() => ({}));
-        console.warn('[checkout] Resend error:', errBody);
-      }
-    } catch (emailErr) {
-      console.error('[checkout] Email send error:', emailErr);
-      // Non blocca il flusso
-    }
-  } else {
-    console.warn('[checkout] RESEND_API_KEY non configurato — email non inviata');
+  try {
+    await sendAdminEmail({
+      subject: `⚠️ Nuovo pagamento Mollie: ${productName} — ${mollieCurrency} ${totalAmount}`,
+      html: `
+        <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#111;color:#eee;padding:24px;border-radius:8px;">
+          <h2 style="color:#f97316;margin-top:0;">⚠️ Nuovo tentativo di pagamento Mollie</h2>
+          <table style="width:100%;border-collapse:collapse;">
+            <tr><td style="padding:6px 0;color:#aaa;">Prodotto</td><td style="padding:6px 0;font-weight:bold;">${productName}</td></tr>
+            <tr><td style="padding:6px 0;color:#aaa;">Prezzo pagato</td><td style="padding:6px 0;font-weight:bold;color:#f97316;">${mollieCurrency} ${totalAmount}</td></tr>
+            <tr><td style="padding:6px 0;color:#aaa;">Quantità</td><td style="padding:6px 0;">${quantity}</td></tr>
+            <tr><td style="padding:6px 0;color:#aaa;">Paese utente</td><td style="padding:6px 0;">${market.flag} ${market.label}</td></tr>
+            <tr>
+              <td style="padding:6px 0;color:#aaa;">Link Amazon</td>
+              <td style="padding:6px 0;">
+                <a href="${localAffiliateUrl}" style="color:#00D4FF;word-break:break-all;">${localAffiliateUrl}</a>
+                <span style="display:block;font-size:11px;color:#666;">Tag: ${market.tag}</span>
+              </td>
+            </tr>
+            <tr><td style="padding:6px 0;color:#aaa;">ID Ordine</td><td style="padding:6px 0;font-family:monospace;font-size:12px;">${orderId ?? 'N/A'}</td></tr>
+            <tr><td style="padding:6px 0;color:#aaa;">Timestamp</td><td style="padding:6px 0;">${new Date().toLocaleString('it-IT')}</td></tr>
+          </table>
+          <p style="margin-top:20px;font-size:12px;color:#666;">
+            Controlla il pannello admin per visualizzare l'ordine completo.
+          </p>
+        </div>
+      `,
+    });
+  } catch (emailErr) {
+    console.error('[checkout] Email send error:', emailErr);
+    // Non blocca il flusso
   }
 
   // ── 3. Crea pagamento Mollie ────────────────────────────────────────────────

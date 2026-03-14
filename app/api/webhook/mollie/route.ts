@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { MARKETPLACE, buildAffiliateUrl, extractAsinFromUrl } from '@/lib/marketplace';
 import type { AmazonLocale } from '@/lib/marketplace';
+import { sendOrderConfirmationEmail, sendAdminEmail } from '@/lib/email';
 
 const MOLLIE_API = 'https://api.mollie.com/v2';
 
@@ -109,92 +110,81 @@ export async function POST(req: NextRequest) {
       console.log(`[mollie-webhook] Ordine ${orderId} aggiornato a: ${newOrderStatus}`);
     }
 
-    // ── 3. Notifica email admin (opzionale, se pagamento confermato) ───────────
+    // ── 3. Email al cliente + notifica admin (solo se pagamento confermato) ─────
     if (status === 'paid') {
-      const resendKey = process.env.RESEND_API_KEY;
-      const adminEmail = process.env.ADMIN_EMAIL || 'admin@kitwer26.com';
-      const fromEmail = process.env.FROM_EMAIL || 'notifiche@kitwer26.com';
+      try {
+        const { data: orderData } = await supabase
+          .from('orders')
+          .select(
+            'id, created_at, customer_name, customer_surname, customer_email, customer_phone, customer_address, customer_city, customer_cap, customer_country, total_amount, order_items(*)'
+          )
+          .eq('id', orderId)
+          .single();
 
-      if (resendKey) {
-        try {
-          const { data: orderData } = await supabase
-            .from('orders')
-            .select(
-              'id, created_at, customer_name, customer_surname, customer_email, customer_phone, customer_address, customer_city, customer_cap, customer_country, total_amount, order_items(*)'
-            )
-            .eq('id', orderId)
-            .single();
+        if (orderData) {
+          const locale: AmazonLocale =
+            (orderData.customer_country as AmazonLocale) && MARKETPLACE[orderData.customer_country as AmazonLocale]
+              ? (orderData.customer_country as AmazonLocale)
+              : 'it';
+          const market = MARKETPLACE[locale];
 
-          if (orderData) {
-            // ── Paese e link Amazon locale ─────────────────────────────────────
-            const locale: AmazonLocale =
-              (orderData.customer_country as AmazonLocale) && MARKETPLACE[orderData.customer_country as AmazonLocale]
-                ? (orderData.customer_country as AmazonLocale)
-                : 'it';
-            const market = MARKETPLACE[locale];
-
-            // Costruisce il link Amazon locale per ogni prodotto (se ASIN disponibile)
-            const itemsHtml = (orderData.order_items || [])
-              .map((item: any) => {
-                const asin      = item.product_url ? extractAsinFromUrl(item.product_url) : null;
-                const localUrl  = asin ? buildAffiliateUrl(asin, locale) : (item.product_url ?? null);
-                const linkHtml  = localUrl
-                  ? `<a href="${localUrl}" style="color:#00D4FF;font-size:11px;word-break:break-all;">${localUrl}</a>`
-                  : '<span style="color:#666;font-size:11px;">N/A</span>';
-                return `<tr>
-                  <td style="padding:6px 0;color:#aaa;vertical-align:top;">${item.product_title}<br>${linkHtml}</td>
-                  <td style="padding:6px 0;text-align:right;vertical-align:top;">x${item.quantity}</td>
-                  <td style="padding:6px 0;text-align:right;font-weight:bold;vertical-align:top;">€${(item.price_at_purchase / item.quantity).toFixed(2)}</td>
-                </tr>`;
-              })
-              .join('');
-
-            await fetch('https://api.resend.com/emails', {
-              method: 'POST',
-              headers: {
-                Authorization: `Bearer ${resendKey}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                from: `Kitwer26 <${fromEmail}>`,
-                to: [adminEmail],
-                subject: `✅ Pagamento Confermato — Ordine ${String(orderId).slice(0, 8)}`,
-                html: `
-                  <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#111;color:#eee;padding:24px;border-radius:8px;">
-                    <h2 style="color:#00FF94;margin-top:0;">✅ Pagamento Confermato</h2>
-
-                    <p style="margin:0 0 4px;"><strong>Ordine:</strong> <span style="font-family:monospace;font-size:12px;">${orderId}</span></p>
-                    <p style="margin:0 0 4px;"><strong>Cliente:</strong> ${orderData.customer_name} ${orderData.customer_surname}</p>
-                    ${orderData.customer_email ? `<p style="margin:0 0 4px;"><strong>Email:</strong> ${orderData.customer_email}</p>` : ''}
-                    ${orderData.customer_phone ? `<p style="margin:0 0 4px;"><strong>Telefono:</strong> ${orderData.customer_phone}</p>` : ''}
-                    ${orderData.customer_address ? `<p style="margin:0 0 16px;"><strong>Indirizzo:</strong> ${orderData.customer_address}, ${orderData.customer_cap ?? ''} ${orderData.customer_city ?? ''}</p>` : ''}
-
-                    <table style="width:100%;border-collapse:collapse;margin:16px 0;">
-                      ${itemsHtml}
-                      <tr style="border-top:1px solid #333;">
-                        <td colspan="2" style="padding:8px 0;font-weight:bold;text-align:right;">Totale pagato:</td>
-                        <td style="padding:8px 0;text-align:right;font-weight:bold;color:#00FF94;">€${orderData.total_amount.toFixed(2)}</td>
-                      </tr>
-                    </table>
-
-                    <div style="background:#1a1a2e;border:1px solid #333;border-radius:6px;padding:12px;margin-top:12px;">
-                      <p style="margin:0 0 4px;font-size:13px;font-weight:bold;">
-                        ${market.flag} Marketplace: ${market.label}
-                        <span style="font-weight:normal;color:#aaa;margin-left:8px;">Tag: ${market.tag}</span>
-                      </p>
-                    </div>
-
-                    <p style="margin-top:20px;font-size:12px;color:#666;">
-                      Accedi al pannello admin per visualizzare i dettagli completi e procedere con l'evasione.
-                    </p>
-                  </div>
-                `,
-              }),
-            });
+          // ── Email cliente (template React) ─────────────────────────────────
+          if (orderData.customer_email) {
+            await sendOrderConfirmationEmail(
+              orderData.customer_email,
+              String(orderId),
+              orderData.customer_name || 'Cliente',
+            ).catch((err) => console.error('[mollie-webhook] Email cliente:', err));
           }
-        } catch (emailErr) {
-          console.error('[mollie-webhook] Email send error:', emailErr);
+
+          // ── Email admin (HTML inline) ───────────────────────────────────────
+          const itemsHtml = (orderData.order_items || [])
+            .map((item: any) => {
+              const asin     = item.product_url ? extractAsinFromUrl(item.product_url) : null;
+              const localUrl = asin ? buildAffiliateUrl(asin, locale) : (item.product_url ?? null);
+              const linkHtml = localUrl
+                ? `<a href="${localUrl}" style="color:#00D4FF;font-size:11px;word-break:break-all;">${localUrl}</a>`
+                : '<span style="color:#666;font-size:11px;">N/A</span>';
+              return `<tr>
+                <td style="padding:6px 0;color:#aaa;vertical-align:top;">${item.product_title}<br>${linkHtml}</td>
+                <td style="padding:6px 0;text-align:right;vertical-align:top;">x${item.quantity}</td>
+                <td style="padding:6px 0;text-align:right;font-weight:bold;vertical-align:top;">€${(item.price_at_purchase / item.quantity).toFixed(2)}</td>
+              </tr>`;
+            })
+            .join('');
+
+          await sendAdminEmail({
+            subject: `✅ Pagamento Confermato — Ordine ${String(orderId).slice(0, 8)}`,
+            html: `
+              <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#111;color:#eee;padding:24px;border-radius:8px;">
+                <h2 style="color:#00FF94;margin-top:0;">✅ Pagamento Confermato</h2>
+                <p style="margin:0 0 4px;"><strong>Ordine:</strong> <span style="font-family:monospace;font-size:12px;">${orderId}</span></p>
+                <p style="margin:0 0 4px;"><strong>Cliente:</strong> ${orderData.customer_name} ${orderData.customer_surname}</p>
+                ${orderData.customer_email ? `<p style="margin:0 0 4px;"><strong>Email:</strong> ${orderData.customer_email}</p>` : ''}
+                ${orderData.customer_phone ? `<p style="margin:0 0 4px;"><strong>Telefono:</strong> ${orderData.customer_phone}</p>` : ''}
+                ${orderData.customer_address ? `<p style="margin:0 0 16px;"><strong>Indirizzo:</strong> ${orderData.customer_address}, ${orderData.customer_cap ?? ''} ${orderData.customer_city ?? ''}</p>` : ''}
+                <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+                  ${itemsHtml}
+                  <tr style="border-top:1px solid #333;">
+                    <td colspan="2" style="padding:8px 0;font-weight:bold;text-align:right;">Totale pagato:</td>
+                    <td style="padding:8px 0;text-align:right;font-weight:bold;color:#00FF94;">€${orderData.total_amount.toFixed(2)}</td>
+                  </tr>
+                </table>
+                <div style="background:#1a1a2e;border:1px solid #333;border-radius:6px;padding:12px;margin-top:12px;">
+                  <p style="margin:0 0 4px;font-size:13px;font-weight:bold;">
+                    ${market.flag} Marketplace: ${market.label}
+                    <span style="font-weight:normal;color:#aaa;margin-left:8px;">Tag: ${market.tag}</span>
+                  </p>
+                </div>
+                <p style="margin-top:20px;font-size:12px;color:#666;">
+                  Accedi al pannello admin per visualizzare i dettagli completi e procedere con l'evasione.
+                </p>
+              </div>
+            `,
+          });
         }
+      } catch (emailErr) {
+        console.error('[mollie-webhook] Email error:', emailErr);
       }
     }
 
