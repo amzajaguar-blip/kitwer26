@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Header from './Header';
 import SearchBar from './SearchBar';
 import CategoryFilter from './CategoryFilter';
+import SubCategoryFilter from './SubCategoryFilter';
 import ProductGrid from './ProductGrid';
 import ProductDrawer from './ProductDrawer';
 import CartDrawer from './CartDrawer';
@@ -14,13 +16,20 @@ import HeroSection from './HeroSection';
 import BundleSection from './BundleSection';
 import LazyAdBanner from './LazyAdBanner';
 import { useProducts } from '@/hooks/useProducts';
+import { Category } from '@/lib/products';
 import { Product } from '@/types/product';
 import { useIntl } from '@/context/InternationalizationContext';
 
 const ADSENSE_ID   = process.env.NEXT_PUBLIC_ADSENSE_ID   ?? '';
 const ADSENSE_SLOT = process.env.NEXT_PUBLIC_ADSENSE_SLOT ?? '';
 
-export default function HomepageClient() {
+function HomepageInner() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const initialCat    = (searchParams.get('cat') ?? 'all') as Category;
+  const initialSubCat = searchParams.get('sub') ?? '';
+
   const {
     products,
     total,
@@ -28,11 +37,14 @@ export default function HomepageClient() {
     setSearch,
     category,
     setCategory,
+    subCategory,
+    setSubCategory,
     loading,
     loadingMore,
     hasMore,
     loadMore,
-  } = useProducts();
+  } = useProducts({ initialCategory: initialCat, initialSubCategory: initialSubCat });
+
   const { t } = useIntl();
 
   const [drawerProduct, setDrawerProduct] = useState<Product | null>(null);
@@ -41,6 +53,26 @@ export default function HomepageClient() {
     sessionStorage.setItem('kitwer_product_clicked', '1');
     setDrawerProduct(p);
   };
+
+  // Aggiorna la categoria e resetta la sotto-categoria
+  const handleCategoryChange = useCallback((cat: Category) => {
+    setCategory(cat);
+    setSubCategory('');
+    const params = new URLSearchParams();
+    if (cat !== 'all') params.set('cat', cat);
+    const qs = params.toString();
+    router.push(qs ? `/?${qs}` : '/', { scroll: false });
+  }, [setCategory, setSubCategory, router]);
+
+  // Aggiorna la sotto-categoria e la URL (?sub=...)
+  const handleSubCategoryChange = useCallback((sub: string) => {
+    setSubCategory(sub);
+    const params = new URLSearchParams();
+    if (category !== 'all') params.set('cat', category);
+    if (sub) params.set('sub', sub);
+    const qs = params.toString();
+    router.push(qs ? `/?${qs}` : '/', { scroll: false });
+  }, [category, setSubCategory, router]);
 
   return (
     <div className="min-h-screen pt-[88px] overflow-x-hidden bg-zinc-950">
@@ -61,7 +93,15 @@ export default function HomepageClient() {
         className="sticky top-[88px] z-40 border-b border-zinc-800/80 bg-zinc-950/95 backdrop-blur-xl scroll-mt-0"
       >
         <SearchBar value={search} onChange={setSearch} placeholder={t('search')} />
-        <CategoryFilter active={category} onChange={setCategory} />
+        <CategoryFilter active={category} onChange={handleCategoryChange} />
+        {/* Sub-category pills — visibili solo quando una categoria specifica è attiva */}
+        {category !== 'all' && (
+          <SubCategoryFilter
+            category={category}
+            active={subCategory}
+            onChange={handleSubCategoryChange}
+          />
+        )}
       </div>
 
       {/* Product grid header */}
@@ -77,6 +117,14 @@ export default function HomepageClient() {
             : category.replace(/-/g, ' ').toUpperCase()
           }
         </span>
+        {subCategory && (
+          <>
+            <span className="font-mono text-[9px] text-zinc-700">/</span>
+            <span className="font-mono text-[9px] tracking-widest text-cyan-400/70 uppercase">
+              {subCategory.replace(/-/g, ' ')}
+            </span>
+          </>
+        )}
 
         <div className="ml-auto flex items-center gap-1.5">
           <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
@@ -108,5 +156,13 @@ export default function HomepageClient() {
       <CookieBanner />
       <ChatBotHelpFloating />
     </div>
+  );
+}
+
+export default function HomepageClient() {
+  return (
+    <Suspense>
+      <HomepageInner />
+    </Suspense>
   );
 }

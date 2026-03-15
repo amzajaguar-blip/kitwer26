@@ -18,6 +18,7 @@ export interface Product extends Record<string, any> {
   affiliate_url?: string;
   price?: string | number;
   is_price_pending?: boolean;
+  sub_category?: string;
   variants?: ProductVariant[];
   // Campi legacy / fallback
   title?: string;

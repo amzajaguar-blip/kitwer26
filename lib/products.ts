@@ -24,6 +24,89 @@ export const UNSORTED_CAT: Category = 'UNSORTED';
 
 export const PAGE_SIZE = 12;
 
+/** Sub-categorie disponibili per ogni macro-categoria */
+export const SUB_CATEGORIES: Record<string, { id: string; label: string }[]> = {
+  'hardware-crypto-wallets': [
+    { id: 'entry-level',  label: 'Entry Level' },
+    { id: 'premium',      label: 'Premium' },
+    { id: 'air-gapped',   label: 'Air-Gapped' },
+    { id: 'backup-seed',  label: 'Backup Seed' },
+  ],
+  'comms-security-shield': [
+    { id: 'privacy-screen',   label: 'Privacy Screen' },
+    { id: 'security-keys',    label: 'Security Keys' },
+    { id: 'rfid-protection',  label: 'RFID / Faraday' },
+    { id: 'encrypted-comms',  label: 'Encrypted Comms' },
+  ],
+  'survival-edc-tech': [
+    { id: 'flashlights',      label: 'Flashlights' },
+    { id: 'multitools',       label: 'Multitools' },
+    { id: 'water-filter',     label: 'Water Filter' },
+    { id: 'cordage-shelter',  label: 'Cordage & Shelter' },
+    { id: 'medical-kit',      label: 'Medical Kit' },
+    { id: 'navigation',       label: 'Navigation' },
+  ],
+  'tactical-power-grid': [
+    { id: 'power-stations', label: 'Power Stations' },
+    { id: 'solar-panels',   label: 'Solar Panels' },
+    { id: 'power-banks',    label: 'Power Banks' },
+    { id: 'batteries',      label: 'Batteries' },
+  ],
+  'Tactical Power': [
+    { id: 'power-stations', label: 'Power Stations' },
+    { id: 'solar-panels',   label: 'Solar Panels' },
+    { id: 'power-banks',    label: 'Power Banks' },
+    { id: 'batteries',      label: 'Batteries' },
+  ],
+  'sim-racing-accessories-premium': [
+    { id: 'steering-wheels', label: 'Steering Wheels' },
+    { id: 'pedals',          label: 'Pedals' },
+    { id: 'shifters',        label: 'Shifters' },
+    { id: 'cockpit-rigs',    label: 'Cockpits & Rigs' },
+    { id: 'handbrakes',      label: 'Handbrakes' },
+  ],
+  'sim-racing': [
+    { id: 'steering-wheels', label: 'Steering Wheels' },
+    { id: 'pedals',          label: 'Pedals' },
+    { id: 'shifters',        label: 'Shifters' },
+    { id: 'cockpit-rigs',    label: 'Cockpits & Rigs' },
+    { id: 'handbrakes',      label: 'Handbrakes' },
+  ],
+  'trading-gaming-desk-accessories-premium': [
+    { id: 'monitor-arms',     label: 'Monitor Arms' },
+    { id: 'gaming-chairs',    label: 'Gaming Chairs' },
+    { id: 'desk-accessories', label: 'Desk Accessories' },
+    { id: 'cooling-pads',     label: 'Cooling Pads' },
+    { id: 'vr-headsets',      label: 'VR / Headsets' },
+  ],
+  'pc-hardware-high-ticket': [
+    { id: 'gpus',        label: 'GPUs' },
+    { id: 'cpus',        label: 'CPUs' },
+    { id: 'memory',      label: 'Memory / RAM' },
+    { id: 'storage',     label: 'Storage' },
+    { id: 'cpu-cooling', label: 'CPU Cooling' },
+  ],
+  'PC Hardware': [
+    { id: 'gpus',        label: 'GPUs' },
+    { id: 'cpus',        label: 'CPUs' },
+    { id: 'memory',      label: 'Memory / RAM' },
+    { id: 'storage',     label: 'Storage' },
+    { id: 'cpu-cooling', label: 'CPU Cooling' },
+  ],
+  'sicurezza-domotica-high-end': [
+    { id: 'smart-cameras',   label: 'Smart Cameras' },
+    { id: 'smart-locks',     label: 'Smart Locks' },
+    { id: 'alarm-systems',   label: 'Alarm Systems' },
+    { id: 'home-automation', label: 'Home Automation' },
+  ],
+  'Smart Security': [
+    { id: 'smart-cameras',   label: 'Smart Cameras' },
+    { id: 'smart-locks',     label: 'Smart Locks' },
+    { id: 'alarm-systems',   label: 'Alarm Systems' },
+    { id: 'home-automation', label: 'Home Automation' },
+  ],
+};
+
 // ─── Mappa cross-selling: per ogni categoria "core", le categorie "accessori" suggerite ───
 const COMPLEMENTARY_MAP: Record<string, string[]> = {
   'hardware-crypto-wallets':                   ['comms-security-shield', 'survival-edc-tech', 'tactical-power-grid'],
@@ -92,16 +175,18 @@ export interface FetchProductsResult {
 export async function fetchProducts({
   search = '',
   category = 'all',
+  subCategory = '',
   page = 0,
 }: {
   search?: string;
   category?: Category;
+  subCategory?: string;
   page?: number;
 }): Promise<FetchProductsResult> {
 
   let query = supabase
     .from('products')
-    .select('id, name, category, description, image_url, image_urls, affiliate_url, price', { count: 'exact' })
+    .select('id, name, category, sub_category, description, image_url, image_urls, affiliate_url, price', { count: 'exact' })
     .not('image_url', 'is', null)
     .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
@@ -113,6 +198,11 @@ export async function fetchProducts({
   // Filtro categoria tramite la colonna 'category' del DB
   if (category !== 'all') {
     query = query.eq('category', category);
+  }
+
+  // Filtro sotto-categoria
+  if (subCategory.trim()) {
+    query = query.eq('sub_category', subCategory.trim());
   }
 
   const { data, error, count } = await query;
