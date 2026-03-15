@@ -162,13 +162,18 @@ SUB_KW['PC Hardware']     = SUB_KW['pc-hardware-high-ticket'];
 SUB_KW['Smart Security']  = SUB_KW['sicurezza-domotica-high-end'];
 
 // ── Funzione di classificazione ───────────────────────────────────────────────
+/**
+ * Classifica un prodotto nella sua sotto-categoria.
+ * Fallback: 'general' se categoria è nota ma nessuna keyword matcha.
+ * Fallback: null se la categoria non è mappata (nessun sub-sistema per quella cat).
+ */
 function assignSubCategory(
   category: string,
   name: string,
   description: string,
 ): string | null {
   const rules = SUB_KW[category];
-  if (!rules) return null;
+  if (!rules) return null; // categoria non mappata → nessuna sub-categoria
 
   const text = `${name} ${description ?? ''}`.toLowerCase();
   for (const [subCat, keywords] of rules) {
@@ -176,7 +181,8 @@ function assignSubCategory(
       if (text.includes(kw)) return subCat;
     }
   }
-  return null;
+  // Nessuna keyword matchata → fallback 'general' (non perdiamo il prodotto)
+  return 'general';
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -247,6 +253,7 @@ async function main() {
       updates.push({ id: p.id, sub_category: sub });
       stats[`${cat} → ${sub}`] = (stats[`${cat} → ${sub}`] ?? 0) + 1;
     } else {
+      // null = categoria non mappata (nessun sistema sub per quella cat)
       skipped++;
     }
   }
