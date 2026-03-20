@@ -72,32 +72,32 @@ export async function POST(req: NextRequest) {
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  // ── Recupero affiliate_url lato server e costruzione link locale ─────────────
-  let affiliateUrl: string | null = null;
-  let localAffiliateUrl: string | null = null;
+  // ── Recupero product_url diretto per ogni item (batch) ──────────────────────
+  // Mappa productId → product_url Amazon diretto (NO tag affiliato).
+  // L'admin riceve il link esatto per acquistare il prodotto su Amazon.
+  const productUrlMap = new Map<string, string>();
 
-  if (productId) {
+  const allIds = [
+    ...(cartItems ?? []).map(i => i.productId).filter(Boolean) as string[],
+    ...(productId ? [productId] : []),
+  ];
+
+  if (allIds.length > 0) {
     try {
-      const { data: pd } = await supabase
+      const { data: pds } = await supabase
         .from('products')
-        .select('affiliate_url')
-        .eq('id', productId)
-        .single();
-      affiliateUrl = pd?.affiliate_url ?? null;
+        .select('id, product_url')
+        .in('id', allIds);
+
+      for (const pd of pds ?? []) {
+        if (pd.product_url) productUrlMap.set(String(pd.id), pd.product_url);
+      }
     } catch { /* non bloccante */ }
   }
 
-  // Costruisce il link Amazon locale con tag affiliazione corretto
-  if (affiliateUrl) {
-    const asin = extractAsinFromUrl(affiliateUrl);
-    if (asin) {
-      localAffiliateUrl = buildAffiliateUrl(asin, locale);
-    }
-  }
-  // Fallback: link alla homepage del marketplace locale
-  if (!localAffiliateUrl) {
-    const market = MARKETPLACE[locale];
-    localAffiliateUrl = `https://${market.domain}/?tag=${market.tag}`;
+  // Helper: restituisce il product_url diretto (o null se non trovato)
+  function getAffiliateUrl(id: string | null | undefined): string | null {
+    return (id && productUrlMap.get(id)) ?? null;
   }
 
   // ── 1. Salva ordine su Supabase con dati cliente completi ───────────────────
@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
             product_variant:   null,
             quantity:          item.quantity,
             price_at_purchase: item.finalPrice * item.quantity,
-            product_url:       localAffiliateUrl,
+            product_url:       getAffiliateUrl(item.productId),   // ← link specifico per ogni prodotto
           }))
         : [{
             order_id:          orderId,
@@ -145,7 +145,7 @@ export async function POST(req: NextRequest) {
             product_variant:   null,
             quantity,
             price_at_purchase: parseFloat(totalAmount),
-            product_url:       localAffiliateUrl,
+            product_url:       getAffiliateUrl(productId),         // ← link del singolo prodotto
           }];
 
       const { error: itemErr } = await supabase.from('order_items').insert(itemsToInsert);
@@ -177,7 +177,7 @@ export async function POST(req: NextRequest) {
             <tr><td style="padding:4px 0;color:#aaa;">Indirizzo</td><td style="padding:4px 0;">${customer.address}, ${customer.cap} ${customer.city} (${customer.province})</td></tr>
             ` : ''}
             <tr style="border-top:1px solid #333;"><td style="padding:10px 0 4px;color:#aaa;">Link Amazon</td>
-              <td style="padding:10px 0 4px;"><a href="${localAffiliateUrl}" style="color:#00D4FF;word-break:break-all;">${localAffiliateUrl}</a><span style="display:block;font-size:11px;color:#666;">Tag: ${market.tag}</span></td>
+              <td style="padding:10px 0 4px;"><a href="${getAffiliateUrl(productId)}" style="color:#00D4FF;word-break:break-all;">${getAffiliateUrl(productId)}</a><span style="display:block;font-size:11px;color:#666;">Tag: ${market.tag}</span></td>
             </tr>
             <tr><td style="padding:4px 0;color:#aaa;">ID Ordine</td><td style="padding:4px 0;font-family:monospace;font-size:12px;">${orderId ?? 'N/A'}</td></tr>
             <tr><td style="padding:4px 0;color:#aaa;">Timestamp</td><td style="padding:4px 0;">${new Date().toLocaleString('it-IT')}</td></tr>
@@ -205,11 +205,40 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const baseUrl     = process.env.NEXT_PUBLIC_SITE_URL || 'https://kitwer26.com';
-    const redirectUrl = `${baseUrl}/checkout/success${orderId ? `?order=${orderId}` : ''}`;
+    // redirectUrl: derivato dall'host della richiesta (funziona sia in locale che in prod)
+    // NOTA: x-forwarded-proto NON esiste in Next.js dev locale (nessun proxy) →
+    //       default 'http' per evitare https://localhost che causa SSL error nel browser.
+    //       In produzione/Vercel, x-forwarded-proto è sempre 'https'.
+    const host        = req.headers.get('host') ?? 'kitwer26.com';
+    const proto       = req.headers.get('x-forwarded-proto') ?? 'http';
+    const requestBase = `${proto}://${host}`;
+
+    // Mollie reindirizza sempre al success — la success page legge lo stato
+    // e ri-dirige a /checkout/error se il pagamento risulta fallito/annullato.
+    const redirectUrl = orderId
+      ? `${requestBase}/checkout/success?order=${orderId}`
+      : `${requestBase}/checkout/success`;
+
+    // webhookUrl: deve essere un URL pubblico HTTPS raggiungibile da Mollie
+    const publicBase  = process.env.NEXT_PUBLIC_SITE_URL || 'https://kitwer26.com';
     const webhookUrl  = process.env.VERCEL_URL
       ? `https://${process.env.VERCEL_URL}/api/webhook/mollie`
-      : (process.env.MOLLIE_WEBHOOK_URL ?? `${baseUrl}/api/webhook/mollie`);
+      : (process.env.MOLLIE_WEBHOOK_URL ?? `${publicBase}/api/webhook/mollie`);
+
+    // Mappa locale → Mollie locale (BCP 47)
+    const mollieLocaleMap: Record<string, string> = {
+      it: 'it_IT', de: 'de_DE', fr: 'fr_FR',
+      es: 'es_ES', uk: 'en_GB', us: 'en_US',
+    };
+    const mollieLocale = mollieLocaleMap[locale] ?? 'it_IT';
+
+    // Metodi abilitati: escluso paypal perché in test-mode Mollie/PayPal
+    // causa errori di protocollo in Firefox/Chrome (bug noto Mollie sandbox).
+    // In produzione rimuovere il filtro o aggiungere 'paypal' all'array.
+    const isTestMode = mollieKey.startsWith('test_');
+    const allowedMethods = isTestMode
+      ? ['creditcard', 'ideal', 'bancontact', 'eps', 'giropay', 'sofort']
+      : undefined; // in prod offriamo tutti i metodi disponibili
 
     const mollieRes = await fetch(`${MOLLIE_API}/payments`, {
       method:  'POST',
@@ -225,6 +254,8 @@ export async function POST(req: NextRequest) {
         description:  `Kitwer26 — ${productName}`,
         redirectUrl,
         webhookUrl,
+        locale:       mollieLocale,
+        ...(allowedMethods ? { method: allowedMethods } : {}),
         metadata: {
           order_id:     orderId,
           product_id:   productId,
@@ -247,7 +278,15 @@ export async function POST(req: NextRequest) {
       throw new Error('URL checkout non ricevuto da Mollie');
     }
 
-    console.log(`[checkout] Pagamento Mollie creato — orderId=${orderId} amount=${mollieCurrency} ${totalAmount} locale=${locale}`);
+    // Salva mollieId nell'ordine per poter verificare il pagamento lato success page
+    if (orderId && mollieData.id) {
+      await supabase
+        .from('orders')
+        .update({ mollie_payment_id: mollieData.id })
+        .eq('id', orderId);
+    }
+
+    console.log(`[checkout] Pagamento Mollie creato — orderId=${orderId} mollieId=${mollieData.id} amount=${mollieCurrency} ${totalAmount} locale=${locale}`);
 
     return NextResponse.json({
       success:     true,

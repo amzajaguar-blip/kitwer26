@@ -6,13 +6,14 @@ import { useIntl } from '@/context/InternationalizationContext';
 
 // ── Icon paths (public/svg_kitwer) ──────────────────────────────────────────
 const ICONS = {
-  cryptoWallets: '/svg_kitwer/freepik__svg-crypto-wallets__62566.png',
-  security:      '/svg_kitwer/freepik__svg-smart-security-emblem-shield-fused-with-digita__35743.png',
-  survivalEdc:   '/svg_kitwer/freepik__svg-survival-edc__62565-removebg-preview.png',
-  tacticalPower: '/svg_kitwer/freepik__svg-tactila-power-icon-crisp-vector-lines-monochro__62564.png',
-  simRacing:     '/svg_kitwer/freepik__svg-sim-racing-wheel-icon-clean-vector-strokes-sim__62562.png',
-  pcHardware:    '/svg_kitwer/freepik__svg-icon-set-of-pc-hardware-components-motherboard__62563-removebg-preview.png',
-  box:           '/svg_kitwer/freepik__scatola-pacco-svg-flat-cardboard-box-icon-with-fol__5786-removebg-preview.png',
+  cryptoWallets:    '/svg_kitwer/freepik__svg-crypto-wallets__62566.png',
+  security:         '/svg_kitwer/freepik__svg-smart-security-emblem-shield-fused-with-digita__35743.png',
+  smartSecurity:    '/svg_kitwer/freepik__svg-lucchetto-doro-detailed-gold-padlock-with-engr__17793-removebg-preview.png',
+  survivalEdc:      '/svg_kitwer/freepik__svg-survival-edc__62565-removebg-preview.png',
+  tacticalPower:    '/svg_kitwer/freepik__svg-tactila-power-icon-crisp-vector-lines-monochro__62564.png',
+  simRacing:        '/svg_kitwer/freepik__svg-sim-racing-wheel-icon-clean-vector-strokes-sim__62562.png',
+  pcHardware:       '/svg_kitwer/freepik__svg-icon-set-of-pc-hardware-components-motherboard__62563-removebg-preview.png',
+  box:              '/svg_kitwer/freepik__scatola-pacco-svg-flat-cardboard-box-icon-with-fol__5786-removebg-preview.png',
 } as const;
 
 interface CategoryGroup {
@@ -69,9 +70,8 @@ function CategoryFilterContent({ active, onChange }: Props) {
       groupTag:   'Security',
       items: [
         { id: 'hardware-crypto-wallets',        label: t('categories.cryptoWallets'),   icon: ICONS.cryptoWallets },
-        { id: 'comms-security-shield',          label: t('categories.communications'),  icon: ICONS.security },
+        { id: 'Smart Security',                 label: t('categories.smartSecurity'),   icon: ICONS.smartSecurity },
         { id: 'survival-edc-tech',              label: t('categories.survivalEdc'),     icon: ICONS.survivalEdc },
-        { id: 'Tactical Power',                 label: t('categories.tacticalPower'),   icon: ICONS.tacticalPower },
       ],
     },
     {
@@ -81,14 +81,14 @@ function CategoryFilterContent({ active, onChange }: Props) {
         { id: 'sim-racing-accessories-premium',          label: t('categories.simRacing'),  icon: ICONS.simRacing },
         { id: 'trading-gaming-desk-accessories-premium', label: t('categories.gamingDesk'), icon: ICONS.pcHardware },
         { id: 'PC Hardware',                             label: t('categories.pcHardware'), icon: ICONS.pcHardware },
+        { id: 'pc-hardware-high-ticket',                 label: 'PC Elite',                 icon: ICONS.pcHardware },
       ],
     },
     {
-      groupLabel: t('categories.premium'),
-      groupTag:   'Premium',
+      groupLabel: 'Elite',
+      groupTag:   'Elite Tier',
       items: [
-        { id: 'sim-racing',                     label: t('categories.simRacingPro'),  icon: ICONS.simRacing },
-        { id: 'Smart Security',                 label: t('categories.smartSecurity'), icon: ICONS.security },
+        { id: 'sicurezza-domotica-high-end', label: 'Smart Home', icon: ICONS.smartSecurity },
       ],
     },
   ];

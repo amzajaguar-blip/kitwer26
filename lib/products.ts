@@ -4,8 +4,6 @@ import { Product } from '@/types/product';
 export type Category =
   | 'all'
   | 'hardware-crypto-wallets'
-  | 'tactical-power-grid'
-  | 'comms-security-shield'
   | 'survival-edc-tech'
   | 'trading-gaming-desk-accessories-premium'
   | 'sim-racing-accessories-premium'
@@ -14,10 +12,11 @@ export type Category =
   | 'sicurezza-domotica-high-end'
   // categorie forzate da file override (corrispondono esattamente al DB)
   | 'Smart Security'
-  | 'Tactical Power'
   | 'PC Hardware'
   // prodotti importati ma non ancora classificati
-  | 'UNSORTED';
+  | 'UNSORTED'
+  // alias navigabili — alias lato UI per le categorie elite bundle
+  | 'comms-security-shield';
 
 /** Value used by importer to mark uncategorized rows */
 export const UNSORTED_CAT: Category = 'UNSORTED';
@@ -38,35 +37,13 @@ export const SUB_CATEGORIES: Record<string, { id: string; label: string; slug: s
     { id: 'backup-seed', label: 'Backup Seed', slug: 'backup-seed' },
     { id: 'general',     label: 'General',     slug: 'general' },
   ],
-  'comms-security-shield': [
-    { id: 'privacy-screen',  label: 'Privacy Screen',  slug: 'privacy-screen' },
-    { id: 'security-keys',   label: 'Security Keys',   slug: 'security-keys' },
-    { id: 'rfid-protection', label: 'RFID / Faraday',  slug: 'rfid-protection' },
-    { id: 'encrypted-comms', label: 'Encrypted Comms', slug: 'encrypted-comms' },
-    { id: 'general',         label: 'General',         slug: 'general' },
-  ],
   'survival-edc-tech': [
-    { id: 'flashlights',     label: 'Flashlights',       slug: 'flashlights' },
     { id: 'multitools',      label: 'Multitools',        slug: 'multitools' },
     { id: 'water-filter',    label: 'Water Filter',      slug: 'water-filter' },
     { id: 'cordage-shelter', label: 'Cordage & Shelter', slug: 'cordage-shelter' },
     { id: 'medical-kit',     label: 'Medical Kit',       slug: 'medical-kit' },
     { id: 'navigation',      label: 'Navigation',        slug: 'navigation' },
     { id: 'general',         label: 'General',           slug: 'general' },
-  ],
-  'tactical-power-grid': [
-    { id: 'power-stations', label: 'Power Stations', slug: 'power-stations' },
-    { id: 'solar-panels',   label: 'Solar Panels',   slug: 'solar-panels' },
-    { id: 'power-banks',    label: 'Power Banks',    slug: 'power-banks' },
-    { id: 'batteries',      label: 'Batteries',      slug: 'batteries' },
-    { id: 'general',        label: 'General',        slug: 'general' },
-  ],
-  'Tactical Power': [
-    { id: 'power-stations', label: 'Power Stations', slug: 'power-stations' },
-    { id: 'solar-panels',   label: 'Solar Panels',   slug: 'solar-panels' },
-    { id: 'power-banks',    label: 'Power Banks',    slug: 'power-banks' },
-    { id: 'batteries',      label: 'Batteries',      slug: 'batteries' },
-    { id: 'general',        label: 'General',        slug: 'general' },
   ],
   'sim-racing-accessories-premium': [
     { id: 'steering-wheels', label: 'Steering Wheels',  slug: 'steering-wheels' },
@@ -143,17 +120,15 @@ export function getSubCategoryDef(category: string, slug: string) {
 
 // ─── Mappa cross-selling: per ogni categoria "core", le categorie "accessori" suggerite ───
 const COMPLEMENTARY_MAP: Record<string, string[]> = {
-  'hardware-crypto-wallets':                   ['comms-security-shield', 'survival-edc-tech', 'tactical-power-grid'],
-  'tactical-power-grid':                       ['survival-edc-tech', 'hardware-crypto-wallets'],
+  'hardware-crypto-wallets':                   ['survival-edc-tech'],
   'comms-security-shield':                     ['survival-edc-tech', 'hardware-crypto-wallets'],
-  'survival-edc-tech':                         ['comms-security-shield', 'tactical-power-grid', 'hardware-crypto-wallets'],
+  'survival-edc-tech':                         ['hardware-crypto-wallets'],
   'trading-gaming-desk-accessories-premium':   ['sim-racing-accessories-premium', 'pc-hardware-high-ticket'],
   'sim-racing-accessories-premium':            ['trading-gaming-desk-accessories-premium', 'pc-hardware-high-ticket'],
   'sim-racing':                                ['sim-racing-accessories-premium', 'trading-gaming-desk-accessories-premium'],
   'pc-hardware-high-ticket':                   ['trading-gaming-desk-accessories-premium', 'sim-racing-accessories-premium'],
   'sicurezza-domotica-high-end':               ['hardware-crypto-wallets', 'comms-security-shield'],
   'Smart Security':                            ['hardware-crypto-wallets', 'comms-security-shield'],
-  'Tactical Power':                            ['survival-edc-tech', 'hardware-crypto-wallets'],
   'PC Hardware':                               ['trading-gaming-desk-accessories-premium', 'sim-racing-accessories-premium'],
 };
 
@@ -185,7 +160,7 @@ export async function fetchRelatedProducts(
 
   const { data, error } = await supabase
     .from('products')
-    .select('id, name, category, description, image_url, image_urls, affiliate_url, price')
+    .select('id, name, category, description, image_url, image_urls, product_url, price')
     .in('category', searchCats)
     .neq('id', currentId)
     .not('image_url', 'is', null)
@@ -197,6 +172,69 @@ export async function fetchRelatedProducts(
   }
 
   return ((data ?? []) as Product[]).filter((p) => hasValidImage(p.image_url));
+}
+
+// ─── Tactical Deals ──────────────────────────────────────────────────────────────
+
+export interface TacticalDeal {
+  id:           string;
+  name:         string;
+  category:     string;
+  sub_category: string | null;
+  image_url:    string | null;
+  image_urls:   string[] | null;
+  product_url:  string | null;
+  rawPrice:     number;
+  /** Prezzo finale con markup 1.2× (quello che il cliente paga) */
+  dealPrice:    number;
+  /** Prezzo di riferimento mercato 1.45× — usato per mostrare lo sconto */
+  marketPrice:  number;
+  /** Percentuale di risparmio arrotondata */
+  discountPct:  number;
+}
+
+/**
+ * Restituisce i prodotti Budget King ordinati per prezzo crescente.
+ * dealPrice  = rawPrice × 1.20  (nostro markup standard)
+ * marketPrice= rawPrice × 1.45  (prezzo medio di mercato di riferimento)
+ * discountPct ≈ 17%  — visible saving rispetto al mercato
+ */
+export async function getTacticalDeals(limit = 8): Promise<TacticalDeal[]> {
+  const { data, error } = await supabase
+    .from('products')
+    .select('id, name, category, sub_category, image_url, image_urls, product_url, price')
+    .eq('is_budget_king', true)
+    .not('price', 'is', null)
+    .order('price', { ascending: true })
+    .limit(limit);
+
+  if (error) {
+    console.error('[getTacticalDeals] Supabase error:', error.message);
+    return [];
+  }
+
+  const deals: TacticalDeal[] = [];
+  for (const row of data ?? []) {
+    const raw = parseFloat(String(row.price ?? ''));
+    if (isNaN(raw) || raw <= 0) continue;
+    const dealPrice   = Math.round(raw * 1.20 * 100) / 100;
+    const marketPrice = Math.round(raw * 1.45 * 100) / 100;
+    const discountPct = Math.round((1 - dealPrice / marketPrice) * 100);
+    deals.push({
+      id:           String(row.id),
+      name:         row.name         ?? '',
+      category:     row.category     ?? '',
+      sub_category: row.sub_category ?? null,
+      image_url:    row.image_url    ?? null,
+      image_urls:   Array.isArray(row.image_urls) ? row.image_urls : null,
+      product_url:  row.product_url  ?? null,
+      rawPrice:     raw,
+      dealPrice,
+      marketPrice,
+      discountPct,
+    });
+  }
+  return deals;
 }
 
 // ─── Fetch principale con paginazione ───────────────────────────────────────────
@@ -218,23 +256,23 @@ export async function fetchProducts({
   page?: number;
 }): Promise<FetchProductsResult> {
 
+  // Paginazione sempre attiva — evita di caricare migliaia di righe in una volta
+  const rangeFrom = page * PAGE_SIZE;
+  const rangeTo   = (page + 1) * PAGE_SIZE - 1;
+
   let query = supabase
     .from('products')
-    .select('id, name, category, sub_category, description, image_url, image_urls, affiliate_url, price', { count: 'exact' })
-    .not('image_url', 'is', null)
-    .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+    .select('id, name, category, sub_category, description, image_url, image_urls, product_url, price', { count: 'exact' })
+    .range(rangeFrom, rangeTo);
 
-  // Ricerca testuale sulla colonna 'name' (colonna reale nel DB)
   if (search.trim()) {
     query = query.ilike('name', `%${search.trim()}%`);
   }
 
-  // Filtro categoria tramite la colonna 'category' del DB
   if (category !== 'all') {
     query = query.eq('category', category);
   }
 
-  // Filtro sotto-categoria
   if (subCategory.trim()) {
     query = query.eq('sub_category', subCategory.trim());
   }
@@ -246,11 +284,5 @@ export async function fetchProducts({
     throw error;
   }
 
-  if (data && data.length > 0) {
-    const cols = Object.keys(data[0]).join(', ');
-    console.log(`[fetchProducts] pagina=${page} count=${data.length} colonne=[${cols}]`);
-  }
-
-  const filtered = ((data ?? []) as Product[]).filter((p) => hasValidImage(p.image_url));
-  return { products: filtered, total: count };
+  return { products: (data ?? []) as Product[], total: count };
 }
