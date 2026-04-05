@@ -4,7 +4,7 @@ export const Hero = () => {
       <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-white mb-6 uppercase">
         Kitwer <span className="text-cyan-500">2026</span>
       </h1>
-      <p className="text-xl text-gray-400 max-w-2xl mb-10">
+      <p className="text-xl text-th-subtle max-w-2xl mb-10">
         Hardware ad alte prestazioni, simulazione professionale e setup estremi.
         Curati per chi non accetta compromessi.
       </p>

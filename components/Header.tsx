@@ -21,7 +21,7 @@ export default function Header() {
         <div className="flex items-center gap-3 w-10">
           <div className="flex items-center gap-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse shrink-0" />
-            <span className="font-mono text-[8px] tracking-widest text-zinc-600 uppercase hidden sm:block">
+            <span className="font-mono text-[8px] tracking-widest text-th-subtle uppercase hidden sm:block">
               SECURE
             </span>
           </div>
@@ -31,7 +31,7 @@ export default function Header() {
         {/* Logo centrato */}
         <div className="absolute left-1/2 -translate-x-1/2">
           <Image
-            src="/LOGOKITWER.png"
+            src="/icon.png"
             alt="Kitwer26"
             width={160}
             height={56}
@@ -43,7 +43,7 @@ export default function Header() {
         {/* Cart */}
         <button
           onClick={openCart}
-          className="relative w-10 h-10 flex items-center justify-center rounded-sm border border-zinc-700/60 hover:border-cyan-500/50 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 transition-all active:scale-95 min-h-[44px] min-w-[44px]"
+          className="relative w-10 h-10 flex items-center justify-center rounded-sm border border-zinc-700/60 hover:border-cyan-500/50 bg-zinc-900 hover:bg-zinc-800 text-th-subtle transition-all active:scale-95 min-h-[44px] min-w-[44px]"
           aria-label="Carrello"
         >
           <ShoppingBag size={18} />

@@ -56,6 +56,7 @@ export default function VariantSelector({ variants, onChange, onImageChange }: P
                     width={40}
                     height={40}
                     className="w-full h-full object-contain"
+                    unoptimized
                   />
                 </button>
               ) : (

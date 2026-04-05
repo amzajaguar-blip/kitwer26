@@ -17,7 +17,7 @@ export default function SafeFocus({ category }: SafeFocusProps) {
         </span>
       </div>
 
-      <div className="grid grid-cols-1 gap-2.5 text-[11px] text-zinc-400 font-sans">
+      <div className="grid grid-cols-1 gap-2.5 text-[11px] text-th-subtle font-sans">
         <div className="flex items-center gap-2">
           <Lock className="w-3.5 h-3.5 text-green-500 shrink-0" />
           <span>{isCrypto ? 'Sigillo Anti-Manomissione Integro' : 'Pagamento Criptato SSL'}</span>

@@ -16,7 +16,7 @@ export default function SubCategoryFilter({ category, active, onChange }: Props)
     <div className="overflow-x-auto scrollbar-hide px-4 py-1.5 border-t border-zinc-800/60">
       <div className="flex items-center gap-2 min-w-max">
         {/* Label */}
-        <span className="font-mono text-[8px] tracking-widest text-zinc-600 uppercase shrink-0 mr-1">
+        <span className="font-mono text-[8px] tracking-widest text-th-subtle uppercase shrink-0 mr-1">
           sub
         </span>
 
@@ -26,7 +26,7 @@ export default function SubCategoryFilter({ category, active, onChange }: Props)
           className={`flex-shrink-0 inline-flex items-center px-2.5 h-6 rounded-full font-mono text-[10px] font-medium tracking-wide transition-all duration-150 active:scale-95 ${
             active === ''
               ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/60 shadow-[0_0_8px_rgba(6,182,212,0.25)]'
-              : 'bg-zinc-900 text-zinc-500 border border-zinc-700/40 hover:border-zinc-600 hover:text-zinc-300'
+              : 'bg-zinc-900 text-th-subtle border border-zinc-700/40 hover:border-zinc-600 hover:text-white'
           }`}
         >
           All
@@ -42,7 +42,7 @@ export default function SubCategoryFilter({ category, active, onChange }: Props)
               className={`flex-shrink-0 inline-flex items-center px-2.5 h-6 rounded-full font-mono text-[10px] font-medium tracking-wide transition-all duration-150 active:scale-95 ${
                 isActive
                   ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/60 shadow-[0_0_8px_rgba(6,182,212,0.25)]'
-                  : 'bg-zinc-900 text-zinc-500 border border-zinc-700/40 hover:border-zinc-600 hover:text-zinc-300'
+                  : 'bg-zinc-900 text-th-subtle border border-zinc-700/40 hover:border-zinc-600 hover:text-white'
               }`}
             >
               {sub.label}

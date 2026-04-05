@@ -1,8 +1,29 @@
 'use client';
 
+import { useEffect, useRef, Component, ReactNode } from 'react';
 import ProductCard from './ProductCard';
 import { Product } from '@/types/product';
 import { useIntl } from '@/context/InternationalizationContext';
+
+// ── Error boundary per singola card ──────────────────────────────────────────
+// Isola il crash di un ProductCard senza buttare giù l'intera griglia
+class CardBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { failed: false };
+  }
+  static getDerivedStateFromError() { return { failed: true }; }
+  render() {
+    if (this.state.failed) {
+      return (
+        <div className="flex flex-col bg-zinc-900 border border-zinc-800 rounded-sm aspect-square items-center justify-center opacity-30">
+          <span className="font-mono text-[9px] text-th-subtle text-center px-2">// DATI NON DISP.</span>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 interface ProductGridProps {
   products: Product[];
@@ -39,6 +60,23 @@ export default function ProductGrid({
   onOpenDrawer,
 }: ProductGridProps) {
   const { t } = useIntl();
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // Scroll infinito automatico — carica il prossimo blocco quando il sentinel è visibile
+  useEffect(() => {
+    if (!hasMore || loadingMore) return;
+    const el = sentinelRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) onLoadMore();
+      },
+      { rootMargin: '300px' }, // inizia a caricare 300px prima del bordo
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, onLoadMore]);
 
   if (loading) {
     return (
@@ -52,7 +90,7 @@ export default function ProductGrid({
 
   if (products.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-gray-600">
+      <div className="flex flex-col items-center justify-center py-24 text-th-subtle">
         <svg
           width="44"
           height="44"
@@ -65,7 +103,7 @@ export default function ProductGrid({
           <circle cx="11" cy="11" r="8" />
           <path d="m21 21-4.35-4.35" />
         </svg>
-        <p className="text-sm text-gray-500">{t('noProducts')}</p>
+        <p className="text-sm text-th-subtle">{t('noProducts')}</p>
       </div>
     );
   }
@@ -74,53 +112,30 @@ export default function ProductGrid({
     <>
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 px-4 sm:px-6 pt-4 sm:pt-6 max-w-6xl mx-auto">
         {products.map((p, i) => (
-          <div
-            key={p.id ?? `${p.name}-${i}`}
-            className="animate-scale-in opacity-0"
-            style={{
-              animationDelay: `${Math.min(i * 60, 400)}ms`,
-              animationFillMode: 'forwards',
-            }}
-          >
-            <ProductCard product={p} onOpenDrawer={onOpenDrawer} />
-          </div>
+          <CardBoundary key={p.id ?? `${p.name}-${i}`}>
+            <div
+              className="animate-scale-in opacity-0"
+              style={{
+                animationDelay: `${Math.min(i * 60, 400)}ms`,
+                animationFillMode: 'forwards',
+              }}
+            >
+              <ProductCard product={p} onOpenDrawer={onOpenDrawer} />
+            </div>
+          </CardBoundary>
         ))}
       </div>
 
-      {hasMore && (
-        <div className="flex justify-center py-8">
-          <button
-            onClick={onLoadMore}
-            disabled={loadingMore}
-            className="px-8 h-11 bg-[var(--th-input)] text-[var(--th-text)] text-sm font-semibold rounded-full border border-[var(--th-border)] active:scale-95 transition-transform disabled:opacity-40 min-w-[140px] hover:border-[#00D4FF]/40"
-          >
-            {loadingMore ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg
-                  className="animate-spin w-4 h-4 text-[#00D4FF]"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  />
-                </svg>
-                {t('loading')}
-              </span>
-            ) : (
-              t('loadMore')
-            )}
-          </button>
+      {/* Sentinel invisibile — trigga il caricamento automatico */}
+      <div ref={sentinelRef} className="h-1" />
+
+      {/* Spinner visibile mentre carica */}
+      {loadingMore && (
+        <div className="flex justify-center py-6">
+          <svg className="animate-spin w-5 h-5 text-cyan-400" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
         </div>
       )}
     </>

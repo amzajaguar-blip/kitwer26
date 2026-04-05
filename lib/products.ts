@@ -13,6 +13,9 @@ export type Category =
   // categorie forzate da file override (corrispondono esattamente al DB)
   | 'Smart Security'
   | 'PC Hardware'
+  | 'Smart Home'
+  | '3D Printing'
+  | 'tactical-drones-fpv'
   // prodotti importati ma non ancora classificati
   | 'UNSORTED'
   // alias navigabili — alias lato UI per le categorie elite bundle

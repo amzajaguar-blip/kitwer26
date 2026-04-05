@@ -27,43 +27,46 @@ export default function HeroSection() {
         </div>
 
         {/* Main title */}
-        <h1 className="font-mono font-extrabold text-5xl sm:text-6xl md:text-7xl leading-none tracking-tight mb-4 text-white">
-          KITWER <span className="text-orange-400">2026</span>
+        <h1 className="font-mono font-extrabold text-5xl sm:text-6xl md:text-7xl leading-none tracking-tight mb-4" style={{ color: '#ff9a3e' }}>
+          KITWER26
         </h1>
 
         {/* Subtitle */}
-        <p className="mt-3 text-base sm:text-lg font-sans font-medium text-zinc-400 tracking-wide">
+        <p className="mt-3 text-base sm:text-lg font-sans font-medium text-th-subtle tracking-wide">
           Premium Hardware &amp; Simulation Gear
         </p>
 
         {/* Stats row */}
         <div className="flex items-center justify-center gap-8 mt-8 mb-10">
           {[
-            { val: '64+', label: 'PRODOTTI VERIFICATI' },
-            { val: '4',   label: 'BUNDLE TATTICI' },
-            { val: '24H', label: 'SUPPORTO ATTIVO' },
+            { val: '600+',   label: 'ASSET TATTICI' },
+            { val: 'BUNDLE', label: 'CONFIGURAZIONI ELITE' },
+            { val: '24H',    label: 'SUPPORTO ATTIVO' },
           ].map(({ val, label }) => (
             <div key={label} className="text-center">
               <p className="font-mono font-bold text-2xl text-orange-400">{val}</p>
-              <p className="font-mono text-[9px] tracking-widest text-zinc-600 uppercase mt-0.5">{label}</p>
+              <p className="font-mono text-[9px] tracking-widest text-th-subtle uppercase mt-0.5">{label}</p>
             </div>
           ))}
         </div>
 
-        {/* CTAs */}
+        {/* CTAs — usa scrollIntoView per non inquinare l'URL con hash (#products)
+             che causerebbe auto-scroll al reload successivo */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <a
-            href="#products"
+          <button
+            type="button"
+            onClick={() => document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' })}
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-10 py-4 font-mono font-bold text-sm tracking-widest uppercase text-black bg-orange-500 hover:bg-orange-400 active:scale-95 transition-all rounded-sm shadow-[0_0_24px_rgba(249,115,22,0.45)] hover:shadow-[0_0_36px_rgba(249,115,22,0.65)]"
           >
             [ SHOP NOW ]
-          </a>
-          <a
-            href="#bundles"
+          </button>
+          <button
+            type="button"
+            onClick={() => document.getElementById('bundles')?.scrollIntoView({ behavior: 'smooth' })}
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-10 py-4 font-mono font-bold text-sm tracking-widest uppercase text-cyan-400 border border-cyan-500/40 hover:bg-cyan-500/10 hover:border-cyan-400 active:scale-95 transition-all rounded-sm"
           >
             [ VEDI I BUNDLE ]
-          </a>
+          </button>
         </div>
       </div>
     </section>

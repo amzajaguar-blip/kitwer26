@@ -104,7 +104,7 @@ export function ChatBotHelpFloating() {
                    md:text-sm md:px-4 md:py-2.5 active:scale-95 transition-transform md:right-6"
       >
         <Image
-          src="/svg_kitwer/freepik__svg-chatbot-clean-vector-lines-friendly-rounded-sp__59074-removebg-preview.png"
+          src="/svg_kitwer/chatbot-gold.png"
           alt="Assistenza"
           width={24}
           height={24}
@@ -124,7 +124,7 @@ export function ChatBotHelpFloating() {
                 e.stopPropagation();
                 setIsOpen(false);
               }}
-              className="text-zinc-400 hover:text-white transition-colors"
+              className="text-th-subtle hover:text-white transition-colors"
               aria-label="Chiudi"
             >
               <X size={16} />
@@ -142,7 +142,7 @@ export function ChatBotHelpFloating() {
                   className={`max-w-[85%] rounded-lg px-3 py-2 text-xs font-mono leading-relaxed ${
                     msg.from === 'user'
                       ? 'bg-blue-600 text-white'
-                      : 'bg-zinc-700 text-zinc-200'
+                      : 'bg-zinc-700 text-white'
                   }`}
                 >
                   {msg.text}
