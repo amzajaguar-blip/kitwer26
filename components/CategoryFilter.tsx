@@ -14,6 +14,9 @@ const ICONS = {
   simRacing:        '/svg_kitwer/freepik__svg-sim-racing-wheel-icon-clean-vector-strokes-sim__62562.png',
   pcHardware:       '/svg_kitwer/freepik__svg-icon-set-of-pc-hardware-components-motherboard__62563-removebg-preview.png',
   box:              '/svg_kitwer/freepik__scatola-pacco-svg-flat-cardboard-box-icon-with-fol__5786-removebg-preview.png',
+  smartHome:        '/svg_kitwer/freepik__svg-smart-security-emblem-shield-fused-with-digita__35743.png',
+  printing3d:       '/svg_kitwer/freepik_isometric-3d-printer-with-glowing-laser-nozzle-printing-complex-neon-wireframe-cyber-grid-neon-cyan-and-electric-orange-accents_0001-removebg-preview.png',
+  tacticalDrones:   '/svg_kitwer/drone-fpv-tactical-removebg.png',
 } as const;
 
 interface CategoryGroup {
@@ -85,10 +88,18 @@ function CategoryFilterContent({ active, onChange }: Props) {
       ],
     },
     {
-      groupLabel: 'Elite',
-      groupTag:   'Elite Tier',
+      groupLabel: 'Smart',
+      groupTag:   'Smart',
       items: [
-        { id: 'sicurezza-domotica-high-end', label: 'Smart Home', icon: ICONS.smartSecurity },
+        { id: 'sicurezza-domotica-high-end', label: 'Smart Home Pro', icon: ICONS.smartSecurity },
+        { id: '3D Printing',                 label: '3D Printing',    icon: ICONS.printing3d },
+      ],
+    },
+    {
+      groupLabel: 'Tactical',
+      groupTag:   'FPV',
+      items: [
+        { id: 'tactical-drones-fpv', label: 'Drones & FPV', icon: ICONS.tacticalDrones },
       ],
     },
   ];
@@ -142,5 +153,13 @@ function CategoryFilterContent({ active, onChange }: Props) {
 }
 
 export default function CategoryFilter(props: Props) {
-  return <CategoryFilterContent {...props} />;
+  return (
+    <div className="relative">
+      {/* Gradiente sinistro */}
+      <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-6 z-10 bg-gradient-to-r from-zinc-950 to-transparent" />
+      {/* Gradiente destro */}
+      <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 z-10 bg-gradient-to-l from-zinc-950 to-transparent" />
+      <CategoryFilterContent {...props} />
+    </div>
+  );
 }

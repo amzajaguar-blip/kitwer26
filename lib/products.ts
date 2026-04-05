@@ -220,8 +220,9 @@ export async function getTacticalDeals(limit = 8): Promise<TacticalDeal[]> {
   for (const row of data ?? []) {
     const raw = parseFloat(String(row.price ?? ''));
     if (isNaN(raw) || raw <= 0) continue;
-    const dealPrice   = Math.round(raw * 1.20 * 100) / 100;
-    const marketPrice = Math.round(raw * 1.45 * 100) / 100;
+    // raw è già il prezzo finale (markup applicato in import)
+    const dealPrice   = raw;
+    const marketPrice = Math.round(raw * 1.20 * 100) / 100;
     const discountPct = Math.round((1 - dealPrice / marketPrice) * 100);
     deals.push({
       id:           String(row.id),
@@ -266,6 +267,14 @@ export async function fetchProducts({
   let query = supabase
     .from('products')
     .select('id, name, category, sub_category, description, image_url, image_urls, product_url, price', { count: 'exact' })
+    // Filtra a livello DB — esclude prodotti senza immagine o prezzo valido
+    .not('image_url', 'is', null)
+    .neq('image_url', '')
+    .neq('image_url', '/placeholder.svg')
+    // Esclude ASIN usato come image ID (pattern: /images/I/B[9chars].)
+    .not('image_url', 'like', '%/I/B_________._')
+    .not('price', 'is', null)
+    .gt('price', 0)
     .range(rangeFrom, rangeTo);
 
   if (search.trim()) {

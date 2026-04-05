@@ -811,7 +811,9 @@ function BundleCard({
   isActive:  boolean;
   onInspect: (p: BundleSlotProduct) => void;
 }) {
-  const { formatPrice } = useIntl();
+  const { convertPrice } = useIntl();
+  // formatBundlePrice: usa solo exchange rate — il prezzo nel DB è già finale (markup applicato in import)
+  const formatBundlePrice = (n: number) => convertPrice(n);
   const { addItem }     = useCart();
   const router          = useRouter();
   const [adding, setAdding] = useState(false);
@@ -874,7 +876,7 @@ function BundleCard({
               key={p.id}
               product={p}
               slotLabel={bundle.slotLabels[i] ?? ''}
-              formatPrice={formatPrice}
+              formatPrice={formatBundlePrice}
               onInspect={onInspect}
             />
           ))}
@@ -895,7 +897,7 @@ function BundleCard({
               Prezzo mercato
             </span>
             <span className="font-mono text-sm font-semibold line-through" style={{ color: '#3f3f46' }}>
-              {bundle.barratoPrice > 0 ? formatPrice(bundle.barratoPrice) : '—'}
+              {bundle.barratoPrice > 0 ? formatBundlePrice(bundle.barratoPrice) : '—'}
             </span>
           </div>
           <div className="flex items-center justify-between">
@@ -909,12 +911,12 @@ function BundleCard({
               className="font-mono font-extrabold text-2xl tracking-tight"
               style={{ color: '#22d3ee', textShadow: '0 0 14px rgba(34,211,238,0.6)' }}
             >
-              {bundle.bundlePrice > 0 ? `~${formatPrice(bundle.bundlePrice)}` : 'Variabile'}
+              {bundle.bundlePrice > 0 ? `~${formatBundlePrice(bundle.bundlePrice)}` : 'Variabile'}
             </span>
           </div>
           {bundle.bundlePrice > 0 && bundle.barratoPrice > bundle.bundlePrice && (
             <p className="font-mono text-[9px] text-right" style={{ color: '#22d3ee88' }}>
-              Risparmi ~{formatPrice(Math.round((bundle.barratoPrice - bundle.bundlePrice) * 100) / 100)}
+              Risparmi ~{formatBundlePrice(Math.round((bundle.barratoPrice - bundle.bundlePrice) * 100) / 100)}
             </p>
           )}
         </div>

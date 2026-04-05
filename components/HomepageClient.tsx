@@ -63,7 +63,9 @@ function HomepageInner() {
   };
 
   // Aggiorna la categoria e resetta la sotto-categoria
+  // Qualsiasi click su un filtro (incluso "All Protocols") toglie il cap homepage
   const handleCategoryChange = useCallback((cat: Category) => {
+    setBypassHomepageCap(true);
     setCategory(cat);
     setSubCategory('');
     const params = new URLSearchParams();
