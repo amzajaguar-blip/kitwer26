@@ -31,7 +31,7 @@ export function detectMarketplace(): AmazonLocale {
 }
 
 /**
- * Ritorna la valuta Mollie corretta derivandola dal marketplace rilevato.
+ * Ritorna la valuta Stripe corretta derivandola dal marketplace rilevato.
  */
 export function detectCurrency(): 'EUR' | 'GBP' | 'USD' {
   return MARKETPLACE[detectMarketplace()].currency;

@@ -2,8 +2,8 @@
 
 import Image from 'next/image';
 import { useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, CreditCard } from 'lucide-react';
-import type { Product } from '@/types/product';
+import { ChevronLeft, ChevronRight, CreditCard, ExternalLink } from 'lucide-react';
+import type { Product, ProductVariant } from '@/types/product';
 import { useIntl } from '@/context/InternationalizationContext';
 import Link from 'next/link';
 import RelatedProducts from './RelatedProducts';
@@ -38,6 +38,102 @@ const SECURITY_BULLETS = [
   },
 ];
 
+// ── Variant Selector ──────────────────────────────────────────────────────────
+
+const VARIANT_ICONS: Record<string, string> = {
+  'Colore': '🎨', 'Piattaforma': '🎮', 'Capacità': '💾',
+  'Refresh Rate': '📺', 'Risoluzione': '🖥️', 'Dimensione': '📐',
+  'Taglia': '📏', 'Connettività': '📡', 'Versione': '🔀',
+};
+
+interface VariantSelectorProps {
+  variants:        ProductVariant[];
+  selected:        Record<string, string>;
+  onSelect:        (variantName: string, value: string) => void;
+  formatPrice:     (n: number) => string;
+}
+
+function VariantSelector({ variants, selected, onSelect, formatPrice }: VariantSelectorProps) {
+  if (!variants.length) return null;
+  return (
+    <div className="space-y-4 border border-zinc-800 rounded-sm p-4 bg-zinc-900/60">
+      <p className="font-mono text-[9px] tracking-[0.3em] text-th-subtle uppercase font-bold">
+        Opzioni Disponibili
+      </p>
+      {variants.map((v) => (
+        <div key={v.name}>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs">{VARIANT_ICONS[v.name] ?? '⚙️'}</span>
+            <span className="font-mono text-[10px] font-bold text-white uppercase tracking-widest">
+              {v.name}
+            </span>
+            {selected[v.name] && (
+              <span className="font-mono text-[10px] text-orange-400 ml-auto">
+                {selected[v.name]}
+                {v.prices?.[selected[v.name]] != null && (
+                  <span className="text-th-subtle ml-1">
+                    — {formatPrice(v.prices![selected[v.name]])}
+                  </span>
+                )}
+              </span>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {v.values.map((val) => {
+              const isActive    = selected[v.name] === val;
+              const price       = v.prices?.[val];
+              const productId   = v.productIds?.[val];
+              const hasVariantImg = !!v.images?.[val];
+
+              return (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => onSelect(v.name, val)}
+                  className={`relative flex flex-col items-center gap-0.5 px-3 py-2 rounded-sm border font-mono text-[10px] font-semibold transition-all active:scale-95
+                    ${isActive
+                      ? 'border-orange-500 bg-orange-500/10 text-orange-400 ring-1 ring-orange-500/30'
+                      : 'border-zinc-700 bg-zinc-900 text-th-subtle hover:border-zinc-500 hover:text-white'
+                    }`}
+                >
+                  {hasVariantImg && (
+                    <Image
+                      src={v.images![val]}
+                      alt={val}
+                      width={32}
+                      height={32}
+                      className="w-8 h-8 object-contain rounded-sm"
+                      unoptimized
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  )}
+                  <span>{val}</span>
+                  {price != null && (
+                    <span className={`text-[9px] font-normal ${isActive ? 'text-orange-300' : 'text-th-subtle'}`}>
+                      {formatPrice(price)}
+                    </span>
+                  )}
+                  {productId && isActive && (
+                    <Link
+                      href={`/product/${productId}`}
+                      className="absolute -top-1.5 -right-1.5 w-4 h-4 flex items-center justify-center bg-orange-500 rounded-full"
+                      onClick={(e) => e.stopPropagation()}
+                      title="Vai a questo prodotto"
+                    >
+                      <ExternalLink size={8} className="text-black" />
+                    </Link>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const DESC_TRUNCATE = 220;
 
 /** Rimuove tutti i tag HTML mantenendo solo il testo. */
@@ -46,31 +142,72 @@ function stripHtml(html: string): string {
 }
 
 export default function ProductPageClient({ product, relatedProducts = [] }: Props) {
-  const { locale, formatPrice, getExchangeRate } = useIntl();
+  const { locale, convertPrice, getExchangeRate } = useIntl();
+
+  /** Rileva ASIN fake su Amazon CDN */
+  const isRealImage = (url?: string | null): url is string => {
+    if (!url || typeof url !== 'string' || !url.trim()) return false;
+    if (url.includes('m.media-amazon.com')) {
+      const id = url.match(/\/images\/I\/([^._]+)/)?.[1] ?? '';
+      if (/^[A-Z0-9]{10}$/.test(id)) return false; // ASIN fake
+      if (!url.includes('._')) return false;
+    }
+    return true;
+  };
+
+  /**
+   * Normalizza un URL immagine:
+   * - http:// → https:// (Next.js Image richiede il protocollo nella allowlist;
+   *   quasi tutti i siti moderni supportano HTTPS — se fallisce, onError fa il fallback)
+   */
+  const normalizeImgUrl = (url: string): string =>
+    url.startsWith('http://') ? url.replace('http://', 'https://') : url;
 
   const images = useMemo(() => {
-    // Priorità: image_urls (DB gallery) → images (legacy) → image_url singola
-    if (Array.isArray(product.image_urls) && product.image_urls.length > 0) {
-      const filtered = product.image_urls.filter((u) => typeof u === 'string' && u.trim());
-      if (filtered.length > 0) return filtered;
-    }
-    const arr: string[] = [];
-    if (Array.isArray(product.images) && product.images.length > 0) {
-      arr.push(...product.images.filter((u) => typeof u === 'string' && u.trim()));
-    }
-    const thumb = product.image_url || product.thumbnailImage;
-    if ((!arr.length || !arr[0]) && thumb) arr.unshift(thumb);
-    return arr.length ? arr : ['/placeholder.svg'];
+    const raw: string[] = [
+      ...(Array.isArray(product.image_urls) ? product.image_urls : []),
+      ...(Array.isArray(product.images)     ? product.images     : []),
+      product.image_url    ?? '',
+      product.thumbnailImage ?? '',
+    ];
+    const real = [...new Set(raw)]
+      .filter(isRealImage)
+      .map(normalizeImgUrl);
+    return real.length ? real : ['/placeholder.svg'];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product.image_urls, product.images, product.image_url, product.thumbnailImage]);
 
   const [index, setIndex]               = useState(0);
   const [failedImages, setFailedImages] = useState<Set<number>>(new Set());
   const [descExpanded, setDescExpanded] = useState(false);
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
 
   const currentSrc = failedImages.has(index) ? '/placeholder.svg' : images[index];
 
-  const raw           = parseFloat(String(product.price ?? ''));
-  const finalPriceNum = isNaN(raw) ? null : Math.round(raw * getExchangeRate() * 1.2 * 100) / 100;
+  const variants = (product.variants ?? []) as ProductVariant[];
+
+  // Prezzo attivo: se la variante "Versione" selezionata ha un prezzo → usalo
+  const activeVariantPrice = useMemo(() => {
+    const versioneVariant = variants.find((v) => v.name === 'Versione');
+    const selVersione     = selectedVariants['Versione'];
+    if (versioneVariant && selVersione && versioneVariant.prices?.[selVersione] != null) {
+      return versioneVariant.prices![selVersione];
+    }
+    return null;
+  }, [variants, selectedVariants]);
+
+  const raw           = parseFloat(String(activeVariantPrice ?? product.price ?? ''));
+  const finalPriceNum = isNaN(raw) ? null : Math.round(raw * getExchangeRate() * 100) / 100;
+
+  const handleVariantSelect = (variantName: string, value: string) => {
+    setSelectedVariants((prev) => ({ ...prev, [variantName]: value }));
+    // Se la variante ha un'immagine associata → passa a quell'immagine
+    const vDef = variants.find((v) => v.name === variantName);
+    if (vDef?.images?.[value]) {
+      const imgIdx = images.indexOf(vDef.images[value]);
+      if (imgIdx >= 0) setIndex(imgIdx);
+    }
+  };
   const inStock       = true;
 
   const desc        = stripHtml(product.description ?? '');
@@ -81,16 +218,16 @@ export default function ProductPageClient({ product, relatedProducts = [] }: Pro
 
   const showSecurityBullets = isSecurityCategory(product.category);
 
-  const [mollieLoading, setMollieLoading] = useState(false);
+  const [stripeLoading, setStripeLoading] = useState(false);
 
   const goPrev = () => setIndex((p) => (p === 0 ? images.length - 1 : p - 1));
   const goNext = () => setIndex((p) => (p === images.length - 1 ? 0 : p + 1));
 
-  const handleMollieCheckout = async () => {
+  const handleStripeCheckout = async () => {
     if (finalPriceNum === null) return;
-    setMollieLoading(true);
+    setStripeLoading(true);
     try {
-      const res = await fetch('/api/checkout', {
+      const res = await fetch('/api/checkout/stripe', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -105,10 +242,10 @@ export default function ProductPageClient({ product, relatedProducts = [] }: Pro
       if (!res.ok) throw new Error(data.error || 'Errore checkout');
       window.location.href = data.checkoutUrl;
     } catch (err) {
-      console.error('[Mollie checkout]', err);
+      console.error('[Stripe checkout]', err);
       alert("Errore durante l'avvio del pagamento. Riprova.");
     } finally {
-      setMollieLoading(false);
+      setStripeLoading(false);
     }
   };
 
@@ -118,11 +255,11 @@ export default function ProductPageClient({ product, relatedProducts = [] }: Pro
       <header className="sticky top-0 z-30 flex items-center justify-between px-4 h-14 border-b border-zinc-800 bg-zinc-950/95 backdrop-blur-xl">
         <Link
           href="/"
-          className="font-mono text-xs text-zinc-500 hover:text-cyan-400 active:scale-95 transition-all"
+          className="font-mono text-xs text-th-subtle hover:text-cyan-400 active:scale-95 transition-all"
         >
           ← TORNA AL DATABASE
         </Link>
-        <span className="font-mono text-[10px] font-semibold text-zinc-600 uppercase tracking-widest">
+        <span className="font-mono text-[10px] font-semibold text-th-subtle uppercase tracking-widest">
           SCHEDA PRODOTTO
         </span>
         <span className="w-10" />
@@ -136,13 +273,19 @@ export default function ProductPageClient({ product, relatedProducts = [] }: Pro
             <Image
               key={index}
               src={currentSrc}
-              alt={product.name}
+              alt={product.name ?? ''}
               width={600}
               height={600}
               sizes="(max-width: 768px) 100vw, 33vw"
               className="w-full h-full object-contain transition-opacity duration-200"
               priority
-              onError={() => setFailedImages((prev) => new Set(prev).add(index))}
+              unoptimized
+              onError={() => {
+                console.error(
+                  `[ProductPage] Immagine fallita — prodotto: "${product.name}" | index: ${index} | url: ${currentSrc}`,
+                );
+                setFailedImages((prev) => new Set(prev).add(index));
+              }}
             />
 
             {images.length > 1 && (
@@ -199,7 +342,13 @@ export default function ProductPageClient({ product, relatedProducts = [] }: Pro
                     width={64}
                     height={64}
                     className="w-full h-full object-contain"
-                    onError={() => setFailedImages((prev) => new Set(prev).add(i))}
+                    unoptimized
+                    onError={() => {
+                      console.error(
+                        `[ProductPage] Thumbnail fallita — prodotto: "${product.name}" | thumb ${i + 1} | url: ${img}`,
+                      );
+                      setFailedImages((prev) => new Set(prev).add(i));
+                    }}
                   />
                 </button>
               ))}
@@ -224,7 +373,7 @@ export default function ProductPageClient({ product, relatedProducts = [] }: Pro
           <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm font-mono text-[10px] font-semibold border ${
             inStock
               ? 'bg-green-500/10 text-green-400 border-green-500/25'
-              : 'text-zinc-500 border-zinc-700'
+              : 'text-th-subtle border-zinc-700'
           }`}>
             <span className={`w-1.5 h-1.5 rounded-full ${inStock ? 'bg-green-400' : 'bg-zinc-500'}`} />
             {inStock ? 'DISPONIBILE' : 'ESAURITO'}
@@ -233,7 +382,7 @@ export default function ProductPageClient({ product, relatedProducts = [] }: Pro
           {/* Description + read more */}
           {desc && (
             <div>
-              <p className="text-sm leading-relaxed text-zinc-400 font-sans">
+              <p className="text-sm leading-relaxed text-th-subtle font-sans">
                 {displayDesc}
               </p>
               {isLongDesc && (
@@ -247,6 +396,16 @@ export default function ProductPageClient({ product, relatedProducts = [] }: Pro
             </div>
           )}
 
+          {/* Variant selector */}
+          {variants.length > 0 && (
+            <VariantSelector
+              variants={variants}
+              selected={selectedVariants}
+              onSelect={handleVariantSelect}
+              formatPrice={(n) => convertPrice(n)}
+            />
+          )}
+
           {/* Security bullets */}
           {showSecurityBullets && (
             <div className="rounded-sm border border-cyan-500/20 bg-cyan-500/5 p-4 space-y-3">
@@ -256,8 +415,8 @@ export default function ProductPageClient({ product, relatedProducts = [] }: Pro
               {SECURITY_BULLETS.map(({ icon, title, text }) => (
                 <div key={title} className="flex items-start gap-2.5">
                   <span className="text-base shrink-0 mt-0.5">{icon}</span>
-                  <p className="text-[12px] leading-snug text-zinc-400 font-sans">
-                    <span className="font-semibold text-zinc-200">{title}: </span>{text}
+                  <p className="text-[12px] leading-snug text-th-subtle font-sans">
+                    <span className="font-semibold text-white">{title}: </span>{text}
                   </p>
                 </div>
               ))}
@@ -266,7 +425,7 @@ export default function ProductPageClient({ product, relatedProducts = [] }: Pro
 
           {/* Trust badge */}
           <div className="rounded-sm border border-zinc-700/60 bg-zinc-900 px-3 py-2.5 text-xs text-center">
-            <p className="flex items-center justify-center gap-1.5 font-mono text-zinc-500 text-[10px]">
+            <p className="flex items-center justify-center gap-1.5 font-mono text-th-subtle text-[10px]">
               <Image
                 src="/svg_kitwer/freepik__scatola-pacco-svg-flat-cardboard-box-icon-with-fol__5786-removebg-preview.png"
                 alt=""
@@ -277,7 +436,7 @@ export default function ProductPageClient({ product, relatedProducts = [] }: Pro
               />
               <span>Spedizione Rapida — Garanzia 24 mesi</span>
             </p>
-            <p className="flex items-center justify-center gap-1.5 mt-0.5 font-mono text-zinc-500 text-[10px]">
+            <p className="flex items-center justify-center gap-1.5 mt-0.5 font-mono text-th-subtle text-[10px]">
               <Image
                 src="/svg_kitwer/freepik__svg-support-for-logo-assets-crisp-outlines-layered__59071-removebg-preview.png"
                 alt=""
@@ -304,21 +463,28 @@ export default function ProductPageClient({ product, relatedProducts = [] }: Pro
           <div className="flex items-center gap-3">
             {/* Price */}
             <div className="shrink-0">
-              <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-600">Prezzo</p>
-              <p className="font-mono font-black text-2xl text-orange-400">
-                {finalPriceNum !== null ? formatPrice(raw) : '—'}
+              <p className="font-mono text-[9px] uppercase tracking-widest text-th-subtle">
+                {activeVariantPrice != null ? 'Prezzo Variante' : 'Prezzo'}
               </p>
+              <p className="font-mono font-black text-2xl text-orange-400">
+                {finalPriceNum !== null ? convertPrice(raw) : '—'}
+              </p>
+              {activeVariantPrice != null && (
+                <p className="font-mono text-[9px] text-th-subtle">
+                  ← {selectedVariants['Versione']}
+                </p>
+              )}
             </div>
 
-            {/* CTA unica — solo Acquista → Mollie */}
+            {/* CTA unica — solo Acquista → Stripe */}
             <div className="flex-1">
               <button
                 type="button"
-                onClick={handleMollieCheckout}
-                disabled={mollieLoading || !inStock || finalPriceNum === null}
+                onClick={handleStripeCheckout}
+                disabled={stripeLoading || !inStock || finalPriceNum === null}
                 className="flex items-center justify-center gap-2 h-12 px-4 font-mono font-bold text-xs tracking-widest uppercase text-black bg-orange-500 hover:bg-orange-400 active:scale-95 transition-all rounded-sm disabled:opacity-40 shadow-[0_0_12px_rgba(249,115,22,0.4)] w-full"
               >
-                {mollieLoading ? (
+                {stripeLoading ? (
                   <><span className="animate-spin inline-block w-4 h-4 border-2 border-black/30 border-t-black rounded-full" /> CARICAMENTO...</>
                 ) : (
                   <><CreditCard size={15} /> [ ACQUISTA ]</>

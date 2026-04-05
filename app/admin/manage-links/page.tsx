@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import type { Product } from '@/types/product';
 import {
   ArrowLeft,
   ExternalLink,
@@ -14,10 +13,14 @@ import {
   Search,
 } from 'lucide-react';
 
-type ProductWithRequiredId = Product & { id: string };
+interface ProductLink {
+  id: string;
+  name: string;
+  product_url: string | null;
+}
 
 export default function ManageLinksPage() {
-  const [products, setProducts] = useState<ProductWithRequiredId[]>([]);
+  const [products, setProducts] = useState<ProductLink[]>([]);
   const [loading, setLoading] = useState(true);
   const [globalError, setGlobalError] = useState<string | null>(null);
 
@@ -32,19 +35,19 @@ export default function ManageLinksPage() {
     setGlobalError(null);
     const { data, error } = await supabase
       .from('products')
-      .select('id, title, url')
-      .order('title', { ascending: true });
+      .select('id, name, product_url')
+      .order('name', { ascending: true });
 
     if (error) {
       console.error('[manage-links] Errore fetch products:', error.message);
       setGlobalError('Impossibile caricare i prodotti.');
       setProducts([]);
     } else {
-      const list = (data ?? []) as unknown as ProductWithRequiredId[];
+      const list = (data ?? []) as ProductLink[];
       setProducts(list);
       const nextInputs: Record<string, string> = {};
       list.forEach((p) => {
-        if (p.id) nextInputs[p.id] = p.url ?? '';
+        if (p.id) nextInputs[p.id] = p.product_url ?? '';
       });
       setInputs((prev) => ({ ...nextInputs, ...prev }));
     }
@@ -81,12 +84,7 @@ export default function ManageLinksPage() {
 
       setProducts((prev) =>
         prev.map((p) =>
-          p.id === id
-            ? {
-                ...p,
-                url: url || undefined,
-              }
-            : p
+          p.id === id ? { ...p, product_url: url || null } : p
         )
       );
 
@@ -107,7 +105,7 @@ export default function ManageLinksPage() {
 
   const filteredProducts = products.filter((p) => {
     if (!search.trim()) return true;
-    return (p.title ?? '').toLowerCase().includes(search.toLowerCase());
+    return (p.name ?? '').toLowerCase().includes(search.toLowerCase());
   });
 
   if (loading && products.length === 0) {
@@ -123,7 +121,7 @@ export default function ManageLinksPage() {
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-white flex flex-col">
-      {/* Header mobile-first */}
+      {/* Header */}
       <div className="sticky top-0 z-40 bg-[#0A0A0A]/95 backdrop-blur-sm border-b border-gray-800 px-4 h-14 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Link
@@ -142,15 +140,12 @@ export default function ManageLinksPage() {
             </span>
           </div>
         </div>
-        <Link
-          href="/admin"
-          className="text-[10px] text-gray-500 underline underline-offset-2"
-        >
+        <Link href="/admin" className="text-[10px] text-gray-500 underline underline-offset-2">
           Ordini
         </Link>
       </div>
 
-      {/* Barra ricerca + stato */}
+      {/* Ricerca */}
       <div className="px-4 pt-3 pb-2 space-y-2 border-b border-gray-900 bg-[#0A0A0A]">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" size={14} />
@@ -169,12 +164,11 @@ export default function ManageLinksPage() {
           </div>
         )}
         <p className="text-[10px] text-gray-600">
-          Incolla i nuovi link Amazon.it. Il salvataggio usa un accesso sicuro
-          al database (service role), solo lato server.
+          Incolla i link Amazon. Vengono usati nell&apos;email admin e nel flusso di acquisto automatico.
         </p>
       </div>
 
-      {/* Lista prodotti */}
+      {/* Lista */}
       <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2.5 pb-6">
         {filteredProducts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-gray-600 text-xs">
@@ -183,21 +177,19 @@ export default function ManageLinksPage() {
           </div>
         ) : (
           filteredProducts.map((product) => {
-            const id = product.id;
-            const value = id ? inputs[id] ?? product.url ?? '' : '';
-            const isSaving = savingId === id;
+            const { id } = product;
+            const value = inputs[id] ?? product.product_url ?? '';
+            const isSaving  = savingId  === id;
             const isSuccess = successId === id;
-            const isError = errorId === id;
+            const isError   = errorId   === id;
 
             return (
               <div
                 key={id}
                 className={`bg-[#111111] rounded-2xl border px-3.5 py-3.5 space-y-2.5 ${
-                  isSuccess
-                    ? 'border-emerald-500/70 shadow-[0_0_0_1px_rgba(16,185,129,0.35)]'
-                    : isError
-                    ? 'border-red-500/70 shadow-[0_0_0_1px_rgba(248,113,113,0.35)]'
-                    : 'border-gray-800/70'
+                  isSuccess ? 'border-emerald-500/70 shadow-[0_0_0_1px_rgba(16,185,129,0.35)]'
+                  : isError  ? 'border-red-500/70 shadow-[0_0_0_1px_rgba(248,113,113,0.35)]'
+                  : 'border-gray-800/70'
                 }`}
               >
                 <div className="flex items-start gap-2.5">
@@ -206,37 +198,37 @@ export default function ManageLinksPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold text-white leading-snug line-clamp-3">
-                      {product.title}
+                      {product.name}
                     </p>
-                    {product.url && (
+                    {product.product_url && (
                       <p className="text-[9px] text-gray-500 mt-0.5 truncate">
-                        Attuale: {product.url}
+                        {product.product_url}
                       </p>
                     )}
                   </div>
-                  {product.url ? (
-                    <a
-                      href={product.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 h-7 rounded-full bg-[#00D4FF] text-[#0A0A0A] text-[10px] font-black active:scale-95 transition-transform"
-                    >
-                      <ExternalLink size={11} />
-                      Test
-                    </a>
-                  ) : (
-                    <span className="flex-shrink-0 text-[9px] text-gray-600">
-                      Nessun link
-                    </span>
-                  )}
+                  <div className="flex-shrink-0">
+                    {product.product_url ? (
+                      <a
+                        href={product.product_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 h-7 rounded-full bg-[#00D4FF] text-[#0A0A0A] text-[10px] font-black active:scale-95 transition-transform"
+                      >
+                        <ExternalLink size={11} />
+                        Apri
+                      </a>
+                    ) : (
+                      <span className="text-[9px] text-gray-600">Nessun link</span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-1.5">
                   <input
                     type="text"
                     value={value}
-                    onChange={(e) => id && handleChange(id, e.target.value)}
-                    placeholder="Incolla qui il nuovo link Amazon.it"
+                    onChange={(e) => handleChange(id, e.target.value)}
+                    placeholder="Incolla qui il link Amazon"
                     className="w-full h-9 px-3 rounded-xl bg-[#181818] border border-gray-800 text-[11px] text-white placeholder-gray-600 focus:outline-none focus:border-[#00D4FF]"
                     inputMode="url"
                     autoCapitalize="none"
@@ -245,27 +237,19 @@ export default function ManageLinksPage() {
                   />
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-[9px] text-gray-600 max-w-[65%]">
-                      Suggerimento: controlla che il dominio sia{' '}
-                      <span className="text-[#00D4FF] font-semibold">amazon.it</span> prima di
-                      salvare.
+                      Es: <span className="text-[#00D4FF]">amazon.it/dp/B0XXXXXXXX</span>
                     </p>
                     <button
-                      onClick={() => id && handleUpdate(id)}
-                      disabled={!id || isSaving}
+                      onClick={() => handleUpdate(id)}
+                      disabled={isSaving}
                       className="flex-shrink-0 inline-flex items-center justify-center gap-1 px-3.5 h-8 rounded-xl text-[11px] font-bold bg-[#00D4FF] text-[#0A0A0A] disabled:opacity-50 active:scale-95 transition-transform"
                     >
                       {isSaving ? (
-                        <>
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          <span>Salvataggio...</span>
-                        </>
+                        <><Loader2 className="w-3.5 h-3.5 animate-spin" /><span>Salvo...</span></>
                       ) : isSuccess ? (
-                        <>
-                          <Check size={12} />
-                          <span>Salvato</span>
-                        </>
+                        <><Check size={12} /><span>Salvato</span></>
                       ) : (
-                        <span>Aggiorna Link</span>
+                        <span>Salva Link</span>
                       )}
                     </button>
                   </div>
@@ -278,4 +262,3 @@ export default function ManageLinksPage() {
     </div>
   );
 }
-

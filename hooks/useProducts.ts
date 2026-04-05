@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { fetchProducts, Category, PAGE_SIZE, FetchProductsResult } from '@/lib/products';
 import { Product } from '@/types/product';
 
-const DEBOUNCE_MS = 350;
+const DEBOUNCE_MS    = 350; // delay per ricerca/filtri (evita request ad ogni tasto)
+const INITIAL_DELAY  = 0;   // nessun delay al primo mount — i prodotti appaiono subito
 
 export function useProducts(opts?: { initialCategory?: Category; initialSubCategory?: string }) {
   const [products, setProducts]       = useState<Product[]>([]);
@@ -16,8 +17,9 @@ export function useProducts(opts?: { initialCategory?: Category; initialSubCateg
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore]         = useState(true);
 
-  const pageRef     = useRef(0);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const pageRef      = useRef(0);
+  const debounceRef  = useRef<ReturnType<typeof setTimeout>>();
+  const isMounted    = useRef(false);
 
   const load = useCallback(
     async (s: string, cat: Category, sub: string, page: number, append: boolean) => {
@@ -28,7 +30,14 @@ export function useProducts(opts?: { initialCategory?: Category; initialSubCateg
         const result: FetchProductsResult = await fetchProducts({ search: s, category: cat, subCategory: sub, page });
         setProducts((prev) => (append ? [...prev, ...result.products] : result.products));
         setTotal(result.total);
-        setHasMore(result.products.length === PAGE_SIZE);
+        // Ultima pagina: meno risultati di PAGE_SIZE → non c'è altro
+        // Pagina piena: confronta prodotti accumulati (page+1)*PAGE_SIZE col totale
+        // Evita che l'ultimo batch esatto (total % PAGE_SIZE === 0) mostri "carica altro"
+        const pagesLoaded   = page + 1;
+        const accumulated   = pagesLoaded * PAGE_SIZE;
+        const lastPage      = result.products.length < PAGE_SIZE;
+        const receivedAll   = lastPage || (result.total !== null && accumulated >= result.total);
+        setHasMore(!receivedAll);
       } catch (e) {
         console.error('[useProducts]', e);
       } finally {
@@ -39,13 +48,16 @@ export function useProducts(opts?: { initialCategory?: Category; initialSubCateg
     []
   );
 
-  // Ogni volta che search, category o subCategory cambiano → reset pagina + debounce
+  // Mount iniziale → carica subito (0ms). Cambi successivi → debounce 350ms.
   useEffect(() => {
+    const delay = isMounted.current ? DEBOUNCE_MS : INITIAL_DELAY;
+    isMounted.current = true;
+
     pageRef.current = 0;
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       load(search, category, subCategory, 0, false);
-    }, DEBOUNCE_MS);
+    }, delay);
     return () => clearTimeout(debounceRef.current);
   }, [search, category, subCategory, load]);
 

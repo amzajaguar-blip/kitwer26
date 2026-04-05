@@ -350,3 +350,35 @@ async function resolveBundle(config: BundleConfig): Promise<ResolvedBundle> {
 export async function getStrategicBundles(): Promise<ResolvedBundle[]> {
   return Promise.all(BUNDLE_CONFIGS.map(resolveBundle));
 }
+
+// ── Static metadata (no DB — usato da generateStaticParams e generateMetadata) ─
+
+export interface BundleMeta {
+  id:           string;
+  title:        string;
+  subtitle:     string;
+  badge:        string;
+  badgeColor:   'orange' | 'amber' | 'cyan' | 'purple';
+  description:  string;
+  highlight:    string;
+  scarcityUnits: number;
+  slotLabels:   string[];
+}
+
+export const BUNDLE_META: BundleMeta[] = BUNDLE_CONFIGS.map((c) => ({
+  id:           c.id,
+  title:        c.title,
+  subtitle:     c.subtitle,
+  badge:        c.badge,
+  badgeColor:   c.badgeColor,
+  description:  c.description,
+  highlight:    c.highlight,
+  scarcityUnits: c.scarcityUnits,
+  slotLabels:   c.slots.map((s) => s.label),
+}));
+
+export async function resolveBundleById(id: string): Promise<ResolvedBundle | null> {
+  const config = BUNDLE_CONFIGS.find((c) => c.id === id);
+  if (!config) return null;
+  return resolveBundle(config);
+}

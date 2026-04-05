@@ -11,12 +11,12 @@ import ProductDrawer from './ProductDrawer';
 import CartDrawer from './CartDrawer';
 import Footer from './Footer';
 import CookieBanner from './CookieBanner';
-import { ChatBotHelpFloating } from './ChatBotHelp';
 import HeroSection from './HeroSection';
 import BundleSection from './BundleSection';
+import TacticalDealsSection from './TacticalDealsSection';
 import LazyAdBanner from './LazyAdBanner';
 import { useProducts } from '@/hooks/useProducts';
-import { Category } from '@/lib/products';
+import { Category, PAGE_SIZE } from '@/lib/products';
 import { Product } from '@/types/product';
 import { useIntl } from '@/context/InternationalizationContext';
 
@@ -46,6 +46,14 @@ function HomepageInner() {
   } = useProducts({ initialCategory: initialCat, initialSubCategory: initialSubCat });
 
   const { t } = useIntl();
+
+  const MAX_HOMEPAGE_PAGES = 4;
+  const [bypassHomepageCap, setBypassHomepageCap] = useState(false);
+  const isHomepageDefault  = category === 'all' && !search && !subCategory;
+  const homepageCap        = MAX_HOMEPAGE_PAGES * PAGE_SIZE; // 48
+  const capActive          = isHomepageDefault && !bypassHomepageCap;
+  const cappedHasMore      = hasMore && !(capActive && products.length >= homepageCap);
+  const showCatalogCTA     = capActive && !cappedHasMore && products.length >= homepageCap;
 
   const [drawerProduct, setDrawerProduct] = useState<Product | null>(null);
 
@@ -84,6 +92,9 @@ function HomepageInner() {
       {/* Bundle section */}
       <BundleSection />
 
+      {/* Tactical Deals — Budget King products con pricing comparativo */}
+      <TacticalDealsSection />
+
       {/* Divider */}
       <div className="mx-4 border-t border-zinc-800 mb-6" />
 
@@ -106,7 +117,7 @@ function HomepageInner() {
 
       {/* Product grid header */}
       <div className="px-4 pt-4 pb-2 flex items-center gap-2">
-        <span className="font-mono text-[9px] tracking-[0.3em] text-zinc-600 uppercase">
+        <span className="font-mono text-[9px] tracking-[0.3em] text-th-subtle uppercase">
           {t('database')}
         </span>
         <span className="font-mono text-[9px] tracking-widest text-cyan-500/80 uppercase">
@@ -119,7 +130,7 @@ function HomepageInner() {
         </span>
         {subCategory && (
           <>
-            <span className="font-mono text-[9px] text-zinc-700">/</span>
+            <span className="font-mono text-[9px] text-th-subtle">/</span>
             <span className="font-mono text-[9px] tracking-widest text-cyan-400/70 uppercase">
               {subCategory.replace(/-/g, ' ')}
             </span>
@@ -128,7 +139,7 @@ function HomepageInner() {
 
         <div className="ml-auto flex items-center gap-1.5">
           <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
-          <span className="font-mono text-[8px] text-zinc-600 tracking-widest">{t('live')}</span>
+          <span className="font-mono text-[8px] text-th-subtle tracking-widest">{t('live')}</span>
         </div>
       </div>
 
@@ -138,10 +149,25 @@ function HomepageInner() {
           products={products}
           loading={loading}
           loadingMore={loadingMore}
-          hasMore={hasMore}
+          hasMore={cappedHasMore}
           onLoadMore={loadMore}
           onOpenDrawer={handleOpenDrawer}
         />
+
+        {/* CTA Catalogo completo — mostrato solo nella homepage default dopo 48 prodotti */}
+        {showCatalogCTA && (
+          <div className="flex flex-col items-center gap-3 py-10 px-4">
+            <p className="font-mono text-[11px] text-th-subtle tracking-widest uppercase">
+              — Stai vedendo i primi {homepageCap} prodotti —
+            </p>
+            <button
+              onClick={() => setBypassHomepageCap(true)}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-sm bg-zinc-900 border border-cyan-500/40 font-mono text-[12px] text-cyan-400 tracking-wide hover:bg-zinc-800 hover:border-cyan-400 transition-all"
+            >
+              <span>→ Sfoglia tutto il catalogo</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Footer */}
@@ -152,9 +178,7 @@ function HomepageInner() {
       <ProductDrawer product={drawerProduct} onClose={() => setDrawerProduct(null)} />
       <CartDrawer />
 
-      {/* Cookie + Chatbot assistance */}
       <CookieBanner />
-      <ChatBotHelpFloating />
     </div>
   );
 }

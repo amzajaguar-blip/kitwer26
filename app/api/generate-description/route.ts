@@ -15,6 +15,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'title è obbligatorio' }, { status: 400 });
   }
 
+  const deepseekKey = process.env.DEEPSEEK_API_KEY;
+  if (!deepseekKey) {
+    return NextResponse.json({ error: 'DEEPSEEK_API_KEY non configurata' }, { status: 500 });
+  }
+
   const { title, variantAttributes } = body as {
     title: string;
     variantAttributes?: string;
@@ -28,7 +33,7 @@ export async function POST(request: NextRequest) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+      Authorization: `Bearer ${deepseekKey}`,
     },
     body: JSON.stringify({
       model: 'deepseek-chat',

@@ -16,6 +16,7 @@ import {
   Check,
   Sparkles,
   Link2,
+  Upload,
 } from 'lucide-react';
 
 // ─── Tipi ─────────────────────────────────────────────────────────────────────
@@ -103,26 +104,94 @@ function trackingLink(code: string): string {
 const STATUSES = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'] as const;
 
 const STATUS_STYLE: Record<string, string> = {
-  pending:                 'text-yellow-400 bg-yellow-400/10 border-yellow-400/25',
-  pending_mollie_payment:  'text-orange-400 bg-orange-400/10 border-orange-400/25',
-  confirmed:               'text-[#00FF94] bg-[#00FF94]/10 border-[#00FF94]/25',
-  processing:              'text-[#00D4FF] bg-[#00D4FF]/10 border-[#00D4FF]/25',
-  shipped:                 'text-purple-400 bg-purple-400/10 border-purple-400/25',
-  delivered:               'text-[#00FF94] bg-[#00FF94]/10 border-[#00FF94]/25',
-  cancelled:               'text-red-400 bg-red-400/10 border-red-400/25',
-  mollie_error:            'text-red-500 bg-red-500/10 border-red-500/25',
+  pending:                  'text-yellow-400 bg-yellow-400/10 border-yellow-400/25',
+  pending_stripe_payment:   'text-orange-400 bg-orange-400/10 border-orange-400/25',
+  confirmed:                'text-[#00FF94] bg-[#00FF94]/10 border-[#00FF94]/25',
+  processing:               'text-[#00D4FF] bg-[#00D4FF]/10 border-[#00D4FF]/25',
+  shipped:                  'text-purple-400 bg-purple-400/10 border-purple-400/25',
+  delivered:                'text-[#00FF94] bg-[#00FF94]/10 border-[#00FF94]/25',
+  cancelled:                'text-red-400 bg-red-400/10 border-red-400/25',
+  payment_aborted:          'text-red-400 bg-red-400/10 border-red-400/25',
+  stripe_error:             'text-red-500 bg-red-500/10 border-red-500/25',
 };
 
 const STATUS_LABEL: Record<string, string> = {
-  pending:                'In attesa',
-  pending_mollie_payment: '⏳ Pagamento Mollie',
-  confirmed:              '✅ Pagato',
-  processing:             'In lavorazione',
-  shipped:                'Spedito',
-  delivered:              'Consegnato',
-  cancelled:              'Annullato',
-  mollie_error:           '❌ Errore Mollie',
+  pending:                 'In attesa',
+  pending_stripe_payment:  '⏳ Pagamento Stripe',
+  confirmed:               '✅ Pagato',
+  processing:              'In lavorazione',
+  shipped:                 'Spedito',
+  delivered:               'Consegnato',
+  cancelled:               'Annullato',
+  payment_aborted:         '❌ Pagamento Annullato',
+  stripe_error:            '❌ Errore Stripe',
 };
+
+// ─── Placeholder: nessun dato ─────────────────────────────────────────────────
+
+function MissionEmptyState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-24 px-6 text-center">
+      <div className="relative mb-5">
+        <div className="w-16 h-16 rounded-full bg-[#111111] border border-gray-800 flex items-center justify-center">
+          <Package size={28} className="text-gray-700" />
+        </div>
+        <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#0A0A0A] border border-gray-800 flex items-center justify-center">
+          <span className="text-[9px]">📡</span>
+        </div>
+      </div>
+      <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">
+        Quadrante temporale
+      </p>
+      <p className="text-sm text-gray-400 leading-snug max-w-[240px]">
+        Nessun dato di missione rilevato nel quadrante temporale selezionato
+      </p>
+      <button
+        onClick={onRetry}
+        className="mt-5 flex items-center gap-2 px-4 h-8 rounded-xl bg-[#111111] border border-gray-800 text-[11px] font-bold text-gray-500 active:text-white active:border-gray-600 transition-colors"
+      >
+        <RefreshCw size={11} />
+        Scansiona di nuovo
+      </button>
+    </div>
+  );
+}
+
+// ─── Placeholder: errore di connessione ───────────────────────────────────────
+
+function MissionErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-24 px-6 text-center">
+      <div className="relative mb-5">
+        <div className="w-16 h-16 rounded-full bg-red-500/5 border border-red-500/20 flex items-center justify-center">
+          <Package size={28} className="text-red-500/40" />
+        </div>
+        <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#0A0A0A] border border-red-500/20 flex items-center justify-center">
+          <span className="text-[9px]">⚠️</span>
+        </div>
+      </div>
+      <p className="text-xs font-bold text-red-500/60 uppercase tracking-widest mb-1">
+        Segnale interrotto
+      </p>
+      <p className="text-sm text-gray-400 leading-snug max-w-[260px] mb-2">
+        Nessun dato di missione rilevato nel quadrante temporale selezionato
+      </p>
+      <p className="text-[10px] text-gray-700 max-w-[260px] font-mono break-all">
+        {message}
+      </p>
+      <button
+        onClick={onRetry}
+        className="mt-5 flex items-center gap-2 px-4 h-8 rounded-xl bg-red-500/10 border border-red-500/25 text-[11px] font-bold text-red-400 active:bg-red-500/20 transition-colors"
+      >
+        <RefreshCw size={11} />
+        Riprova connessione
+      </button>
+      <p className="mt-3 text-[10px] text-gray-700 max-w-[220px]">
+        Verifica la connessione al database o le credenziali Supabase nelle variabili d&apos;ambiente.
+      </p>
+    </div>
+  );
+}
 
 // ─── Componente principale ────────────────────────────────────────────────────
 
@@ -130,6 +199,7 @@ export default function AdminPage() {
   const router   = useRouter();
   const [orders, setOrders]             = useState<Order[]>([]);
   const [loading, setLoading]           = useState(true);
+  const [fetchError, setFetchError]     = useState<string | null>(null);
   const [expanded, setExpanded]         = useState<string | null>(null);
   const [trackingInputs, setTrackingInputs] = useState<Record<string, string>>({});
   const [savingTracking, setSavingTracking] = useState<Record<string, boolean>>({});
@@ -137,31 +207,47 @@ export default function AdminPage() {
 
   const loadOrders = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*, order_items(*, products(image_url))')
-      .order('created_at', { ascending: false });
+    setFetchError(null);
 
-    if (!error && data) {
-      const orders = data as Order[];
-      setOrders(orders);
-      // Pre-popola i campi tracking con i valori salvati
-      const inputs: Record<string, string> = {};
-      orders.forEach((o) => { if (o.tracking_code) inputs[o.id] = o.tracking_code; });
-      setTrackingInputs((prev) => ({ ...inputs, ...prev }));
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*, order_items(*, products(image_url))')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        setFetchError(error.message ?? 'Errore sconosciuto dal database');
+        setOrders([]);
+      } else {
+        const fetched = (data ?? []) as Order[];
+        setOrders(fetched);
+        // Pre-popola i campi tracking con i valori salvati
+        const inputs: Record<string, string> = {};
+        fetched.forEach((o) => { if (o.tracking_code) inputs[o.id] = o.tracking_code; });
+        setTrackingInputs((prev) => ({ ...inputs, ...prev }));
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Impossibile raggiungere il database';
+      setFetchError(message);
+      setOrders([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) router.replace('/admin/login');
-      else loadOrders();
-    });
-  }, [router, loadOrders]);
+    // BUG FIX: il vecchio codice chiamava supabase.auth.getSession() che è SEMPRE null
+    // perché l'auth admin usa un sistema custom (cookie vault), non Supabase Auth.
+    // Risultato: loop infinito → /admin/login anche con sessione valida.
+    // La protezione è già garantita da middleware.ts + app/admin/layout.tsx (server-side).
+    loadOrders();
+  }, [loadOrders]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    // BUG FIX: il vecchio codice chiamava supabase.auth.signOut() che non fa nulla
+    // perché la sessione admin è il cookie kitwer_vault_session, non Supabase Auth.
+    // Il cookie deve essere cancellato via API route server-side (httpOnly = non accessibile da JS).
+    await fetch('/api/auth/logout', { method: 'POST' });
     router.replace('/admin/login');
   };
 
@@ -206,7 +292,7 @@ export default function AdminPage() {
         <div className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/LOGOKITWER.png"
+            src="/icon.png"
             alt="Kitwer"
             className="h-10 w-auto object-contain"
             style={{ filter: 'drop-shadow(0 0 6px rgba(0,212,255,0.3))' }}
@@ -242,15 +328,21 @@ export default function AdminPage() {
           <Link2 size={12} />
           Link Amazon
         </Link>
+        <Link
+          href="/admin/import"
+          className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-xl bg-[#111111] border border-gray-800 text-[11px] font-bold text-orange-400 active:scale-95 transition-transform"
+        >
+          <Upload size={12} />
+          Import
+        </Link>
       </div>
 
       {/* Lista ordini */}
       <div className="px-3 py-4 space-y-2.5 pb-16">
-        {orders.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-gray-600">
-            <Package size={42} className="mb-3 opacity-25" />
-            <p className="text-sm">Nessun ordine ancora</p>
-          </div>
+        {fetchError ? (
+          <MissionErrorState message={fetchError} onRetry={loadOrders} />
+        ) : orders.length === 0 ? (
+          <MissionEmptyState onRetry={loadOrders} />
         ) : (
           orders.map((order) => {
             const isOpen    = expanded === order.id;

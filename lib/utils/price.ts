@@ -5,8 +5,12 @@
  * Usare queste funzioni per garantire consistenza in tutto il progetto.
  */
 
-/** Tasso di cambio USD → EUR (conservativo, aggiorna se necessario) */
-export const USD_TO_EUR = 0.92;
+/**
+ * Tasso di cambio USD → EUR = 1 / EUR_RATES.USD (lib/currency.ts).
+ * Con EUR_RATES.USD = 1.08 → USD_TO_EUR ≈ 0.9259.
+ * Mantenuto per retrocompatibilità con applyMarkupFormula().
+ */
+export const USD_TO_EUR = 1 / 1.08; // ≈ 0.9259
 
 /** Ricarico commerciale del 20% sul prezzo base */
 export const MARKUP = 1.20;
@@ -58,7 +62,7 @@ export function parsePrice(input: string): number {
 
 /**
  * Applica la formula di prezzo: (BasePrice × ExchangeRate × 1.20) + 3.99.
- * Se la valuta di origine è USD, converte prima in EUR (× 0.92).
+ * Se la valuta di origine è USD, converte prima in EUR (× USD_TO_EUR ≈ 0.926).
  * La flat fee di gestione (3.99€) viene aggiunta DOPO il markup, in modo che
  * il successivo arrotondamento psicologico (.90/.99) avvenga sul totale finale.
  *
@@ -87,20 +91,6 @@ function commercialRound(value: number): number {
   if (floor + 0.90 >= value) return floor + 0.90;
   if (floor + 0.99 >= value) return floor + 0.99;
   return (floor + 1) + 0.90; // decimali > .99 (raro ma gestito)
-}
-
-/**
- * Calcola il prezzo finale con markup 20%, flat fee 3.99€ e arrotondamento a .90.
- * Alias semplificato di applyMarkupFormula + floor + 0.90.
- *
- * @param basePrice - Prezzo base in EUR
- * @returns Prezzo finale arrotondato a X,90
- */
-export function calculateFinalPrice(basePrice: number): number {
-  let price = basePrice * MARKUP;
-  price = price + FLAT_FEE;
-  const integerPart = Math.floor(price);
-  return integerPart + 0.90;
 }
 
 /** Separatore decimale per lingua */

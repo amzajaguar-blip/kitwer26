@@ -9,7 +9,8 @@
  * ║    variants   → Scraping varianti da Amazon                  ║
  * ║    subcats    → Assegna sotto-categorie keyword-based        ║
  * ║    fix-images → Ripara URL immagini rotte                    ║
- * ║    check-links → Verifica integrità link affiliazione        ║
+ * ║    sync-product-links → Sincronizza URL prodotti da affiliate  ║
+ * ║    process-magazzino-links → Pulisce e verifica link MAGAZZINO  ║
  * ║    prices     → Migra/ricalcola prezzi da CSV                ║
  * ║    clean-db   → ⚠ Svuota tabella products (PERICOLOSO)       ║
  * ║                                                              ║
@@ -17,11 +18,12 @@
  * ║    npx tsx scripts/kitwer-tools.ts                (menu)     ║
  * ║    npx tsx scripts/kitwer-tools.ts import         (diretto)  ║
  * ║    npx tsx scripts/kitwer-tools.ts import --upsert           ║
+ * ║    npx tsx scripts/kitwer-tools.ts import --hard-reset       ║
  * ║    npx tsx scripts/kitwer-tools.ts dedup --dry-run           ║
  * ║    npx tsx scripts/kitwer-tools.ts variants --all            ║
  * ║    npx tsx scripts/kitwer-tools.ts subcats                   ║
  * ║    npx tsx scripts/kitwer-tools.ts fix-images                ║
- * ║    npx tsx scripts/kitwer-tools.ts check-links               ║
+ * ║    npx tsx scripts/kitwer-tools.ts sync-product-links       ║
  * ║    npx tsx scripts/kitwer-tools.ts prices                    ║
  * ║    npx tsx scripts/kitwer-tools.ts prices --execute          ║
  * ║    npx tsx scripts/kitwer-tools.ts clean-db                  ║
@@ -150,24 +152,59 @@ function menu(question: string, choices: string[]): Promise<string> {
 // ══════════════════════════════════════════════════════════════════
 
 async function fetchProductGallery(asin: string): Promise<string[]> {
-  const fallback = `https://m.media-amazon.com/images/I/${asin}.jpg`;
+  const fallback = `https://m.media-amazon.com/images/I/${asin}._AC_SL500_.jpg`;
   try {
     const res = await fetch(`https://www.amazon.it/dp/${asin}/`, {
       headers: { 'User-Agent': nextUA(), 'Accept-Language': 'it-IT,it;q=0.9' },
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(12_000),
     });
     if (!res.ok) return [fallback];
     const html = await res.text();
 
-    const hiRes = [...html.matchAll(/"hiRes"\s*:\s*"(https:\/\/m\.media-amazon\.com\/images\/I\/[^"]+)"/g)];
-    if (hiRes.length > 0) return [...new Set(hiRes.map((m) => m[1]))];
+    type ImgEntry = { hiRes?: string; large?: string; thumb?: string };
+    const collected: string[] = [];
 
-    const large = [...html.matchAll(/"large"\s*:\s*"(https:\/\/m\.media-amazon\.com\/images\/I\/[^"]+)"/g)];
-    if (large.length > 0) return [...new Set(large.map((m) => m[1]))];
+    // ── 1. Blocco colorImages JSON (initial = galleria principale + varianti) ──
+    // Amazon embedded JSON: 'colorImages': { 'initial': [...], 'ColorName': [...] }
+    const ciM = html.match(/['"']colorImages['"']\s*:\s*(\{[\s\S]{10,8000}?\})\s*[,\}]/);
+    if (ciM?.[1]) {
+      try {
+        const ci = JSON.parse(ciM[1]) as Record<string, ImgEntry[]>;
+        // Prima l'array 'initial' → galleria principale del prodotto
+        for (const e of ci['initial'] ?? []) {
+          const url = e.hiRes ?? e.large;
+          if (url) collected.push(url);
+        }
+        // Poi tutte le varianti colore (hiRes > large)
+        for (const [key, entries] of Object.entries(ci)) {
+          if (key === 'initial') continue;
+          for (const e of entries) {
+            const url = e.hiRes ?? e.large;
+            if (url) collected.push(url);
+          }
+        }
+      } catch { /* ignora JSON malformato */ }
+    }
 
+    // ── 2. Fallback: tutti i "hiRes" sparsi nell'HTML ─────────────────────────
+    if (collected.length === 0) {
+      for (const m of html.matchAll(/"hiRes"\s*:\s*"(https:\/\/m\.media-amazon\.com\/images\/I\/[^"]+)"/g))
+        collected.push(m[1]);
+    }
+
+    // ── 3. Fallback: tutti i "large" sparsi nell'HTML ─────────────────────────
+    if (collected.length === 0) {
+      for (const m of html.matchAll(/"large"\s*:\s*"(https:\/\/m\.media-amazon\.com\/images\/I\/[^"]+)"/g))
+        collected.push(m[1]);
+    }
+
+    // ── 4. Deduplica + filtra URL non-Amazon ──────────────────────────────────
+    const deduped = [...new Set(collected)].filter((u) => u.includes('media-amazon.com'));
+    if (deduped.length > 0) return deduped;
+
+    // ── 5. Ultimo fallback: og:image → landingImageUrl → CDN ASIN ────────────
     const og = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["'](https:\/\/[^"']+)["']/i);
     if (og?.[1]) return [og[1]];
-
     const land = html.match(/"landingImageUrl"\s*:\s*"(https:\/\/[^"]+)"/);
     if (land?.[1]) return [land[1]];
 
@@ -210,7 +247,13 @@ async function findAsin(name: string): Promise<string | null> {
   } catch { return null; }
 }
 
-interface Variant { name: string; values: string[]; images?: Record<string, string> }
+interface Variant {
+  name: string;
+  values: string[];
+  images?: Record<string, string>;
+  prices?: Record<string, number>;      // valore → prezzo
+  productIds?: Record<string, string>;  // valore → id prodotto
+}
 
 async function scrapeVariants(asin: string): Promise<Variant[]> {
   try {
@@ -338,13 +381,15 @@ function normHeader(s: string): string {
 
 function sanitizeH(s: string) { return s.replace(/[^a-z0-9\s]/g, '').trim(); }
 
-const NAME_ALIASES     = ['nome_prodotto','nome prodotto','nome','product_name','product name','prodotto','name'];
-const CATEGORY_ALIASES = ['categoria','category'];
-const PRICE_ALIASES    = ['prezzo (€)','prezzo_eur','prezzo_usd','estimated_price_eur','prezzo_stimato_eur','price','prezzo','price €','price eur','price usd'];
-const ASIN_ALIASES     = ['amazon_asin','asin_amazon','asin amazon','asin'];
-const LINK_ALIASES     = ['link_esempio_amazon.it','link affiliazione (esempio)','link_affiliazione_(esempio)','link affiliazione','link_affiliazione','link_esempio','link','amazon link','amazon_link'];
+const NAME_ALIASES         = ['nome_prodotto','nome prodotto','nome','product_name','product name','prodotto','name'];
+const CATEGORY_ALIASES     = ['categoria','category'];
+const SUBCATEGORY_ALIASES  = ['sottocategoria','subcategory','subcategoria','sub_category','sub categoria'];
+const RATING_ALIASES       = ['valutazione','rating','voto','stars','vote','recensione'];
+const PRICE_ALIASES        = ['prezzo (€)','prezzo_eur','prezzo_usd','estimated_price_eur','prezzo_stimato_eur','price','prezzo','price €','price eur','price usd'];
+const ASIN_ALIASES         = ['amazon_asin','asin_amazon','asin amazon','asin'];
+const LINK_ALIASES         = ['link_esempio_amazon.it','link affiliazione (esempio)','link_affiliazione_(esempio)','link affiliazione','link_affiliazione','link_esempio','link','amazon link','amazon_link','url'];
 
-interface ColMap { nameIdx:number; categoryIdx:number; priceIdx:number; asinIdx:number; linkIdx:number }
+interface ColMap { nameIdx:number; categoryIdx:number; subCategoryIdx:number; ratingIdx:number; priceIdx:number; asinIdx:number; linkIdx:number }
 
 function detectColumns(headers: string[]): ColMap {
   const san = headers.map(normHeader).map(sanitizeH);
@@ -357,7 +402,15 @@ function detectColumns(headers: string[]): ColMap {
     }
     return -1;
   };
-  return { nameIdx: find(NAME_ALIASES), categoryIdx: find(CATEGORY_ALIASES), priceIdx: find(PRICE_ALIASES), asinIdx: find(ASIN_ALIASES), linkIdx: find(LINK_ALIASES) };
+  return {
+    nameIdx:        find(NAME_ALIASES),
+    categoryIdx:    find(CATEGORY_ALIASES),
+    subCategoryIdx: find(SUBCATEGORY_ALIASES),
+    ratingIdx:      find(RATING_ALIASES),
+    priceIdx:       find(PRICE_ALIASES),
+    asinIdx:        find(ASIN_ALIASES),
+    linkIdx:        find(LINK_ALIASES),
+  };
 }
 
 function detectCurrency(headers: string[]): 'EUR' | 'USD' | 'UNKNOWN' {
@@ -375,6 +428,18 @@ function extractAsinFromUrl(url: string): string | null {
 
 function extractAsinFromText(text: string): string | null {
   return text.match(/\b(B0[0-9A-Z]{8})\b/i)?.[1]?.toUpperCase() ?? null;
+}
+
+/**
+ * Pulisce un URL Amazon lasciando solo l'ASIN nel path canonico.
+ * Input:  https://www.amazon.it/dp/B01L9TIS6S?ref=foo&tag=bar
+ * Output: https://www.amazon.it/dp/B01L9TIS6S/
+ */
+function cleanAmazonUrl(url: string): string {
+  if (!url) return url;
+  const asin = extractAsinFromUrl(url);
+  if (asin) return `https://www.amazon.it/dp/${asin}/`;
+  return url;
 }
 
 function fixEuropeanDecimals(line: string): string {
@@ -395,16 +460,27 @@ function fixEuropeanDecimals(line: string): string {
 }
 
 function parseCsvLine(line: string): string[] {
-  const f: string[] = []; let cur = '', inQ = false;
-  for (const ch of line) {
-    if (ch === '"') inQ = !inQ;
-    else if (ch === ',' && !inQ) { f.push(cur.trim()); cur = ''; }
-    else cur += ch;
+  const f: string[] = [];
+  let cur = '', inQ = false, i = 0;
+  while (i < line.length) {
+    const ch = line[i];
+    // Virgoletta escapata con backslash (\"): aggiunge " senza uscire dal campo
+    if (ch === '\\' && inQ && i + 1 < line.length && line[i + 1] === '"') {
+      cur += '"'; i += 2; continue;
+    }
+    // Doppia virgoletta RFC 4180 ("") dentro campo quotato: aggiunge " singola
+    if (ch === '"' && inQ && i + 1 < line.length && line[i + 1] === '"') {
+      cur += '"'; i += 2; continue;
+    }
+    if (ch === '"') { inQ = !inQ; i++; continue; }
+    if (ch === ',' && !inQ) { f.push(cur.trim()); cur = ''; i++; continue; }
+    cur += ch; i++;
   }
-  f.push(cur.trim()); return f;
+  f.push(cur.trim());
+  return f;
 }
 
-interface CsvProduct { name:string; price:number|null; category:string; asin:string|null; currency:'EUR'|'USD'|'UNKNOWN' }
+interface CsvProduct { name:string; price:number|null; category:string; subCategory:string; rating:number|null; asin:string|null; currency:'EUR'|'USD'|'UNKNOWN' }
 
 function parseCsvContent(content: string, filename = ''): CsvProduct[] {
   const lines = content.trim().split(/\r\n|\n|\r/);
@@ -418,15 +494,18 @@ function parseCsvContent(content: string, filename = ''): CsvProduct[] {
     if (!line.trim()) continue;
     const cols = parseCsvLine(fixEuropeanDecimals(line));
     const name = (cols[map.nameIdx] ?? '').trim();
-    const category = (cols[map.categoryIdx] ?? '').trim();
+    const category = map.categoryIdx !== -1 ? (cols[map.categoryIdx] ?? '').trim() : '';
+    const subCategory = map.subCategoryIdx !== -1 ? (cols[map.subCategoryIdx] ?? '').trim() : '';
     if (!name || PLACEHOLDER.test(name)) continue;
     const rawPrice = map.priceIdx !== -1 ? (cols[map.priceIdx] ?? '').trim() : '';
     const price = rawPrice !== '' ? parseFloat(rawPrice) : null;
+    const rawRating = map.ratingIdx !== -1 ? (cols[map.ratingIdx] ?? '').trim() : '';
+    const rating = rawRating !== '' ? parseFloat(rawRating.replace(',', '.')) : null;
     const rawAsin = map.asinIdx !== -1 ? (cols[map.asinIdx] ?? '').trim() : '';
     const rawLink = map.linkIdx !== -1 ? (cols[map.linkIdx] ?? '').trim() : '';
     let asin: string | null = ASIN_RE.test(rawAsin) ? rawAsin.toUpperCase() : extractAsinFromUrl(rawAsin);
-    if (!asin && rawLink) asin = extractAsinFromUrl(rawLink);
-    results.push({ name, price, category, asin, currency });
+    if (!asin && rawLink) asin = extractAsinFromUrl(rawLink) ?? extractAsinFromText(rawLink);
+    results.push({ name, price, category, subCategory, rating, asin, currency });
   }
   return results;
 }
@@ -446,15 +525,18 @@ function parseExcelFile(filePath: string): CsvProduct[] {
     for (const row of rows.slice(1)) {
       if (!row?.length) continue;
       const name = (row[map.nameIdx] ?? '').toString().trim();
-      const category = (row[map.categoryIdx] ?? '').toString().trim();
+      const category = map.categoryIdx !== -1 ? (row[map.categoryIdx] ?? '').toString().trim() : '';
+      const subCategory = map.subCategoryIdx !== -1 ? (row[map.subCategoryIdx] ?? '').toString().trim() : '';
       if (!name || PLACEHOLDER.test(name)) continue;
       const rawPrice = map.priceIdx !== -1 ? (row[map.priceIdx] ?? '').toString().trim() : '';
       const price = rawPrice !== '' ? parseFloat(rawPrice.replace(',', '.')) : null;
+      const rawRating = map.ratingIdx !== -1 ? (row[map.ratingIdx] ?? '').toString().trim() : '';
+      const rating = rawRating !== '' ? parseFloat(rawRating.replace(',', '.')) : null;
       const rawAsin = map.asinIdx !== -1 ? (row[map.asinIdx] ?? '').toString().trim() : '';
       const rawLink = map.linkIdx !== -1 ? (row[map.linkIdx] ?? '').toString().trim() : '';
       let asin: string | null = ASIN_RE.test(rawAsin) ? rawAsin.toUpperCase() : extractAsinFromUrl(rawAsin);
-      if (!asin && rawLink) asin = extractAsinFromUrl(rawLink);
-      results.push({ name, price, category, asin, currency });
+      if (!asin && rawLink) asin = extractAsinFromUrl(rawLink) ?? extractAsinFromText(rawLink);
+      results.push({ name, price, category, subCategory, rating, asin, currency });
     }
     return results;
   } catch (e) { log(C.red, 'XLSX', String(e)); return []; }
@@ -465,6 +547,18 @@ function parseExcelFile(filePath: string): CsvProduct[] {
 // ══════════════════════════════════════════════════════════════════
 
 const CATEGORY_MAP: Record<string, string> = {
+  // fpv drones (PRIORITY: prima di battery/vr per evitare classificazioni errate)
+  'fpv':'fpv-drones-tech','cinewhoop':'fpv-drones-tech',
+  'quadcopter':'fpv-drones-tech','betafpv':'fpv-drones-tech',
+  'iflight':'fpv-drones-tech','geprc':'fpv-drones-tech',
+  'hglrc':'fpv-drones-tech','radiomaster':'fpv-drones-tech',
+  'fatshark':'fpv-drones-tech','walksnail':'fpv-drones-tech',
+  'eachine':'fpv-drones-tech','betaflight':'fpv-drones-tech',
+  'elrs':'fpv-drones-tech','crossfire':'fpv-drones-tech',
+  'holybro':'fpv-drones-tech','flywoo':'fpv-drones-tech',
+  'happymodel':'fpv-drones-tech','diatone':'fpv-drones-tech',
+  'frsky':'fpv-drones-tech','flysky':'fpv-drones-tech',
+  'tbs tango':'fpv-drones-tech','drone':'fpv-drones-tech',
   // crypto wallets
   'cold storage':'hardware-crypto-wallets','signing device':'hardware-crypto-wallets',
   'ledger':'hardware-crypto-wallets','trezor':'hardware-crypto-wallets',
@@ -512,8 +606,11 @@ const CATEGORY_MAP: Record<string, string> = {
   'chair':'trading-gaming-desk-accessories-premium',
   'monitor':'trading-gaming-desk-accessories-premium',
   'desk':'trading-gaming-desk-accessories-premium',
-  'vr':'trading-gaming-desk-accessories-premium',
-  'quest':'trading-gaming-desk-accessories-premium',
+  'virtual reality':'trading-gaming-desk-accessories-premium',
+  'meta quest':'trading-gaming-desk-accessories-premium',
+  'oculus':'trading-gaming-desk-accessories-premium',
+  'htc vive':'trading-gaming-desk-accessories-premium',
+  'valve index':'trading-gaming-desk-accessories-premium',
   'ergotron':'trading-gaming-desk-accessories-premium',
   // survival edc
   'fire starter':'survival-edc-tech','ferro rod':'survival-edc-tech',
@@ -526,37 +623,302 @@ const CATEGORY_MAP: Record<string, string> = {
   'multitool':'survival-edc-tech','olight':'survival-edc-tech',
   'emergency':'survival-edc-tech','emergenza':'survival-edc-tech',
   'tattica':'survival-edc-tech','keychain':'survival-edc-tech',
+  'knife':'survival-edc-tech','coltello':'survival-edc-tech',
+  'blade':'survival-edc-tech','spyderco':'survival-edc-tech',
+  'schrade':'survival-edc-tech','condor':'survival-edc-tech',
+  'benchmade':'survival-edc-tech','cold steel':'survival-edc-tech',
+  'night vision':'survival-edc-tech','nightvision':'survival-edc-tech',
+  'visione notturna':'survival-edc-tech','thermal':'survival-edc-tech',
+  'bivvy':'survival-edc-tech','bivy':'survival-edc-tech',
+  'sopravvivenza':'survival-edc-tech','bivouac':'survival-edc-tech',
+  'mylar':'survival-edc-tech','coperta reattiva':'survival-edc-tech',
 };
 
-const KNOWN_CATS = new Set([
-  'hardware-crypto-wallets','tactical-power-grid','comms-security-shield',
-  'sim-racing-accessories-premium','trading-gaming-desk-accessories-premium',
-  'survival-edc-tech','Smart Security','Tactical Power','PC Hardware',
+// Set di tutti gli slug top-level validi nel DB
+const VALID_SLUGS = new Set([
+  'hardware-crypto-wallets', 'tactical-power-grid', 'comms-security-shield',
+  'sim-racing-accessories-premium', 'trading-gaming-desk-accessories-premium',
+  'survival-edc-tech', 'fpv-drones-tech',
+  'Smart Security', 'Tactical Power', 'PC Hardware',
+  'Smart Home', '3D Printing',
 ]);
 
-const FILE_CAT_OVERRIDES: Record<string, string> = {
-  'smart_security.csv':'Smart Security',
-  'tactila power.csv':'Tactical Power',
-  'pc_hardwer.csv':'PC Hardware',
+// Mappa esplicita: qualsiasi variante stringa (lowercase, spazi) → slug canonico DB
+// Usata da resolveSlug() — NON fa keyword matching, solo lookup deterministico
+const SLUG_ALIASES: Record<string, string> = {
+  // hardware-crypto-wallets
+  'hardware-crypto-wallets':                 'hardware-crypto-wallets',
+  'hardware crypto wallets':                 'hardware-crypto-wallets',
+  'crypto wallets':                          'hardware-crypto-wallets',
+  'crypto_wallets':                          'hardware-crypto-wallets',
+  'hardware wallet':                         'hardware-crypto-wallets',
+  // tactical-power-grid
+  'tactical-power-grid':                     'tactical-power-grid',
+  'tactical power grid':                     'tactical-power-grid',
+  'tactical power':                          'tactical-power-grid',
+  'tactical_power':                          'tactical-power-grid',
+  'tactila power':                           'tactical-power-grid', // typo filename
+  'tactila_power':                           'tactical-power-grid', // typo filename
+  // comms-security-shield
+  'comms-security-shield':                   'comms-security-shield',
+  'comms security shield':                   'comms-security-shield',
+  'comms security':                          'comms-security-shield',
+  // sim-racing-accessories-premium
+  'sim-racing-accessories-premium':          'sim-racing-accessories-premium',
+  'sim racing accessories premium':          'sim-racing-accessories-premium',
+  'sim racing accessories':                  'sim-racing-accessories-premium',
+  'sim racing':                              'sim-racing-accessories-premium',
+  'sim_racing':                              'sim-racing-accessories-premium',
+  'categoria sim racing':                    'sim-racing-accessories-premium',
+  'categoria_sim_racing':                    'sim-racing-accessories-premium',
+  // trading-gaming-desk-accessories-premium
+  'trading-gaming-desk-accessories-premium': 'trading-gaming-desk-accessories-premium',
+  'trading gaming desk accessories premium': 'trading-gaming-desk-accessories-premium',
+  'trading gaming desk':                     'trading-gaming-desk-accessories-premium',
+  'gaming desk':                             'trading-gaming-desk-accessories-premium',
+  'gamedesk':                                'trading-gaming-desk-accessories-premium',
+  // survival-edc-tech
+  'survival-edc-tech':                       'survival-edc-tech',
+  'survival edc tech':                       'survival-edc-tech',
+  'survival edc':                            'survival-edc-tech',
+  'survival_edc':                            'survival-edc-tech',
+  'survival edc & digital survival':         'survival-edc-tech',
+  // Smart Security (display name nel DB)
+  'smart security':                          'Smart Security',
+  'smart_security':                          'Smart Security',
+  'smart-security':                          'Smart Security',
+  // PC Hardware (display name nel DB)
+  'pc hardware':                             'PC Hardware',
+  'pc-hardware':                             'PC Hardware',
+  'pc_hardware':                             'PC Hardware',
+  'pc_hardwer':                              'PC Hardware', // typo filename
+  'pc hardwer':                              'PC Hardware', // typo filename
+  // Smart Home
+  'smart home':                              'Smart Home',
+  'smart_home':                              'Smart Home',
+  'smart-home':                              'Smart Home',
+  // 3D Printing
+  '3d printing':                             '3D Printing',
+  '3d_printing':                             '3D Printing',
+  '3d-printing':                             '3D Printing',
+  '3d printing maker':                       '3D Printing',
+  // fpv-drones-tech
+  'fpv-drones-tech':                         'fpv-drones-tech',
+  'fpv drones tech':                         'fpv-drones-tech',
+  'fpv drones':                              'fpv-drones-tech',
+  'fpv-drones':                              'fpv-drones-tech',
+  'tactical drones fpv':                     'fpv-drones-tech',
+  'tactical-drones-fpv':                     'fpv-drones-tech',
+  'tactical drones':                         'fpv-drones-tech',
+  'drones fpv':                              'fpv-drones-tech',
+  'drones fpv tactical':                     'fpv-drones-tech',
+  // gaming workstations → trading-gaming-desk
+  'gaming workstations':                     'trading-gaming-desk-accessories-premium',
+  'gaming_workstations':                     'trading-gaming-desk-accessories-premium',
+  'gaming & workstations':                   'trading-gaming-desk-accessories-premium',
+  'gaming desk & pc hardware':               'trading-gaming-desk-accessories-premium',
+  // crypto mining → hardware-crypto-wallets
+  'crypto mining':                           'hardware-crypto-wallets',
+  'crypto_mining':                           'hardware-crypto-wallets',
+  // comunicazioni → comms-security-shield
+  'comunicazioni':                           'comms-security-shield',
 };
 
-function classifyCategory(name: string, csvCat = '', filename = ''): string {
-  const override = FILE_CAT_OVERRIDES[filename.toLowerCase()];
-  if (override) return override;
+/**
+ * Risolve qualsiasi stringa al suo slug DB canonico tramite lookup deterministico.
+ * Restituisce null se la stringa non è riconosciuta come categoria top-level.
+ * NON fa keyword matching — quello è compito di CATEGORY_MAP.
+ *
+ * Normalizzazione applicata prima del lookup:
+ *   - converte in lowercase, sostituisce [-_]+ con spazio
+ *   - rimuove suffissi "pro" / "premium" per evitare slug spuri
+ *     (es. "Sim Racing Pro" → "sim racing" → slug canonico)
+ *     Eccezione: se la stringa contiene "bundle" i suffissi vengono mantenuti.
+ */
+function resolveSlug(input: string): string | null {
+  if (!input) return null;
+  const key = input.toLowerCase().replace(/[-_]+/g, ' ').trim();
+
+  // 1. Lookup diretto
+  if (SLUG_ALIASES[key]) return SLUG_ALIASES[key];
+
+  // 2. Prova senza estensione file (es. "categoria_sim_racing.csv" → "categoria sim racing")
+  const noExt = key.replace(/\.(csv|xlsx)$/i, '').trim();
+  if (noExt !== key && SLUG_ALIASES[noExt]) return SLUG_ALIASES[noExt];
+
+  // 3. Rimuovi "pro" / "premium" (a meno che non sia un bundle) e riprova
+  const isBundle = key.includes('bundle') || key.includes('kit');
+  if (!isBundle) {
+    const stripped = noExt
+      .replace(/\b(pro|premium)\b/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (stripped !== noExt && SLUG_ALIASES[stripped]) return SLUG_ALIASES[stripped];
+  }
+
+  // 4. Strip suffissi batch/nuovi/numerici dai nomi file
+  //    es. survival_edc_nuovi_28 → survival_edc
+  //        tactical_drones_fpv_41 → tactical_drones_fpv
+  //        sim_racing_batch2_16   → sim_racing
+  const debatched = noExt
+    .replace(/\s+(nuovi|batch\d*)\s+\d+\s*$|\s+(nuovi|batch\d*)\s*$|\s+\d+\s*$/i, '')
+    .trim();
+  if (debatched && debatched !== noExt && SLUG_ALIASES[debatched]) return SLUG_ALIASES[debatched];
+
+  // 5. Controlla se l'input è già uno slug valido nel DB
+  if (VALID_SLUGS.has(input.trim())) return input.trim();
+  return null;
+}
+
+/**
+ * Classifica un prodotto nella categoria corretta rispettando la seguente
+ * gerarchia di priorità (BLINDATA):
+ *   1. Colonna CSV (category/subcategory) — se mappa a uno slug noto
+ *   2. Nome del file sorgente — slug derivato deterministicamente dal filename
+ *   3. Keyword matching sul nome prodotto — solo come ultimo fallback
+ */
+function classifyCategory(
+  name: string, csvCat = '', filename = ''
+): { category: string; source: string } {
+  // PRIORITÀ 1: Colonna CSV (solo se risolve a uno slug top-level noto)
+  if (csvCat.trim()) {
+    const slug = resolveSlug(csvCat.trim());
+    if (slug) return { category: slug, source: `colonna CSV ("${csvCat}")` };
+  }
+
+  // PRIORITÀ 2: Nome file sorgente (fonte primaria per import da MAGAZZINO/)
+  if (filename) {
+    const slug = resolveSlug(filename);
+    if (slug) return { category: slug, source: `file sorgente ("${filename}")` };
+  }
+
+  // PRIORITÀ 3: Keyword fallback sul nome prodotto (solo se nessuna sorgente disponibile)
   const lower = name.toLowerCase();
   for (const [kw, cat] of Object.entries(CATEGORY_MAP)) {
-    if (lower.includes(kw)) return cat;
+    if (lower.includes(kw)) return { category: cat, source: `keyword match ("${kw}")` };
   }
-  const csvL = csvCat.toLowerCase().trim();
-  if (csvL && KNOWN_CATS.has(csvCat.trim())) return csvCat.trim();
-  for (const [kw, cat] of Object.entries(CATEGORY_MAP)) {
-    if (csvL.includes(kw)) return cat;
+
+  return { category: 'UNSORTED', source: 'nessuna corrispondenza' };
+}
+
+// ══════════════════════════════════════════════════════════════════
+// § 6.5 — PROCESS-MAGAZZINO-LINKS
+// ══════════════════════════════════════════════════════════════════
+
+// Funzione per pulire l'URL dai parametri di affiliazione (riutilizzata da sync-product-links)
+function cleanAffiliateLinkUrl(url: string): string {
+  try {
+    const urlObj = new URL(url);
+    // Rimuovi parametri comuni di affiliazione
+    const affiliateParams = ['tag', 'ref', 'linkCode', 'node', 'linkId', 'camp', 'creative', 'creativeASIN', 'ascsubtag'];
+    affiliateParams.forEach((param) => urlObj.searchParams.delete(param));
+    // Rimuovi anche hash
+    return urlObj.toString().split('#')[0];
+  } catch {
+    return url; // Se non è un URL valido, ritorna l'originale
   }
-  const fileL = filename.toLowerCase().replace(/[-_]/g, ' ').replace(/\.csv$/, '');
-  for (const [kw, cat] of Object.entries(CATEGORY_MAP)) {
-    if (fileL.includes(kw)) return cat;
+}
+
+// Verifica se un URL restituisce HTTP 200
+async function checkUrlStatus(url: string): Promise<boolean> {
+  const ctrl = new AbortController();
+  const timeout = setTimeout(() => ctrl.abort(), 10_000);
+  try {
+    let res = await fetch(url, { 
+      method: 'HEAD', 
+      signal: ctrl.signal, 
+      redirect: 'follow', 
+      headers: { 'User-Agent': 'Mozilla/5.0' } 
+    });
+    if (res.status === 405) {
+      res = await fetch(url, { 
+        method: 'GET', 
+        signal: ctrl.signal, 
+        redirect: 'follow', 
+        headers: { 'User-Agent': 'Mozilla/5.0' } 
+      });
+    }
+    return res.status === 200;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timeout);
   }
-  return 'UNSORTED';
+}
+
+interface ProcessedMagazzinoProduct {
+  name: string;
+  price: number | null;
+  category: string;
+  asin: string | null;
+  currency: 'EUR' | 'USD' | 'UNKNOWN';
+  product_url?: string;
+}
+
+// Processa i link dei prodotti nella cartella MAGAZZINO
+async function processMagazzinoLinks(): Promise<Map<string, ProcessedMagazzinoProduct>> {
+  const MAGAZZINO_DIR = resolve(process.cwd(), 'MAGAZZINO');
+  const processedProducts = new Map<string, ProcessedMagazzinoProduct>();
+  
+  if (!existsSync(MAGAZZINO_DIR)) {
+    log(C.yellow, 'WARN', 'Cartella MAGAZZINO/ non trovata');
+    return processedProducts;
+  }
+  
+  const files = readdirSync(MAGAZZINO_DIR).filter(f => f.endsWith('.csv') || f.endsWith('.xlsx'));
+  let totalProcessed = 0;
+  let validLinks = 0;
+  
+  log(C.cyan, 'PROCESS-LINKS', `Elaborazione link da ${files.length} file in MAGAZZINO/`);
+  
+  for (const file of files) {
+    const filePath = join(MAGAZZINO_DIR, file);
+    const isExcel = file.endsWith('.xlsx');
+    const products = isExcel ? parseExcelFile(filePath) : parseCsvContent(readFileSync(filePath, 'utf-8'), file);
+    
+    log(C.cyan, 'FILE', `${file} - ${products.length} prodotti`);
+    
+    for (const product of products) {
+      totalProcessed++;
+      
+      // Se c'è un URL nel prodotto, puliscilo e validalo
+      const originalUrl = (product as any).product_url;
+      
+      if (originalUrl) {
+        const cleanedUrl = cleanAffiliateLinkUrl(originalUrl);
+        const isValid = await checkUrlStatus(cleanedUrl);
+        
+        if (isValid) {
+          validLinks++;
+          // Aggiungi il link pulito al prodotto
+          const productWithUrl = {
+            ...product,
+            product_url: cleanedUrl
+          } as ProcessedMagazzinoProduct;
+          
+          // Usa il nome del prodotto come chiave
+          processedProducts.set(product.name, productWithUrl);
+          
+          log(C.green, 'LINK-OK', `✓ ${product.name}`);
+        } else {
+          // Prodotto senza link valido
+          processedProducts.set(product.name, product as ProcessedMagazzinoProduct);
+          log(C.yellow, 'LINK-FAIL', `✗ ${product.name} (link non valido)`);
+        }
+      } else {
+        // Prodotto senza URL
+        processedProducts.set(product.name, product as ProcessedMagazzinoProduct);
+      }
+      
+      // Delay per evitare rate limiting
+      if (originalUrl) {
+        await delay(500, 1000);
+      }
+    }
+  }
+  
+  log(C.green, 'PROCESS-LINKS', `Completato: ${validLinks}/${totalProcessed} prodotti con link puliti e verificati`);
+  return processedProducts;
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -565,21 +927,36 @@ function classifyCategory(name: string, csvCat = '', filename = ''): string {
 
 interface ProductRow {
   name:string; price:number; category:string; description:string;
-  image_url:string; image_urls:string[]; affiliate_url:string;
-  is_price_pending:boolean; variants:Variant[];
+  image_url:string; image_urls:string[];
+  product_url:string;
+  is_price_pending:boolean; is_budget_king:boolean;
+  sub_category?:string; variants:Variant[];
 }
 
 async function cmdImport(args: string[]) {
-  const permissive   = args.includes('--permissive');
-  const upsertMode   = args.includes('--upsert');
+  const permissive    = args.includes('--permissive');
+  const upsertMode    = args.includes('--upsert');
   const fromRevisione = args.includes('--from-revisione');
+  const hardReset     = args.includes('--hard-reset');
+  const noAsin        = args.includes('--no-asin');
+
+  // Guard: combinazione --hard-reset + --no-asin non consentita
+  if (hardReset && noAsin) {
+    log(C.red, 'FATAL', '--hard-reset e --no-asin non possono essere usati insieme.');
+    log(C.yellow, 'INFO', 'Usa --hard-reset separatamente, poi esegui l\'import con --no-asin.');
+    return;
+  }
+
   const AFFILIATE_TAG  = 'kitwer26-21';
   const MAGAZZINO_DIR  = resolve(process.cwd(), 'MAGAZZINO');
   const OUTPUT_DIR     = resolve(process.cwd(), 'output');
   const OUTPUT_PATH    = join(OUTPUT_DIR, 'import_finale.json');
   const REVISIONE_PATH = resolve(process.cwd(), 'da_revisionare.txt');
 
-  banner('AUTO-IMPORTER — Universal CSV Importer', permissive ? 'PERMISSIVE MODE' : 'STRICT MODE');
+  banner('AUTO-IMPORTER — Universal CSV Importer',
+    hardReset ? '⚠ HARD-RESET + ' + (permissive ? 'PERMISSIVE' : 'STRICT') :
+    noAsin    ? 'NO-ASIN MODE — import diretto senza scraping Amazon' :
+    permissive ? 'PERMISSIVE MODE' : 'STRICT MODE');
   const supabase = getSupabase();
 
   // Ensure table/columns
@@ -588,6 +965,35 @@ async function cmdImport(args: string[]) {
     log(C.red, 'FATAL', `Connessione Supabase: ${connErr.message}`); return;
   }
   log(C.green, 'DB', 'Connesso a Supabase');
+
+  // ── HARD RESET ───────────────────────────────────────────────────
+  if (hardReset) {
+    const forceMode = args.includes('--force');
+    log(C.red, 'HARD-RESET', '⚠  Pulizia completa: products → subcategories → categories...');
+    const { count: before } = await supabase.from('products').select('*', { count: 'exact', head: true });
+    log(C.yellow, 'WARNING', `Prodotti nel DB: ${before ?? 0}`);
+    if (!forceMode) {
+      const ok1 = await confirm(`⚠  HARD RESET: Eliminare TUTTI i ${before ?? 0} prodotti + categorie + sottocategorie?`);
+      if (!ok1) { log(C.cyan, 'ANNULLATO', 'Hard reset annullato — import interrotto'); return; }
+      const ok2 = await confirm('ULTIMA CONFERMA: questa operazione è IRREVERSIBILE. Continuare?');
+      if (!ok2) { log(C.cyan, 'ANNULLATO', 'Hard reset annullato — import interrotto'); return; }
+    } else {
+      log(C.yellow, 'HARD-RESET', '--force attivo: skip conferme interattive');
+    }
+    // 1. Elimina products prima (evita FK violation verso categories/subcategories)
+    const { error: delProdErr } = await supabase.from('products').delete().not('id', 'is', null);
+    if (delProdErr) { log(C.red, 'ERRORE', `Pulizia products fallita: ${delProdErr.message}`); return; }
+    log(C.green, 'HARD-RESET', `✓ Eliminati ${before ?? 0} prodotti`);
+    // 2. Elimina subcategories
+    const { error: delSubErr } = await supabase.from('subcategories').delete().not('id', 'is', null);
+    if (delSubErr) log(C.yellow, 'WARN', `Pulizia subcategories: ${delSubErr.message}`);
+    else log(C.green, 'HARD-RESET', '✓ Tabella subcategories svuotata');
+    // 3. Elimina categories
+    const { error: delCatErr } = await supabase.from('categories').delete().not('id', 'is', null);
+    if (delCatErr) log(C.yellow, 'WARN', `Pulizia categories: ${delCatErr.message}`);
+    else log(C.green, 'HARD-RESET', '✓ Tabella categories svuotata');
+    log(C.green, 'HARD-RESET', '✓ DB completamente pulito — pronto per import fresco');
+  }
 
   const findExisting = async (name: string) => {
     const { data } = await supabase.from('products').select('description').eq('name', name).maybeSingle();
@@ -603,6 +1009,7 @@ async function cmdImport(args: string[]) {
   writeFileSync(OUTPUT_PATH, '[\n', 'utf-8');
   let firstJson = true;
   let saved = 0, skipped = 0, failed = 0, revisione = 0;
+  let processedMagazzinoProducts: Map<string, ProcessedMagazzinoProduct> = new Map();
   const rejectMap = new Map<string, number>();
   const trackRej = (n: string, link: string, reason: string) => {
     appendRevisione(n, link, reason);
@@ -612,7 +1019,8 @@ async function cmdImport(args: string[]) {
 
   const processProduct = async (
     name: string, price: number | null, category: string,
-    asin: string | null, currency: 'EUR'|'USD'|'UNKNOWN', filename: string, idx: number, total: number
+    asin: string | null, currency: 'EUR'|'USD'|'UNKNOWN', filename: string, idx: number, total: number,
+    subCategory = '', rating: number | null = null, cleanProductUrl?: string
   ) => {
     console.log(`\n${C.bright}${C.yellow}── [${idx}/${total}] ${name} ──${C.reset}`);
     try {
@@ -621,41 +1029,76 @@ async function cmdImport(args: string[]) {
       if (exists && upsertMode) log(C.cyan, 'UPSERT', `"${name}" già nel DB → aggiornamento`);
 
       const isPricePending = price === null || isNaN(price) || price <= 0;
-      const finalPrice     = isPricePending ? 0 : applyKitwerFormula(price!, currency);
+      const rawPrice       = isPricePending ? 0 : price!;
+      const finalPrice     = isPricePending ? 0 : applyKitwerFormula(rawPrice, currency);
 
-      const finalCat = classifyCategory(name, category, filename);
+      // ── Budget King: prezzo grezzo < €25 e valutazione ≥ 4.5 ─────
+      const isBudgetKing = !isPricePending && rawPrice < 25.00 &&
+                           rating !== null && !isNaN(rating) && rating >= 4.5;
+      if (isBudgetKing) log(C.yellow, 'BUDGET KING', `⭐ "${name}" → €${rawPrice} | ★${rating}`);
+
+      const { category: finalCat, source: catSource } = classifyCategory(name, category, filename);
+      log(C.cyan, 'IMPORT', `Prodotto '${name}' assegnato a categoria '${finalCat}' (da ${catSource})`);
       if (finalCat === 'UNSORTED' && !permissive) {
         const link = `https://www.amazon.it/s?k=${encodeURIComponent(name)}&tag=${AFFILIATE_TAG}`;
         trackRej(name, link, 'Categoria sconosciuta');
         log(C.red, 'SCARTATO', `"${name}" → categoria sconosciuta`); return;
       }
-      log(C.green, 'CAT', `"${name}" → ${finalCat}`);
 
-      let finalAsin = asin ?? extractAsinFromText(name) ?? await findAsin(name);
-      if (!finalAsin) {
-        const link = `https://www.amazon.it/s?k=${encodeURIComponent(name)}&tag=${AFFILIATE_TAG}`;
-        trackRej(name, link, 'ASIN non trovato');
-        log(C.red, 'SCARTATO', `"${name}" → ASIN non trovato`); return;
-      }
+      // ── Sottocategoria: CSV > keyword fallback ────────────────────
+      const finalSubCat = subCategory.trim() || assignSubCat(finalCat, name, '') || undefined;
+      if (finalSubCat) log(C.magenta, 'SUBCAT', `"${name}" → ${finalSubCat}`);
 
-      const affiliate_url = `https://www.amazon.it/dp/${finalAsin}/?tag=${AFFILIATE_TAG}`;
-      const gallery = await fetchProductGallery(finalAsin);
-      if (gallery.length === 1 && gallery[0].endsWith(`${finalAsin}.jpg`)) {
-        const si = await searchProductImage(name);
-        if (si) gallery[0] = si;
-        else {
-          trackRej(name, affiliate_url, 'Immagine non trovata');
-          log(C.red, 'SCARTATO', `"${name}" → nessuna immagine`); return;
+      let finalAsin: string | null = null;
+      let gallery: string[]  = [];
+      let variants: Variant[] = [];
+
+      if (noAsin) {
+        // ── NO-ASIN MODE: import diretto, nessuno scraping Amazon ───────
+        log(C.cyan, 'NO-ASIN', `"${name}" → import diretto (placeholder immagine, no ASIN)`);
+        gallery  = ['/placeholder.svg'];
+        variants = [];
+      } else {
+        finalAsin = asin ?? extractAsinFromText(name) ?? await findAsin(name);
+        if (!finalAsin) {
+          const link = `https://www.amazon.it/s?k=${encodeURIComponent(name)}&tag=${AFFILIATE_TAG}`;
+          trackRej(name, link, 'ASIN non trovato');
+          log(C.red, 'SCARTATO', `"${name}" → ASIN non trovato`); return;
         }
+        gallery = await fetchProductGallery(finalAsin);
+        if (gallery.length === 1 && gallery[0].endsWith(`${finalAsin}.jpg`)) {
+          const si = await searchProductImage(name);
+          if (si) {
+            gallery[0] = si;
+          } else {
+            // Fallback: URL Amazon CDN standard con ASIN — accettabile, non scartiamo
+            gallery[0] = `https://m.media-amazon.com/images/I/${finalAsin}._AC_SL500_.jpg`;
+            log(C.yellow, 'IMG-FALLBACK', `"${name}" → uso CDN ASIN fallback`);
+          }
+        }
+        variants = await scrapeVariants(finalAsin);
       }
 
-      const variants    = await scrapeVariants(finalAsin);
-      const description = await generateDescription(name, finalCat);
+      // ── URL prodotto ────────────────────────────────────────────────
+      // In no-asin mode usa URL di ricerca senza tag affiliazione (evita click non validi)
+      const product_url = cleanProductUrl
+        ? cleanAmazonUrl(cleanProductUrl)
+        : finalAsin
+          ? `https://www.amazon.it/dp/${finalAsin}/`
+          : noAsin
+            ? `https://www.amazon.it/s?k=${encodeURIComponent(name)}`
+            : `https://www.amazon.it/s?k=${encodeURIComponent(name)}&tag=${AFFILIATE_TAG}`;
+
+      // In no-asin mode saltiamo DeepSeek per velocità e affidabilità
+      const description = noAsin ? '' : await generateDescription(name, finalCat);
 
       const row: ProductRow = {
         name, price: finalPrice, category: finalCat, description,
         image_url: gallery[0], image_urls: gallery,
-        affiliate_url, is_price_pending: isPricePending, variants,
+        product_url,
+        is_price_pending: isPricePending, is_budget_king: isBudgetKing,
+        variants,
+        ...(finalSubCat && { sub_category: finalSubCat }),
       };
 
       const { error } = upsertMode
@@ -687,8 +1130,8 @@ async function cmdImport(args: string[]) {
     for (let i = 0; i < entries.length; i++) {
       const { name, link } = entries[i];
       const asin = extractAsinFromUrl(link) ?? extractAsinFromText(name);
-      await processProduct(name, null, '', asin, 'UNKNOWN', '', i + 1, entries.length);
-      if (i < entries.length - 1) await delay(4000, 7000);
+      await processProduct(name, null, '', asin, 'UNKNOWN', '', i + 1, entries.length, '', null);
+      if (i < entries.length - 1 && !noAsin) await delay(4000, 7000);
     }
   } else {
     const isCsv  = (s: string) => s.toLowerCase().endsWith('.csv');
@@ -714,23 +1157,46 @@ async function cmdImport(args: string[]) {
     if (entries.length === 0) { log(C.yellow, 'SCAN', 'Nessun file CSV/XLSX trovato'); return; }
     log(C.cyan, 'SCAN', `${entries.length} file: ${entries.map((e) => e.filename).join(', ')}\n`);
 
+    // Processa i link MAGAZZINO prima dell'importazione (skip in no-asin mode)
+    if (!noAsin) {
+      log(C.magenta, 'PROCESS', 'Elaborazione link MAGAZZINO...');
+      processedMagazzinoProducts = await processMagazzinoLinks();
+    } else {
+      log(C.cyan, 'NO-ASIN', 'Skip processMagazzinoLinks — no-asin mode attivo');
+    }
+
     for (const { filename, filePath, isExcel } of entries) {
       hr('═', 58, C.blue);
       log(C.blue, 'FILE', filename);
+      // Log di assegnazione fissa della categoria dal file sorgente
+      const fileSlug = resolveSlug(filename);
+      if (fileSlug) {
+        log(C.magenta, 'FOLDER-SYNC', `File: ${filename} -> Assegnazione fissa alla categoria: ${fileSlug}`);
+      } else {
+        log(C.yellow, 'FOLDER-SYNC', `File: ${filename} -> Nessuna categoria fissa — uso keyword fallback per ogni prodotto`);
+      }
       hr('═', 58, C.blue);
       const products = isExcel ? parseExcelFile(filePath) : parseCsvContent(readFileSync(filePath, 'utf-8'), filename);
       if (products.length === 0) { log(C.yellow, 'FILE', 'Nessuna riga valida — salto'); continue; }
       for (let i = 0; i < products.length; i++) {
-        const { name, price, category, asin, currency } = products[i];
-        await processProduct(name, price, category, asin, currency, filename, i + 1, products.length);
-        if (i < products.length - 1) await delay(4000, 7000);
+        const { name, price, category, subCategory, rating, asin, currency } = products[i];
+        const processedProduct = processedMagazzinoProducts.get(name);
+        const cleanProductUrl = processedProduct?.product_url;
+        await processProduct(name, price, category, asin, currency, filename, i + 1, products.length, subCategory, rating, cleanProductUrl);
+        if (i < products.length - 1 && !noAsin) await delay(4000, 7000);
       }
     }
   }
 
   appendFileSync(OUTPUT_PATH, '\n]\n', 'utf-8');
 
-  // Riepilogo
+  // Riepilogo link puliti (solo in modalità normale, non no-asin)
+  if (!noAsin) {
+    const cleanLinksCount = [...processedMagazzinoProducts.values()].filter((p) => p.product_url).length;
+    console.log(`${C.bright}${C.green}  ✓ ${cleanLinksCount} prodotti importati con link puliti e verificati${C.reset}`);
+  }
+
+  // Riepilogo generale
   hr();
   console.log(`${C.bright}${C.green}  ✓ Importati     : ${saved}${C.reset}`);
   console.log(`${C.bright}${C.blue}  ↺ Già nel DB    : ${skipped}${C.reset}`);
@@ -744,86 +1210,101 @@ async function cmdImport(args: string[]) {
 // ══════════════════════════════════════════════════════════════════
 
 async function cmdDedup(args: string[]) {
-  const dryRun = args.includes('--dry-run');
-  banner('DEDUP-PRODUCTS — De-duplicazione intelligente', dryRun ? 'DRY RUN (no modifiche)' : 'LIVE');
+  const dryRun   = args.includes('--dry-run');
+  const inspect  = args.includes('--inspect'); // mostra URL raw dei top gruppi
+  banner('DEDUP-PRODUCTS — De-duplicazione per ASIN univoco', dryRun ? 'DRY RUN (no modifiche)' : inspect ? 'INSPECT' : 'LIVE');
   const supabase = getSupabase();
 
-  interface P { id:string; name:string; description:string|null; image_url:string|null; image_urls:string[]|null; affiliate_url:string|null; category:string|null; price:number|null; variants:Variant[]|null; slug:string|null }
+  interface P { id:string; name:string; product_url:string|null; price:number|null; created_at:string|null }
 
-  const { data: products, error } = await supabase
-    .from('products').select('id,name,description,image_url,image_urls,affiliate_url,category,price,variants,slug').order('name');
-  if (error) { log(C.red, 'FATAL', error.message); return; }
-  if (!products?.length) { log(C.yellow, 'INFO', 'Nessun prodotto'); return; }
-  log(C.cyan, 'SCAN', `${products.length} prodotti caricati`);
+  // Carica in batch (Supabase max 1000 per query)
+  let allProducts: P[] = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from('products')
+      .select('id,name,product_url,price,created_at')
+      .range(from, from + 999);
+    if (error) { log(C.red, 'FATAL', error.message); return; }
+    if (!data?.length) break;
+    allProducts = allProducts.concat(data as P[]);
+    if (data.length < 1000) break;
+    from += 1000;
+  }
+  if (!allProducts.length) { log(C.yellow, 'INFO', 'Nessun prodotto nel database'); return; }
+  log(C.cyan, 'SCAN', `${allProducts.length} prodotti caricati`);
 
-  const makeSlug = (name: string) =>
-    name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-').replace(/-+/g, '-').slice(0, 80);
+  // Normalizza il nome per confronto: lowercase, no accenti, no punteggiatura, spazi singoli
+  const normName = (s: string) =>
+    s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+     .replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
 
-  const mergeDescs = (descs: string[]) => {
-    const clean = descs.map((d) => d.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()).filter(Boolean);
-    if (clean.length <= 1) return clean[0] ?? '';
-    const seen = new Set<string>(); const uniq: string[] = [];
-    for (const s of clean.flatMap((d) => d.split(/(?<=[.!?])\s+/).filter((s) => s.length > 10))) {
-      const k = s.toLowerCase().slice(0, 40);
-      if (!seen.has(k)) { seen.add(k); uniq.push(s); }
-    }
-    return uniq.join(' ');
-  };
-
+  // Raggruppa per nome normalizzato — duplicati reali hanno lo stesso nome esatto
   const groups = new Map<string, P[]>();
-  for (const p of products as P[]) {
-    const key = Array.isArray(p.image_urls) && p.image_urls.length > 0 ? p.image_urls[0] : (p.image_url ?? `__noid_${p.id}`);
+  let noName = 0;
+  for (const p of allProducts) {
+    const key = normName(p.name ?? '');
+    if (!key || key.length < 5) { noName++; continue; }
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push(p);
   }
 
-  const dups = [...groups.values()].filter((g) => g.length > 1);
-  log(C.yellow, 'DUPLICATI', `${dups.length} gruppi trovati`);
-  if (dups.length === 0) { log(C.green, 'OK', 'Nessun duplicato!'); return; }
+  const dups = [...groups.entries()].filter(([, g]) => g.length > 1);
+  const totalToDelete = dups.reduce((s, [, g]) => s + g.length - 1, 0);
+  log(C.yellow, 'DUPLICATI', `${dups.length} nomi duplicati  |  ${noName} senza nome (ignorati)  |  da eliminare: ${totalToDelete}`);
 
-  let merged = 0, deleted = 0, errored = 0;
-  for (const group of dups) {
-    const sorted = [...group].sort((a, b) => b.name.length - a.name.length);
-    const master = sorted[0], dupItems = sorted.slice(1);
-    console.log(`\n${C.bright}${C.yellow}── GRUPPO (${group.length}) ──${C.reset}`);
-    log(C.green, 'MASTER', `"${master.name}"`);
-    dupItems.forEach((d) => log(C.gray, 'DUP', `"${d.name}"`));
+  if (dups.length === 0) {
+    log(C.green, 'OK', 'Nessun duplicato trovato — database pulito!');
+    hr();
+    return;
+  }
 
-    const titleVals = [master.name, ...dupItems.map((d) => d.name).filter((n) => n !== master.name)];
-    const existVars = Array.isArray(master.variants) ? master.variants : [];
-    let newVars = [...existVars];
-    if (titleVals.length > 1) {
-      const idx = newVars.findIndex((v) => v.name === 'Versione');
-      if (idx >= 0) newVars[idx] = { ...newVars[idx], values: [...new Set([...newVars[idx].values, ...titleVals])] };
-      else newVars.push({ name: 'Versione', values: titleVals });
+  // --inspect: mostra TOP 5 gruppi con URL raw per diagnosi
+  if (inspect || dryRun) {
+    const topGroups = [...dups].sort((a, b) => b[1].length - a[1].length).slice(0, inspect ? 10 : dups.length);
+    console.log(`\n${C.bright}  Gruppi duplicati (ordinati per dimensione):${C.reset}`);
+    for (const [key, group] of topGroups) {
+      console.log(`\n  ${C.bright}${C.yellow}NOME: "${key.slice(0, 60)}"  (${group.length} record)${C.reset}`);
+      group.slice(0, 3).forEach((p, i) => {
+        const label = i === 0 ? `${C.green}KEEP` : `${C.gray}DEL `;
+        console.log(`    ${label}${C.reset}  id=${p.id}  price=${p.price ?? '?'}  "${p.name.slice(0, 55)}"`);
+        console.log(`         product_url: ${p.product_url ?? 'null'}`);
+      });
+      if (group.length > 3) console.log(`    ${C.gray}  ... e altri ${group.length - 3} record${C.reset}`);
     }
+    if (inspect && dups.length > 10) console.log(`\n  ${C.gray}... e altri ${dups.length - 10} gruppi${C.reset}`);
+  }
 
-    const mergedDesc = mergeDescs([master.description ?? '', ...dupItems.map((d) => d.description ?? '')]);
-    const allUrls = [...new Set([...(master.image_urls ?? []), ...dupItems.flatMap((d) => d.image_urls ?? [])].filter(Boolean))];
-    const baseSlug = makeSlug(master.name);
-    const { data: sc } = await supabase.from('products').select('id').eq('slug', baseSlug).neq('id', master.id).maybeSingle();
-    const finalSlug = sc ? `${baseSlug}-${String(master.id).slice(0, 6)}` : baseSlug;
+  console.log(`\n${C.bright}${C.red}  ⚠  Totale record da eliminare: ${totalToDelete}${C.reset}`);
 
-    if (!dryRun) {
-      const { error: uErr } = await supabase.from('products').update({
-        variants: newVars, description: mergedDesc || master.description,
-        image_urls: allUrls, image_url: allUrls[0] ?? master.image_url, slug: finalSlug,
-      }).eq('id', master.id);
-      if (uErr) { log(C.red, 'ERR', uErr.message); errored++; continue; }
-      const { error: dErr } = await supabase.from('products').delete().in('id', dupItems.map((d) => d.id));
-      if (dErr) { log(C.red, 'ERR', dErr.message); errored++; continue; }
-      deleted += dupItems.length;
-    } else {
-      log(C.yellow, 'DRY', `Avrebbe eliminato ${dupItems.length} duplicati`);
-    }
-    merged++;
+  if (dryRun || inspect) {
+    console.log(`${C.bright}${C.yellow}  DRY RUN — nessuna modifica eseguita${C.reset}`);
+    hr();
+    return;
+  }
+
+  // Esegui cancellazioni: tieni il record con prezzo più basso (o il più recente se parità)
+  let deleted = 0, errored = 0;
+  for (const [, group] of dups) {
+    // Ordina: prezzo crescente → data decrescente come tiebreaker
+    const sorted = [...group].sort((a, b) => {
+      const pa = a.price ?? Infinity, pb = b.price ?? Infinity;
+      if (pa !== pb) return pa - pb;
+      return (b.created_at ?? '').localeCompare(a.created_at ?? '');
+    });
+    const keepId = sorted[0].id;
+    const deleteIds = sorted.slice(1).map((p) => p.id);
+
+    const { error: dErr } = await supabase.from('products').delete().in('id', deleteIds);
+    if (dErr) { log(C.red, 'ERR', `${dErr.message}`); errored++; continue; }
+    deleted += deleteIds.length;
   }
 
   hr();
-  console.log(`${C.bright}${C.green}  Gruppi processati : ${merged}${C.reset}`);
-  console.log(`${C.bright}${C.red}  Record eliminati  : ${deleted}${C.reset}`);
-  if (errored) console.log(`${C.bright}${C.yellow}  Errori           : ${errored}${C.reset}`);
-  if (dryRun) console.log(`${C.bright}${C.yellow}  DRY RUN — nessuna modifica${C.reset}`);
+  console.log(`${C.bright}${C.green}  Gruppi ASIN duplicati : ${dups.length}${C.reset}`);
+  console.log(`${C.bright}${C.red}  Record eliminati      : ${deleted}${C.reset}`);
+  console.log(`${C.bright}${C.cyan}  Prodotti rimasti      : ${allProducts.length - deleted}${C.reset}`);
+  if (errored) console.log(`${C.bright}${C.yellow}  Errori                : ${errored}${C.reset}`);
   hr();
 }
 
@@ -831,46 +1312,233 @@ async function cmdDedup(args: string[]) {
 // § 9 — COMMAND: VARIANTS
 // ══════════════════════════════════════════════════════════════════
 
+/**
+ * Estrae varianti direttamente dal nome del prodotto — offline, 100% affidabile.
+ * Amazon scraping non è usato (bloccato da bot-detection).
+ */
+function extractVariantsFromName(name: string): Variant[] {
+  const variants: Variant[] = [];
+  const n = name;
+
+  // ── Piattaforma (gaming) ──────────────────────────────────────────
+  const platMatch = n.match(/\b(PS[345]|Xbox(?:\s+(?:One|Series\s*[XS]))?|Nintendo\s*Switch|PC)\b/gi);
+  if (platMatch) {
+    const vals = [...new Set(platMatch.map((v) => v.trim()))];
+    if (vals.length) variants.push({ name: 'Piattaforma', values: vals });
+  }
+
+  // ── Combo piattaforma tipo "PS5/PC" ──────────────────────────────
+  const comboPlat = n.match(/\b(PS[345]\/PC|PC\/PS[345]|PS[345]\/Xbox|Xbox\/PC)\b/gi);
+  if (comboPlat && !variants.find((v) => v.name === 'Piattaforma')) {
+    variants.push({ name: 'Piattaforma', values: [...new Set(comboPlat.map((v) => v.trim()))] });
+  }
+
+  // ── Capacità storage / memoria ────────────────────────────────────
+  const storMatch = [...n.matchAll(/\b(\d+)\s*(GB|TB)\b/gi)];
+  if (storMatch.length) {
+    const vals = [...new Set(storMatch.map((m) => `${m[1]}${m[2].toUpperCase()}`))];
+    variants.push({ name: 'Capacità', values: vals });
+  }
+
+  // ── Refresh rate monitor ──────────────────────────────────────────
+  const hzMatch = [...n.matchAll(/\b(\d{2,3})\s*Hz\b/gi)];
+  if (hzMatch.length) {
+    const vals = [...new Set(hzMatch.map((m) => `${m[1]}Hz`))];
+    variants.push({ name: 'Refresh Rate', values: vals });
+  }
+
+  // ── Risoluzione display ───────────────────────────────────────────
+  const resMatch = n.match(/\b(4K|8K|QHD|UHD|WQHD|FHD|1080p|1440p|2160p|OLED)\b/gi);
+  if (resMatch) {
+    const vals = [...new Set(resMatch.map((v) => v.toUpperCase()))];
+    variants.push({ name: 'Risoluzione', values: vals });
+  }
+
+  // ── Dimensione display (pollici) ──────────────────────────────────
+  const inchMatch = [...n.matchAll(/(\d{2,3}(?:\.\d)?)["\u201d\u2033]?\s*(?:pollici|inch)?/gi)]
+    .filter((m) => { const v = parseFloat(m[1]); return v >= 15 && v <= 100; });
+  if (inchMatch.length) {
+    const vals = [...new Set(inchMatch.map((m) => `${m[1]}"`))];
+    variants.push({ name: 'Dimensione', values: vals });
+  }
+
+  // ── Colore ────────────────────────────────────────────────────────
+  const colorKw = ['nero','nera','bianco','bianca','rosso','rossa','argento','grigio','grigia',
+    'black','white','silver','red','blue','blu','verde','green','orange','arancione',
+    'titanium','carbon','midnight','phantom','glacier'];
+  const foundColors = colorKw.filter((c) => new RegExp(`\\b${c}\\b`, 'i').test(n));
+  if (foundColors.length) {
+    const vals = [...new Set(foundColors.map((c) => c.charAt(0).toUpperCase() + c.slice(1)))];
+    variants.push({ name: 'Colore', values: vals });
+  }
+
+  // ── Connettività ──────────────────────────────────────────────────
+  const connMatch = n.match(/\b(Wi-Fi|WiFi|Bluetooth|BT\s*\d\.\d|NFC|USB-?C|USB-?A|Thunderbolt\s*\d?|Wireless|Wired)\b/gi);
+  if (connMatch) {
+    const vals = [...new Set(connMatch.map((v) => v.trim()))];
+    if (vals.length) variants.push({ name: 'Connettività', values: vals });
+  }
+
+  // ── Taglia abbigliamento / fisica ─────────────────────────────────
+  const sizeMatch = n.match(/\b(XXS|XS|[SML]|XL|XXL|2XL|3XL)\b/g);
+  if (sizeMatch) {
+    const vals = [...new Set(sizeMatch)];
+    if (vals.length > 0 && !variants.find((v) => v.name === 'Taglia')) {
+      variants.push({ name: 'Taglia', values: vals });
+    }
+  }
+
+  return variants;
+}
+
 async function cmdVariants(args: string[]) {
   const allMode = args.includes('--all');
   const dryRun  = args.includes('--dry-run');
-  banner('POPULATE-VARIANTS — Scraping varianti da Amazon', dryRun ? 'DRY RUN' : allMode ? 'ALL (sovrascrive)' : 'Solo prodotti senza varianti');
+  banner(
+    'POPULATE-VARIANTS — Estrazione varianti + price-linking per famiglia',
+    dryRun ? 'DRY RUN' : allMode ? 'ALL (sovrascrive)' : 'Solo prodotti senza varianti',
+  );
   const supabase = getSupabase();
 
-  const { data, error } = await supabase.from('products').select('id,name,affiliate_url,variants');
-  if (error) { log(C.red, 'FATAL', error.message); return; }
-  if (!data?.length) { log(C.yellow, 'INFO', 'Nessun prodotto'); return; }
+  // ── Carica tutti i prodotti in batch (servono prezzi + sub_category) ──────
+  interface PFull { id:string; name:string; price:number|null; sub_category:string|null; variants:Variant[]|null }
+  let allData: PFull[] = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from('products').select('id,name,price,sub_category,variants').range(from, from + 999);
+    if (error) { log(C.red, 'FATAL', error.message); return; }
+    if (!data?.length) break;
+    allData = allData.concat(data as PFull[]);
+    if (data.length < 1000) break;
+    from += 1000;
+  }
+  if (!allData.length) { log(C.yellow, 'INFO', 'Nessun prodotto'); return; }
+  log(C.cyan, 'SCAN', `${allData.length} prodotti caricati`);
 
-  const extractAsin = (url: string) => url?.match(/\/dp\/([A-Z0-9]{10})(?:[/?#]|$)/i)?.[1]?.toUpperCase() ?? null;
+  // ── FASE 1 — Estrazione varianti strutturali dal nome ────────────────────
+  // Map: id → variants estratte dalla fase 1
+  const nameVarMap = new Map<string, Variant[]>();
+  for (const p of allData) {
+    const v = extractVariantsFromName(p.name ?? '');
+    if (v.length) nameVarMap.set(p.id, v);
+  }
+  log(C.cyan, 'FASE-1', `${nameVarMap.size} prodotti con varianti strutturali estratte dal nome`);
 
-  const toProcess = allMode
-    ? data.filter((p) => p.affiliate_url)
-    : data.filter((p) => p.affiliate_url && (!p.variants || (p.variants as Variant[]).length === 0));
+  // ── FASE 2 — Raggruppamento per famiglia (prezzo diverso, nome simile) ────
+  // Estrai "base name": rimuovi numeri, unità, colori, piattaforme dal nome
+  const stripVariantTokens = (s: string) =>
+    s.replace(/\b\d{1,4}(?:GB|TB|Hz|"|'')\b/gi, '')
+     .replace(/\b(PS[345]|Xbox|Nintendo\s*Switch|PC|4K|8K|QHD|FHD|OLED|UHD|WQHD)\b/gi, '')
+     .replace(/\b(nero|bianco|black|white|silver|argento|rosso|blue|blu)\b/gi, '')
+     .replace(/\b(XXS|XS|[SML]|XL|XXL|2XL)\b/g, '')
+     .replace(/\s+/g, ' ').trim().toLowerCase()
+     .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-  log(C.cyan, 'SCAN', `${toProcess.length} da processare su ${data.length} totali`);
-  let done = 0, noVar = 0;
+  // Jaccard similarity su parole lunghe >2 chars
+  const jaccard = (a: string, b: string): number => {
+    const wa = new Set(a.split(/\s+/).filter((w) => w.length > 2));
+    const wb = new Set(b.split(/\s+/).filter((w) => w.length > 2));
+    if (wa.size === 0 && wb.size === 0) return 1;
+    const inter = [...wa].filter((w) => wb.has(w)).length;
+    return inter / (wa.size + wb.size - inter);
+  };
 
-  for (let i = 0; i < toProcess.length; i++) {
-    const p = toProcess[i];
-    console.log(`\n${C.bright}${C.yellow}── [${i+1}/${toProcess.length}] ${p.name.slice(0, 60)} ──${C.reset}`);
-    const asin = extractAsin(p.affiliate_url);
-    if (!asin) { log(C.yellow, 'SKIP', 'ASIN non estraibile'); noVar++; continue; }
-    const variants = await scrapeVariants(asin);
-    if (!variants.length) { log(C.gray, 'NO-VAR', 'Nessuna variante trovata'); noVar++; }
-    else {
-      const imgCount = variants.reduce((s, v) => s + Object.keys(v.images ?? {}).length, 0);
-      log(C.green, 'OK', `${variants.map((v) => `${v.name}(${v.values.length})`).join(', ')} | ${imgCount} img`);
-      if (!dryRun) {
-        const { error: upErr } = await supabase.from('products').update({ variants }).eq('id', p.id);
-        if (upErr) log(C.red, 'DB ERR', upErr.message); else done++;
-      } else done++;
+  // Raggruppa per (sub_category → famiglie per nome simile ≥ 0.55)
+  type PFam = { id:string; name:string; price:number|null; sub_category:string|null };
+  const grouped = new Map<string, PFam[][]>(); // sub_cat → array di famiglie
+
+  for (const p of allData) {
+    const subCat = p.sub_category ?? '__no_sub__';
+    if (!grouped.has(subCat)) grouped.set(subCat, []);
+    const families = grouped.get(subCat)!;
+    const baseP = stripVariantTokens(p.name ?? '');
+    let placed = false;
+    for (const fam of families) {
+      const baseF = stripVariantTokens(fam[0].name ?? '');
+      if (jaccard(baseP, baseF) >= 0.55) { fam.push(p); placed = true; break; }
     }
-    if (i < toProcess.length - 1) await delay(4000, 7000);
+    if (!placed) families.push([p]);
+  }
+
+  // Variant "Versione" con price per famiglia con 2+ prodotti
+  // Map: id → { label (etichetta corta), familyVariant }
+  const priceVarMap = new Map<string, Variant>();
+
+  let families2Plus = 0;
+  for (const families of grouped.values()) {
+    for (const fam of families) {
+      if (fam.length < 2) continue;
+      families2Plus++;
+      // Etichetta corta: diff tra nome e base comune (le parole non in comune)
+      const baseCommon = stripVariantTokens(fam[0].name ?? '');
+      const makeLabel = (name: string) => {
+        const tokens = name.split(/\s+/).filter((w) => !baseCommon.includes(w.toLowerCase()) && w.length > 1);
+        return tokens.slice(0, 3).join(' ') || name.slice(0, 25);
+      };
+      const values   : string[]             = [];
+      const prices   : Record<string, number> = {};
+      const productIds: Record<string, string> = {};
+      for (const member of fam) {
+        const label = makeLabel(member.name ?? '');
+        values.push(label);
+        if (member.price != null) prices[label] = member.price;
+        productIds[label] = member.id;
+      }
+      const famVariant: Variant = {
+        name: 'Versione',
+        values,
+        ...(Object.keys(prices).length ? { prices } : {}),
+        productIds,
+      };
+      for (const member of fam) priceVarMap.set(member.id, famVariant);
+    }
+  }
+  log(C.cyan, 'FASE-2', `${families2Plus} famiglie con varianti di prezzo rilevate`);
+
+  // ── Merge fase 1 + fase 2 e filtra cosa processare ───────────────────────
+  const toProcess = allMode ? allData : allData.filter((p) => !p.variants || (p.variants as Variant[]).length === 0);
+
+  const updates: Array<{id:string; variants: Variant[]}> = [];
+  let withVar = 0, noVar = 0;
+
+  for (const p of toProcess) {
+    const structural = nameVarMap.get(p.id) ?? [];
+    const priceVar   = priceVarMap.get(p.id);
+    // Aggiungi "Versione" solo se non c'è già uno structurale con quel nome
+    const merged = priceVar && !structural.find((v) => v.name === 'Versione')
+      ? [...structural, priceVar]
+      : structural;
+
+    if (!merged.length) {
+      noVar++;
+      continue;
+    }
+
+    withVar++;
+    const summary = merged.map((v) => {
+      const priceInfo = v.prices
+        ? `  💰 ${v.values.map((val) => `${val}=${v.prices![val] != null ? `€${v.prices![val]}` : '?'}`).join(', ')}`
+        : '';
+      return `${C.cyan}${v.name}${C.reset}:[${v.values.join('/')}]${priceInfo}`;
+    }).join('  ');
+    log(C.green, 'VAR', `"${p.name.slice(0, 40)}"  →  ${summary}`);
+    updates.push({ id: p.id, variants: merged });
+  }
+
+  if (!dryRun && updates.length > 0) {
+    log(C.cyan, 'DB', `Salvataggio di ${updates.length} record...`);
+    for (let i = 0; i < updates.length; i += 200) {
+      const { error: upErr } = await supabase.from('products').upsert(updates.slice(i, i + 200), { onConflict: 'id' });
+      if (upErr) log(C.red, 'ERR', upErr.message);
+    }
+    log(C.green, 'DONE', 'Salvato');
   }
 
   hr();
-  console.log(`${C.bright}${C.green}  Salvati        : ${done}${C.reset}`);
-  console.log(`${C.bright}${C.yellow}  Senza varianti : ${noVar}${C.reset}`);
+  console.log(`${C.bright}${C.green}  Con varianti        : ${withVar}${C.reset}`);
+  console.log(`${C.bright}${C.yellow}  Senza varianti      : ${noVar}${C.reset}`);
+  console.log(`${C.bright}${C.cyan}  Famiglie (prezzo ∆) : ${families2Plus}${C.reset}`);
   if (dryRun) console.log(`${C.bright}${C.yellow}  DRY RUN — nessun salvataggio${C.reset}`);
   hr();
 }
@@ -953,6 +1621,14 @@ const SUB_KW: Record<string, Array<[string, string[]]>> = {
     ['smart-locks',    ['lock','serratura']],
     ['smart-cameras',  ['camera','telecamera','webcam','sorveglianza']],
   ],
+  'fpv-drones-tech': [
+    ['ready-to-fly',  ['ready-to-fly','avata','dji fpv combo','complete kit','rtf kit','kit beginner']],
+    ['micro-whoops',  ['whoop','cinewhoop','micro quad','1s ','tinyhawk','mobula','pavo pico','cetus','ezpilot']],
+    ['fpv-drones',    ['freestyle','racing quad','mark4','smirk','sector','chimera','protek','nazgul']],
+    ['controllers',   ['controller','transmitter',' tx ','radiomaster','tbs tango','frsky','jumper','flysky','radiolink','taranis','zorro','tango 2']],
+    ['goggles',       ['goggles','fatshark','skyzone','hdzero','walksnail','avatar','dominator','scout','integra','ev800']],
+    ['components',    ['flight controller',' fc ','stack','esc','betaflight','holybro','omnibus','kakute','crossfire module']],
+  ],
 };
 SUB_KW['Tactical Power'] = SUB_KW['tactical-power-grid'];
 SUB_KW['PC Hardware']    = SUB_KW['pc-hardware-high-ticket'];
@@ -997,17 +1673,48 @@ async function cmdSubcats(args: string[]) {
   }
   log(C.cyan, 'FETCH', `${all.length} prodotti caricati`);
 
+  // Fallback sub_category per categoria (quando nessuna keyword fa match)
+  const CAT_FALLBACK: Record<string, string> = {
+    'hardware-crypto-wallets':                 'entry-level',
+    'comms-security-shield':                   'security-keys',
+    'survival-edc-tech':                       'multitools',
+    'tactical-power-grid':                     'power-banks',
+    'sim-racing-accessories-premium':          'steering-wheels',
+    'trading-gaming-desk-accessories-premium': 'desk-accessories',
+    'pc-hardware-high-ticket':                 'storage',
+    'PC Hardware':                             'storage',
+    'Smart Security':                          'home-automation',
+    'sicurezza-domotica-high-end':             'home-automation',
+  };
+
   const updates: Array<{id:string;sub_category:string}> = [];
   const stats: Record<string, number> = {};
-  let unmatched = 0;
+  const unmatchedByCat: Record<string, string[]> = {};
 
   for (const p of all) {
-    const sub = assignSubCat(p.category ?? '', p.name ?? '', p.description ?? '');
-    if (sub) { updates.push({ id: p.id, sub_category: sub }); stats[`${p.category} → ${sub}`] = (stats[`${p.category} → ${sub}`] ?? 0) + 1; }
-    else unmatched++;
+    const cat = p.category ?? '';
+    let sub = assignSubCat(cat, p.name ?? '', p.description ?? '');
+
+    // Fallback: se nessuna keyword ha fatto match, usa la sub default della categoria
+    if (!sub) {
+      sub = CAT_FALLBACK[cat] ?? null;
+      if (sub) {
+        const fbKey = `${cat} → ${sub} [FALLBACK]`;
+        stats[fbKey] = (stats[fbKey] ?? 0) + 1;
+      } else {
+        // Ancora senza match: categoria non riconosciuta
+        if (!unmatchedByCat[cat]) unmatchedByCat[cat] = [];
+        unmatchedByCat[cat].push(p.name ?? p.id);
+      }
+    } else {
+      stats[`${cat} → ${sub}`] = (stats[`${cat} → ${sub}`] ?? 0) + 1;
+    }
+
+    if (sub) updates.push({ id: p.id, sub_category: sub });
   }
 
-  log(C.cyan, 'CLASSIFY', `Assegnate: ${updates.length}  |  Senza match: ${unmatched}`);
+  const totalUnmatched = Object.values(unmatchedByCat).reduce((s, a) => s + a.length, 0);
+  log(C.cyan, 'CLASSIFY', `Assegnate: ${updates.length}  |  Senza match: ${totalUnmatched}`);
 
   if (!dryRun && updates.length > 0) {
     let done = 0;
@@ -1023,7 +1730,17 @@ async function cmdSubcats(args: string[]) {
   hr();
   for (const [k, v] of Object.entries(stats).sort((a, b) => b[1] - a[1]))
     console.log(`  ${C.cyan}${String(v).padStart(4)}${C.reset}  ${k}`);
-  console.log(`  ${C.yellow}${String(unmatched).padStart(4)}${C.reset}  senza sub_category`);
+
+  if (totalUnmatched > 0) {
+    console.log(`\n${C.bright}${C.yellow}  ⚠  ${totalUnmatched} prodotti senza sub_category (categoria non riconosciuta):${C.reset}`);
+    for (const [cat, names] of Object.entries(unmatchedByCat)) {
+      console.log(`\n  ${C.red}${cat || '(nessuna categoria)'}${C.reset}  — ${names.length} prodotti:`);
+      names.slice(0, 5).forEach((n) => console.log(`    ${C.gray}• ${n.slice(0, 70)}${C.reset}`));
+      if (names.length > 5) console.log(`    ${C.gray}  ... e altri ${names.length - 5}${C.reset}`);
+    }
+  } else {
+    console.log(`\n  ${C.bright}${C.green}  ✓ Tutti i prodotti hanno una sub_category${C.reset}`);
+  }
   hr();
   if (dryRun) log(C.yellow, 'DRY RUN', 'Nessuna modifica al DB');
 }
@@ -1039,11 +1756,11 @@ async function cmdFixImages(args: string[]) {
 
   const isAsinBased = (url: string) => /\/images\/I\/[A-Z0-9]{10}\.jpg$/i.test(url);
 
-  const { data, error } = await supabase.from('products').select('id,name,image_url,image_urls,affiliate_url');
+  const { data, error } = await supabase.from('products').select('id,name,image_url,image_urls,product_url');
   if (error) { log(C.red, 'FATAL', error.message); return; }
   if (!data?.length) { log(C.yellow, 'DB', 'Nessun prodotto'); return; }
 
-  const broken = (data as Array<{id:string;name:string;image_url:string;image_urls:string[]|null;affiliate_url:string}>)
+  const broken = (data as Array<{id:string;name:string;image_url:string;image_urls:string[]|null;product_url:string}>)
     .filter((p) => !p.image_url || isAsinBased(p.image_url));
   log(C.cyan, 'SCAN', `${broken.length} prodotti con immagine da riparare (su ${data.length})`);
   if (broken.length === 0) { log(C.green, 'OK', 'Tutte le immagini sono già corrette!'); return; }
@@ -1068,7 +1785,7 @@ async function cmdFixImages(args: string[]) {
   for (let i = 0; i < broken.length; i++) {
     const p = broken[i];
     console.log(`\n${C.bright}${C.yellow}── [${i+1}/${broken.length}] ${p.name} ──${C.reset}`);
-    const asin = extractAsinFromUrl(p.affiliate_url ?? '');
+    const asin = extractAsinFromUrl(p.product_url ?? '');
     if (!asin) { log(C.yellow, 'SKIP', 'Nessun ASIN'); skipped++; continue; }
     const newUrl = await fetchImg(asin);
     if (!newUrl || newUrl === p.image_url) { log(C.gray, 'SKIP', 'Nessuna nuova immagine'); skipped++; }
@@ -1088,65 +1805,39 @@ async function cmdFixImages(args: string[]) {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// § 12 — COMMAND: CHECK-LINKS
+// § 12 — COMMAND: SYNC-PRODUCT-LINKS
 // ══════════════════════════════════════════════════════════════════
 
-async function cmdCheckLinks(_args: string[]) {
-  banner('LINK-CHECKER — Verifica integrità affiliate links');
+async function cmdSyncProductLinks(_args: string[]) {
+  banner('SYNC-PRODUCT-LINKS — Sincronizza URL prodotti da affiliate links');
   const supabase = getSupabase();
-  const OUTPUT = resolve(process.cwd(), 'link_da_sostituire.txt');
-  const TODAY  = new Date().toISOString().split('T')[0];
 
-  const { data, error } = await supabase.from('products').select('id,name,affiliate_url,active').not('affiliate_url','is',null);
+  const { data, error } = await supabase.from('products').select('id,name,product_url').not('product_url','is',null);
   if (error) { log(C.red, 'FATAL', error.message); return; }
-  const products = (data ?? []) as Array<{id:string;name:string;affiliate_url:string|null;active:boolean|null}>;
-  log(C.cyan, 'SCAN', `${products.length} prodotti con affiliate_url`);
+  const products = (data ?? []) as Array<{id:string;name:string;product_url:string|null}>;
+  log(C.cyan, 'SCAN', `${products.length} prodotti con product_url`);
   if (products.length === 0) return;
 
-  const checkUrl = async (url: string) => {
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 10_000);
+  // Normalizza product_url: rimuovi tutti i query params, forza formato /dp/ASIN/
+  const normalizeUrl = (url: string): string => {
     try {
-      let res = await fetch(url, { method: 'HEAD', signal: ctrl.signal, redirect: 'follow', headers: { 'User-Agent': 'Mozilla/5.0' } });
-      if (res.status === 405) res = await fetch(url, { method: 'GET', signal: ctrl.signal, redirect: 'follow', headers: { 'User-Agent': 'Mozilla/5.0' } });
-      return { status: res.status, ok: res.ok };
-    } catch (e) { return { status: null, ok: false, error: String(e).includes('abort') ? 'Timeout' : String(e) }; }
-    finally { clearTimeout(t); }
+      const asin = url.match(/\/dp\/([A-Z0-9]{10})(?:[/?#]|$)/i)?.[1];
+      return asin ? `https://www.amazon.it/dp/${asin.toUpperCase()}/` : url.split('?')[0].split('#')[0];
+    } catch { return url; }
   };
 
-  const results: Array<{p:{id:string;name:string;affiliate_url:string|null;active:boolean|null};ok:boolean;status:number|null;err?:string}> = [];
-  const queue = [...products];
-  const CONC = 5;
-  const worker = async () => {
-    while (queue.length) {
-      const p = queue.shift()!;
-      const r = await checkUrl(p.affiliate_url!);
-      results.push({ p, ok: r.ok, status: r.status, err: 'error' in r ? r.error : undefined });
-      const label = r.ok ? `${C.green}[OK ${r.status}]${C.reset}` : `${C.red}[DEAD ${r.status ?? 'ERR'}]${C.reset}`;
-      console.log(`  ${label} ${p.name}`);
-    }
-  };
-  await Promise.all(Array.from({ length: CONC }, worker));
-
-  const dead = results.filter((r) => !r.ok);
-  const alive = results.filter((r) => r.ok);
-
-  if (dead.length > 0) {
-    const deadIds = dead.map((r) => r.p.id);
-    await supabase.from('products').update({ active: false }).in('id', deadIds);
-    appendFileSync(OUTPUT, dead.map((r) => `[${TODAY}] ${r.p.name} | Status: ${r.status ?? r.err ?? 'ERR'} | URL: ${r.p.affiliate_url ?? 'N/A'}`).join('\n') + '\n', 'utf-8');
-    log(C.red, 'DEAD', `${dead.length} link morti → active=false + link_da_sostituire.txt`);
-  }
-
-  const recovered = alive.filter((r) => r.p.active === false);
-  if (recovered.length > 0) {
-    await supabase.from('products').update({ active: true }).in('id', recovered.map((r) => r.p.id));
-    log(C.green, 'RECOVERY', `${recovered.length} prodotti ripristinati`);
+  let synced = 0, unchanged = 0;
+  for (const p of products) {
+    const normalized = normalizeUrl(p.product_url!);
+    if (normalized === p.product_url) { unchanged++; continue; }
+    const { error: upErr } = await supabase.from('products').update({ product_url: normalized }).eq('id', p.id);
+    if (upErr) log(C.red, 'ERR', `${p.name}: ${upErr.message}`);
+    else { log(C.green, 'FIXED', `${p.name.slice(0,50)}`); synced++; }
   }
 
   hr();
-  console.log(`${C.bright}${C.green}  ✓ Attivi : ${alive.length}${C.reset}`);
-  console.log(`${C.bright}${C.red}  ✗ Morti  : ${dead.length}${C.reset}`);
+  console.log(`${C.bright}${C.green}  ✓ Normalizzati  : ${synced}${C.reset}`);
+  console.log(`${C.bright}${C.cyan}  — Già corretti  : ${unchanged}${C.reset}`);
   hr();
 }
 
@@ -1247,8 +1938,624 @@ async function cmdCleanDb(_args: string[]) {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// § 15 — MAIN DISPATCHER + INTERACTIVE MENU
+// § 15 — COMMAND: STRESS-TEST (stressCheckLinks)
 // ══════════════════════════════════════════════════════════════════
+
+// ── Helpers URL ───────────────────────────────────────────────────────────────
+
+/** ASIN valido: 10 char alfanumerici, tipicamente inizia con B */
+const ASIN_VALID_RE = /^[A-Z0-9]{10}$/;
+
+/** Estrae ASIN da un URL Amazon qualsiasi */
+function asinFromUrl(url: string): string | null {
+  return url.match(/\/dp\/([A-Z0-9]{10})(?:[/?#]|$)/i)?.[1]?.toUpperCase() ?? null;
+}
+
+/** Ricostruisce URL puro: https://www.amazon.it/dp/ASIN/ */
+function toPureUrl(url: string): string {
+  const asin = asinFromUrl(url);
+  if (!asin) return url;
+  const domain = url.match(/^https?:\/\/(www\.amazon\.[a-z.]+)/i)?.[1] ?? 'www.amazon.it';
+  return `https://${domain}/dp/${asin}/`;
+}
+
+/** Controlla se l'URL è già nel formato puro (niente query/hash/tag) */
+function isPureUrl(url: string): boolean {
+  return /^https:\/\/www\.amazon\.[a-z.]+\/dp\/[A-Z0-9]{10}\/?$/.test(
+    url.split('?')[0].split('#')[0],
+  );
+}
+
+// ── TIER 1: Validazione strutturale (istantanea, 100% affidabile) ─────────────
+
+interface StructuralResult {
+  id:           string;
+  name:         string;
+  productUrl:   string | null;
+  asin:         string | null;
+  asinValid:    boolean;   // ASIN ha formato corretto
+  urlValid:     boolean;   // URL contiene un ASIN estraibile
+  isPure:       boolean;   // URL già in formato puro
+  pureUrl:      string;    // URL ricostruito pulito
+  needsFix:     boolean;   // product_url mancante o impuro
+}
+
+function structuralCheck(p: {
+  id: string; name: string;
+  product_url: string | null;
+}): StructuralResult {
+  const productUrl = p.product_url;
+  const asin       = productUrl ? asinFromUrl(productUrl) : null;
+  const asinValid  = !!asin && ASIN_VALID_RE.test(asin);
+  const urlValid   = !!asin;
+  const pure       = productUrl ? toPureUrl(productUrl) : '';
+  const isPure_    = productUrl ? isPureUrl(productUrl) : false;
+  const needsFix   = !productUrl || !isPureUrl(productUrl ?? '');
+
+  return {
+    id: p.id, name: p.name,
+    productUrl,
+    asin, asinValid, urlValid, isPure: isPure_, pureUrl: pure, needsFix,
+  };
+}
+
+// ── COMMAND: stress-test ──────────────────────────────────────────────────────
+/**
+ * Validazione in 2 fasi:
+ *   Fase 1 (sempre): controllo strutturale ASIN — istantaneo, 100% affidabile
+ *   Fase 2 (--fix):  ripara product_url mancanti/impuri sul DB
+ *
+ * NOTA: Il check HTTP diretto di Amazon.it NON è supportato.
+ * Amazon blocca sistematicamente le richieste automatiche (fetch senza browser)
+ * restituendo 404 fittizi indipendentemente dal delay o dagli headers.
+ * L'unico modo affidabile per verificare un link Amazon è aprirlo in un browser reale.
+ * La validazione strutturale ASIN (Fase 1) è sufficiente e 100% corretta.
+ */
+async function cmdStressTest(args: string[]) {
+  const fixMode  = args.includes('--fix');
+  const dryRun   = args.includes('--dry-run');
+  const limitArg = parseInt(args.find((a) => a.startsWith('--limit='))?.split('=')[1] ?? '0', 10);
+
+  banner(
+    'STRESS-CHECK-LINKS — Validazione ASIN + Fix URL',
+    [
+      'Fase 1: Verifica ASIN strutturale (istantanea)',
+      fixMode && !dryRun ? 'Fase 2: FIX product_url sul DB' : '',
+      fixMode && dryRun  ? 'Fase 2: DRY RUN (nessuna scrittura)' : '',
+    ].filter(Boolean).join(' · '),
+  );
+
+  const supabase = getSupabase();
+  const LOGS_DIR = resolve(process.cwd(), 'logs');
+  mkdirSync(LOGS_DIR, { recursive: true });
+
+  // ── Carica prodotti ─────────────────────────────────────────────
+  log(C.cyan, 'DB', 'Caricamento prodotti...');
+  let all: Array<{ id: string; name: string; product_url: string | null }> = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from('products')
+      .select('id, name, product_url')
+      .range(from, from + 999);
+    if (error) { log(C.red, 'FATAL', error.message); return; }
+    if (!data?.length) break;
+    all = all.concat(data);
+    if (data.length < 1000) break;
+    from += 1000;
+  }
+  if (limitArg > 0) all = all.slice(0, limitArg);
+  log(C.cyan, 'SCAN', `${all.length} prodotti nel DB`);
+  if (!all.length) { log(C.yellow, 'INFO', 'Nessun prodotto'); return; }
+
+  // ══════════════════════════════════════════════════════════════════
+  // FASE 1 — Validazione strutturale ASIN
+  // Controlla: presenza product_url · ASIN estraibile · formato ASIN valido
+  // ══════════════════════════════════════════════════════════════════
+  log(C.magenta, 'FASE-1', 'Validazione strutturale ASIN...');
+  const checked     = all.map(structuralCheck);
+  const noUrl       = checked.filter((r) => !r.productUrl);
+  const noAsin      = checked.filter((r) => r.productUrl && !r.urlValid);
+  const badAsin     = checked.filter((r) => r.urlValid && !r.asinValid);
+  const valid       = checked.filter((r) => r.asinValid);
+  const needsFix    = checked.filter((r) => r.needsFix && r.asinValid);
+  const alreadyOk   = checked.filter((r) => !r.needsFix && r.asinValid);
+
+  // Logga solo i veri problemi
+  for (const r of noUrl)  log(C.red,    'NO-URL',   `"${r.name}" — product_url NULL nel DB`);
+  for (const r of noAsin) log(C.red,    'NO-ASIN',  `"${r.name}" — URL senza /dp/ASIN/ estraibile`);
+  for (const r of badAsin)log(C.yellow, 'BAD-ASIN', `"${r.name}" — ASIN "${r.asin}" formato non standard`);
+
+  const totalProblems = noUrl.length + noAsin.length + badAsin.length;
+  if (totalProblems === 0) {
+    log(C.green, 'FASE-1', `✓ PERFETTO — tutti i ${valid.length} ASIN sono validi`);
+  } else {
+    log(C.red, 'FASE-1', `✗ ${totalProblems} prodotti con problemi strutturali reali`);
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // FASE 2 — Fix product_url (solo con --fix)
+  // product_url = URL puro senza tag: https://www.amazon.it/dp/ASIN/
+  // ══════════════════════════════════════════════════════════════════
+  if (fixMode) {
+    if (needsFix.length === 0) {
+      log(C.green, 'FASE-2', `✓ Tutti i ${alreadyOk.length} product_url sono già corretti — nessun fix necessario`);
+    } else if (dryRun) {
+      log(C.yellow, 'FASE-2', `DRY RUN — avrebbe fixato ${needsFix.length} product_url`);
+      for (const r of needsFix.slice(0, 10))
+        log(C.gray, 'DRY', `"${r.name}" → ${r.pureUrl}`);
+    } else {
+      log(C.magenta, 'FASE-2', `Fix product_url per ${needsFix.length} prodotti...`);
+      let fixed = 0, failed = 0;
+      // Batch update in gruppi da 50
+      for (let i = 0; i < needsFix.length; i += 50) {
+        const batch = needsFix.slice(i, i + 50);
+        await Promise.all(batch.map(async (r) => {
+          const { error: upErr } = await supabase
+            .from('products')
+            .update({ product_url: r.pureUrl })
+            .eq('id', r.id);
+          if (upErr) { log(C.red, 'ERR', `${r.name}: ${upErr.message}`); failed++; }
+          else fixed++;
+        }));
+        log(C.gray, 'PROG', `${Math.min(i + 50, needsFix.length)}/${needsFix.length} fixati...`);
+      }
+      log(C.green, 'FASE-2', `✓ ${fixed} product_url aggiornati${failed ? ` · ${failed} errori` : ''}`);
+    }
+  }
+
+  // ── Scrivi report JSON ──────────────────────────────────────────
+  const report = {
+    generatedAt:   new Date().toISOString(),
+    totalProducts: all.length,
+    summary: {
+      valid:           valid.length,
+      perfect:         alreadyOk.length,
+      noProductUrl:    noUrl.length,
+      noAsinInUrl:     noAsin.length,
+      badAsinFormat:   badAsin.length,
+      productUrlFixed: fixMode && !dryRun ? needsFix.length : 0,
+      productUrlTodo:  !fixMode ? needsFix.length : 0,
+    },
+    structuralProblems: [...noUrl, ...noAsin, ...badAsin].map((r) => ({
+      id:     r.id,
+      name:   r.name,
+      url:    r.productUrl,
+      asin:   r.asin,
+      issue:  !r.productUrl ? 'no_product_url' : !r.urlValid ? 'no_asin_in_url' : 'bad_asin_format',
+    })),
+    productUrlsFixed: fixMode && !dryRun ? needsFix.map((r) => ({
+      id: r.id, name: r.name, pureUrl: r.pureUrl,
+    })) : [],
+  };
+
+  const LOG_PATH = join(LOGS_DIR, 'broken_links.json');
+  writeFileSync(LOG_PATH, JSON.stringify(report, null, 2), 'utf-8');
+
+  // ── Riepilogo finale ────────────────────────────────────────────
+  hr('═');
+  console.log(`\n${C.bright}  STRESS-CHECK REPORT${C.reset}`);
+  hr();
+  console.log(`${C.bright}${C.green}  ✓ ASIN validi      : ${valid.length}/${all.length}${C.reset}`);
+  if (noUrl.length)    console.log(`${C.red}  ✗ Senza URL       : ${noUrl.length}${C.reset}`);
+  if (noAsin.length)   console.log(`${C.red}  ✗ ASIN mancante   : ${noAsin.length}${C.reset}`);
+  if (badAsin.length)  console.log(`${C.yellow}  ⚠ ASIN non std    : ${badAsin.length}${C.reset}`);
+
+  if (fixMode && !dryRun)
+    console.log(`${C.bright}${C.green}  ✓ product_url fixati: ${needsFix.length === 0 ? 'già tutti ok' : needsFix.length}${C.reset}`);
+  else if (!fixMode && needsFix.length > 0)
+    console.log(`${C.yellow}  ⚠ product_url da fixare: ${needsFix.length} → usa --fix${C.reset}`);
+  else if (!fixMode && needsFix.length === 0)
+    console.log(`${C.green}  ✓ product_url        : tutti già corretti${C.reset}`);
+
+  hr();
+
+  if (totalProblems === 0 && (needsFix.length === 0 || (fixMode && !dryRun))) {
+    console.log(`${C.bright}${C.green}  ██████████████████████████████████████████${C.reset}`);
+    console.log(`${C.bright}${C.green}  ██  DATABASE PERFETTO — ${all.length} LINK VALIDI  ██${C.reset}`);
+    console.log(`${C.bright}${C.green}  ██████████████████████████████████████████${C.reset}`);
+  }
+
+  console.log(`\n  📄 ${C.cyan}logs/broken_links.json${C.reset}`);
+  if (!fixMode && needsFix.length > 0)
+    console.log(`${C.yellow}  → ./kitwer-tools.sh stress-test --fix${C.reset}`);
+  hr('═');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// § 16 — COMMAND: VERIFY (conteggio categorie + sottocategorie)
+// ══════════════════════════════════════════════════════════════════
+
+async function cmdVerify(_args: string[]) {
+  banner('VERIFY — Analisi completa: categorie · immagini · varianti');
+  const supabase = getSupabase();
+
+  interface P {
+    id: string;
+    name: string | null;
+    category: string | null;
+    sub_category: string | null;
+    is_budget_king: boolean | null;
+    image_url: string | null;
+    image_urls: string[] | null;
+    variants: Array<{ name: string; values: string[] }> | null;
+  }
+
+  let all: P[] = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from('products')
+      .select('id,name,category,sub_category,is_budget_king,image_url,image_urls,variants')
+      .range(from, from + 999);
+    if (error) { log(C.red, 'FATAL', error.message); return; }
+    if (!data?.length) break;
+    all = all.concat(data as P[]);
+    if (data.length < 1000) break;
+    from += 1000;
+  }
+  if (!all.length) { log(C.yellow, 'INFO', 'Database vuoto'); return; }
+
+  // Helper: URL immagine reale (non ASIN fake)
+  const isRealImg = (url: string | null | undefined): boolean => {
+    if (!url) return false;
+    if (url.includes('m.media-amazon.com')) {
+      const id = url.match(/\/images\/I\/([^._]+)/)?.[1] ?? '';
+      if (/^[A-Z0-9]{10}$/.test(id)) return false; // ASIN fake
+      if (!url.includes('._')) return false;
+    }
+    return true;
+  };
+
+  const hasAnyRealImg = (p: P): boolean => {
+    if (isRealImg(p.image_url)) return true;
+    if (Array.isArray(p.image_urls) && p.image_urls.some(isRealImg)) return true;
+    return false;
+  };
+
+  const countRealImgs = (p: P): number => {
+    const urls = new Set<string>();
+    if (isRealImg(p.image_url)) urls.add(p.image_url!);
+    for (const u of p.image_urls ?? []) if (isRealImg(u)) urls.add(u);
+    return urls.size;
+  };
+
+  // ── SEZIONE 1: albero categoria / sottocategoria ──
+  const tree = new Map<string, Map<string, { count: number; withImg: number; noImg: string[] }>>();
+  let budgetKingTotal = 0;
+  const noImgProducts: { name: string; cat: string; sub: string }[] = [];
+
+  for (const p of all) {
+    const cat = p.category ?? '(nessuna categoria)';
+    const sub = p.sub_category ?? '(nessuna sottocategoria)';
+    if (!tree.has(cat)) tree.set(cat, new Map());
+    const subMap = tree.get(cat)!;
+    if (!subMap.has(sub)) subMap.set(sub, { count: 0, withImg: 0, noImg: [] });
+    const slot = subMap.get(sub)!;
+    slot.count++;
+    if (hasAnyRealImg(p)) {
+      slot.withImg++;
+    } else {
+      slot.noImg.push(p.name?.slice(0, 45) ?? p.id);
+      noImgProducts.push({ name: p.name ?? p.id, cat, sub });
+    }
+    if (p.is_budget_king) budgetKingTotal++;
+  }
+
+  const sortedCats = [...tree.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  let grandTotal = 0;
+  const warnSubs: string[] = [];   // subcat con < 3 prodotti
+  const dupeSubs: string[] = [];   // subcat con nomi simili dentro stessa cat
+
+  console.log('');
+  for (const [cat, subMap] of sortedCats) {
+    const catTotal  = [...subMap.values()].reduce((s, v) => s + v.count, 0);
+    const catWithImg = [...subMap.values()].reduce((s, v) => s + v.withImg, 0);
+    const catNoImg  = catTotal - catWithImg;
+    const imgPct    = Math.round((catWithImg / catTotal) * 100);
+    const imgColor  = imgPct === 100 ? C.green : imgPct >= 70 ? C.yellow : C.red;
+    grandTotal += catTotal;
+
+    console.log(
+      `${C.bright}${C.cyan}▶ ${cat.toUpperCase().padEnd(36)}${C.reset}` +
+      ` ${C.bright}${catTotal} prodotti${C.reset}` +
+      `  ${imgColor}🖼 ${imgPct}%${C.reset}` +
+      (catNoImg > 0 ? ` ${C.red}(${catNoImg} senza img)${C.reset}` : ''),
+    );
+
+    // Controlla nomi simili dentro la stessa cat (normalizza e confronta)
+    const subNames = [...subMap.keys()];
+    for (let i = 0; i < subNames.length; i++) {
+      for (let j = i + 1; j < subNames.length; j++) {
+        const a = subNames[i].replace(/[-_]/g, '').toLowerCase();
+        const b = subNames[j].replace(/[-_]/g, '').toLowerCase();
+        if (a === b || a.startsWith(b) || b.startsWith(a)) {
+          dupeSubs.push(`  ⚠  [${cat}] "${subNames[i]}" ≈ "${subNames[j]}"`);
+        }
+      }
+    }
+
+    const sortedSubs = [...subMap.entries()].sort((a, b) => b[1].count - a[1].count);
+    for (const [sub, slot] of sortedSubs) {
+      const bar      = '█'.repeat(Math.min(Math.round(slot.count / 2), 28));
+      const imgIcon  = slot.withImg === slot.count ? `${C.green}✓${C.reset}` : `${C.red}✗${slot.count - slot.withImg}${C.reset}`;
+      const lowWarn  = slot.count < 3 ? ` ${C.red}⚠ POCHI!${C.reset}` : '';
+      if (slot.count < 3) warnSubs.push(`  ⚠  [${cat}] "${sub}" ha solo ${slot.count} prodotto/i`);
+      console.log(
+        `  ${C.gray}├ ${sub.padEnd(38)}${C.reset}` +
+        ` ${C.yellow}${String(slot.count).padStart(4)}${C.reset}` +
+        `  ${C.green}${bar.padEnd(28)}${C.reset}` +
+        `  img:${imgIcon}${lowWarn}`,
+      );
+    }
+  }
+
+  // ── SEZIONE 2: copertura immagini ──
+  const withImg   = all.filter(hasAnyRealImg).length;
+  const noImg     = all.length - withImg;
+  const imgPctAll = Math.round((withImg / all.length) * 100);
+  const multiImg  = all.filter((p) => countRealImgs(p) >= 3).length;
+  const singleImg = all.filter((p) => { const n = countRealImgs(p); return n === 1 || n === 2; }).length;
+
+  hr('─');
+  console.log(`${C.bright}${C.cyan}  🖼  COPERTURA IMMAGINI${C.reset}`);
+  console.log(`  Con immagini reali  : ${C.green}${withImg}${C.reset} / ${all.length}  (${imgPctAll}%)`);
+  console.log(`  Con galleria (≥3)   : ${C.green}${multiImg}${C.reset}`);
+  console.log(`  Solo 1-2 immagini   : ${C.yellow}${singleImg}${C.reset}`);
+  console.log(`  ${C.red}Senza immagini      : ${noImg}${C.reset}`);
+
+  if (noImgProducts.length > 0 && noImgProducts.length <= 30) {
+    console.log(`\n  ${C.red}Prodotti senza immagini reali:${C.reset}`);
+    for (const p of noImgProducts) {
+      console.log(`  ${C.gray}  · [${p.sub}] ${p.name.slice(0, 60)}${C.reset}`);
+    }
+  } else if (noImgProducts.length > 30) {
+    console.log(`\n  ${C.red}  → ${noImgProducts.length} prodotti senza img. Esegui: ./kitwer-tools.sh fill-gallery${C.reset}`);
+  }
+
+  // ── SEZIONE 3: varianti ──
+  hr('─');
+  console.log(`${C.bright}${C.cyan}  🎨  COPERTURA VARIANTI${C.reset}`);
+  const withVariants = all.filter((p) => Array.isArray(p.variants) && p.variants.length > 0);
+  const variantTypeCounts = new Map<string, number>();
+  for (const p of withVariants) {
+    for (const v of p.variants!) {
+      variantTypeCounts.set(v.name, (variantTypeCounts.get(v.name) ?? 0) + 1);
+    }
+  }
+  console.log(`  Con varianti        : ${C.green}${withVariants.length}${C.reset} / ${all.length}  (${Math.round((withVariants.length / all.length) * 100)}%)`);
+  console.log(`  Senza varianti      : ${C.yellow}${all.length - withVariants.length}${C.reset}`);
+
+  if (variantTypeCounts.size > 0) {
+    console.log(`\n  Tipi di varianti trovati:`);
+    const sortedTypes = [...variantTypeCounts.entries()].sort((a, b) => b[1] - a[1]);
+    for (const [name, count] of sortedTypes) {
+      const bar = '█'.repeat(Math.min(Math.round(count / 3), 20));
+      console.log(`  ${C.gray}  ${name.padEnd(20)}${C.reset} ${C.yellow}${String(count).padStart(4)}${C.reset}  ${C.cyan}${bar}${C.reset}`);
+    }
+  }
+
+  // ── SEZIONE 4: alert ──
+  if (warnSubs.length > 0 || dupeSubs.length > 0) {
+    hr('─');
+    console.log(`${C.bright}${C.red}  ⚠  ALERT${C.reset}`);
+    for (const w of warnSubs)  console.log(`${C.red}${w}${C.reset}`);
+    for (const d of dupeSubs)  console.log(`${C.yellow}${d}${C.reset}`);
+  }
+
+  // ── FOOTER ──
+  hr('═');
+  console.log(`${C.bright}${C.green}  TOTALE PRODOTTI    : ${grandTotal}${C.reset}`);
+  console.log(`${C.bright}${C.cyan}  CATEGORIE          : ${tree.size}${C.reset}`);
+  const totalSubs = [...tree.values()].reduce((s, m) => s + m.size, 0);
+  console.log(`${C.bright}${C.cyan}  SOTTO-CATEGORIE    : ${totalSubs}${C.reset}`);
+  console.log(`${C.bright}${C.yellow}  BUDGET KING 👑     : ${budgetKingTotal}${C.reset}`);
+  hr('═');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// § 17 — COMMAND: FILL-GALLERY (ricerca immagini per nome prodotto)
+// ══════════════════════════════════════════════════════════════════
+
+/**
+ * Cerca immagini reali via DuckDuckGo Image Search.
+ * Strategia a 3 livelli:
+ *   1. Nome completo → DDG images
+ *   2. Prime 4 parole → DDG images
+ *   3. Prime 3 parole significative → DDG images
+ *
+ * DDG non blocca le richieste server-side come fa Amazon.
+ * Flow: GET duckduckgo.com/?q=... → estrai vqd token → GET i.js → JSON results
+ */
+async function fetchGalleryByName(name: string): Promise<string[]> {
+  const fetchDDGImages = async (query: string): Promise<string[]> => {
+    try {
+      // Step 1: ottieni il vqd token dalla pagina principale
+      const homeUrl = `https://duckduckgo.com/?q=${encodeURIComponent(query)}&iax=images&ia=images`;
+      const htmlRes = await fetch(homeUrl, {
+        headers: {
+          'User-Agent': nextUA(),
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Connection': 'keep-alive',
+        },
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (!htmlRes.ok) return [];
+      const html = await htmlRes.text();
+
+      // Estrai vqd token (formato: vqd="4-..." o vqd=4-...)
+      const vqd = html.match(/vqd=['"]([^'"]+)['"]/)?.[1]
+               ?? html.match(/vqd=([\d-]+)/)?.[1];
+      if (!vqd) return [];
+
+      // Step 2: fetch risultati immagini JSON
+      await new Promise((r) => setTimeout(r, 400 + Math.random() * 400));
+      const imgApiUrl = `https://duckduckgo.com/i.js?l=it-it&o=json&q=${encodeURIComponent(query)}&vqd=${encodeURIComponent(vqd)}&f=,,,,,&p=1`;
+      const imgRes = await fetch(imgApiUrl, {
+        headers: {
+          'User-Agent': nextUA(),
+          'Accept': 'application/json, text/javascript, */*',
+          'Accept-Language': 'it-IT,it;q=0.9,en-US;q=0.8',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Referer': 'https://duckduckgo.com/',
+          'X-Requested-With': 'XMLHttpRequest',
+          'Connection': 'keep-alive',
+        },
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (!imgRes.ok) return [];
+
+      const json = await imgRes.json() as { results?: Array<{ image?: string; thumbnail?: string; url?: string }> };
+      const results = json.results ?? [];
+
+      const urls: string[] = [];
+      for (const r of results) {
+        // Preferisci image full-size, fallback thumbnail
+        const u = r.image ?? r.thumbnail;
+        if (!u) continue;
+        if (!u.startsWith('http')) continue;
+        // Salta URL DDG interni o placeholder
+        if (u.includes('duckduckgo.com')) continue;
+        if (u.includes('placeholder') || u.includes('no-image')) continue;
+        urls.push(u);
+        if (urls.length >= 8) break;
+      }
+      return urls;
+    } catch { return []; }
+  };
+
+  const queries = [
+    name,
+    name.split(/\s+/).slice(0, 4).join(' '),
+    name.split(/\s+/).filter((w) => w.length > 3).slice(0, 3).join(' '),
+  ].filter((q, i, a) => q.length > 3 && a.indexOf(q) === i);   // dedup + min length
+
+  for (const q of queries) {
+    const imgs = await fetchDDGImages(q);
+    if (imgs.length >= 2) return imgs;
+    if (imgs.length > 0) return imgs;
+    // Piccola pausa tra query diverse
+    await new Promise((r) => setTimeout(r, 800 + Math.random() * 800));
+  }
+  return [];
+}
+
+async function cmdFillGallery(args: string[]) {
+  const dryRun    = args.includes('--dry-run');
+  const forceAll  = args.includes('--all');           // sovrascrive anche chi ha già immagini
+  const limitArg  = parseInt(args.find((a) => a.startsWith('--limit='))?.split('=')[1] ?? '0', 10);
+  const minDelay  = parseInt(args.find((a) => a.startsWith('--delay='))?.split('=')[1] ?? '5000', 10);
+
+  banner(
+    'FILL-GALLERY — Ricerca immagini via DuckDuckGo Images',
+    [dryRun ? 'DRY RUN' : 'LIVE', forceAll ? 'TUTTI' : 'Solo senza immagini', `delay≥${minDelay}ms`].join(' · '),
+  );
+  const supabase  = getSupabase();
+  const LOGS_DIR  = resolve(process.cwd(), 'logs');
+  mkdirSync(LOGS_DIR, { recursive: true });
+
+  const isRealImg = (url?: string | null) => {
+    if (!url || typeof url !== 'string') return false;
+    if (url.startsWith('/')) return true; // placeholder locale
+    if (url.includes('m.media-amazon.com')) {
+      const id = url.match(/\/images\/I\/([^._]+)/)?.[1] ?? '';
+      if (/^[A-Z0-9]{10}$/.test(id)) return false; // ASIN fake
+      if (!url.includes('._')) return false;
+    }
+    return true;
+  };
+
+  // Carica prodotti in batch
+  interface P { id:string; name:string; image_url:string|null; image_urls:string[]|null }
+  let all: P[] = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await supabase.from('products').select('id,name,image_url,image_urls').range(from, from + 999);
+    if (error) { log(C.red, 'FATAL', error.message); return; }
+    if (!data?.length) break;
+    all = all.concat(data as P[]);
+    if (data.length < 1000) break;
+    from += 1000;
+  }
+  log(C.cyan, 'DB', `${all.length} prodotti caricati`);
+
+  // Filtra: solo quelli senza immagini reali (o --all per forzare)
+  const toProcess = forceAll
+    ? all
+    : all.filter((p) => {
+        const hasReal = isRealImg(p.image_url) ||
+          (Array.isArray(p.image_urls) && p.image_urls.some(isRealImg));
+        return !hasReal;
+      });
+
+  if (limitArg > 0 && toProcess.length > limitArg) toProcess.splice(limitArg);
+  log(C.cyan, 'TARGET', `${toProcess.length} prodotti da processare su ${all.length} totali`);
+
+  if (toProcess.length === 0) {
+    log(C.green, 'OK', 'Tutti i prodotti hanno già immagini reali!');
+    return;
+  }
+
+  let found = 0, notFound = 0, captchaCount = 0;
+  const failures: string[] = [];
+
+  for (let i = 0; i < toProcess.length; i++) {
+    const p = toProcess[i];
+    console.log(`\n${C.bright}${C.yellow}── [${i + 1}/${toProcess.length}] ${p.name.slice(0, 65)} ──${C.reset}`);
+
+    if (captchaCount >= 3) {
+      log(C.red, 'STOP', 'Troppi CAPTCHA rilevati — Amazon sta bloccando. Riprova tra 10-15 minuti.');
+      break;
+    }
+
+    const imgs = await fetchGalleryByName(p.name);
+
+    if (!imgs.length) {
+      log(C.red, 'NO-IMG', `Nessuna immagine trovata per "${p.name.slice(0, 50)}"`);
+      failures.push(p.name);
+      notFound++;
+      // Controlla se stiamo ottenendo CAPTCHA
+      captchaCount = notFound > 2 && notFound === i + 1 ? captchaCount + 1 : 0;
+    } else {
+      captchaCount = 0;
+      log(C.green, 'FOUND', `${imgs.length} immagini trovate`);
+      imgs.slice(0, 3).forEach((u) => log(C.gray, '→', u.slice(0, 80)));
+      found++;
+
+      if (!dryRun) {
+        const { error: upErr } = await supabase.from('products').update({
+          image_url:  imgs[0],
+          image_urls: imgs,
+        }).eq('id', p.id);
+        if (upErr) log(C.red, 'DB-ERR', upErr.message);
+        else log(C.green, 'SAVED', `${imgs.length} immagini salvate`);
+      }
+    }
+
+    // Delay anti-bot tra richieste (salta l'ultimo)
+    if (i < toProcess.length - 1) {
+      const ms = minDelay + Math.floor(Math.random() * 3000);
+      process.stdout.write(`  ${C.gray}⏳ pausa ${(ms / 1000).toFixed(1)}s...${C.reset}\r`);
+      await new Promise((r) => setTimeout(r, ms));
+    }
+  }
+
+  // Salva report fallimenti
+  const reportPath = join(LOGS_DIR, 'fill_gallery_failures.json');
+  writeFileSync(reportPath, JSON.stringify({ date: new Date().toISOString(), failures }, null, 2));
+
+  hr('═');
+  console.log(`${C.bright}${C.green}  ✓ Immagini trovate  : ${found}${C.reset}`);
+  console.log(`${C.bright}${C.red}  ✗ Non trovate       : ${notFound}${C.reset}`);
+  console.log(`${C.bright}${C.cyan}  Totale processati   : ${i_end(found + notFound)}${C.reset}`);
+  if (dryRun) console.log(`${C.bright}${C.yellow}  DRY RUN — nessun salvataggio${C.reset}`);
+  console.log(`  📄 Report: ${C.cyan}logs/fill_gallery_failures.json${C.reset}`);
+  hr('═');
+}
+
+function i_end(n: number) { return n; } // helper per evitare errore var 'i' fuori scope
 
 const COMMANDS: Record<string, { fn: (args: string[]) => Promise<void>; desc: string }> = {
   'import':       { fn: cmdImport,     desc: 'Importa prodotti da CSV/XLSX (MAGAZZINO/ o file specifici)' },
@@ -1256,9 +2563,13 @@ const COMMANDS: Record<string, { fn: (args: string[]) => Promise<void>; desc: st
   'variants':     { fn: cmdVariants,   desc: 'Scraping varianti colore/taglia da Amazon' },
   'subcats':      { fn: cmdSubcats,    desc: 'Assegna sotto-categorie via keyword matching' },
   'fix-images':   { fn: cmdFixImages,  desc: 'Ripara URL immagini rotte nel DB' },
-  'check-links':  { fn: cmdCheckLinks, desc: 'Verifica integrità link affiliazione' },
-  'prices':       { fn: cmdPrices,     desc: 'Migra e ricalcola prezzi da CSV' },
-  'clean-db':     { fn: cmdCleanDb,    desc: '⚠  Svuota completamente la tabella products' },
+  'sync-product-links':  { fn: cmdSyncProductLinks, desc: 'Sincronizza URL prodotti puliti da affiliate links' },
+  'process-magazzino-links': { fn: async (args) => { await processMagazzinoLinks(); }, desc: 'Processa i link MAGAZZINO: pulizia + verifica 200' },
+  'prices':       { fn: cmdPrices,       desc: 'Migra e ricalcola prezzi da CSV' },
+  'clean-db':     { fn: cmdCleanDb,      desc: '⚠  Svuota completamente la tabella products' },
+  'stress-test':  { fn: cmdStressTest,   desc: '🔗 Verifica integrità URL + purity check + log broken_links.json' },
+  'verify':       { fn: cmdVerify,       desc: '📊 Conteggio prodotti per categoria e sottocategoria' },
+  'fill-gallery': { fn: cmdFillGallery,  desc: '🖼️  Riempi gallerie immagini cercando per nome su DuckDuckGo Images' },
 };
 
 function printHelp() {
@@ -1273,15 +2584,22 @@ function printHelp() {
   console.log(`\n${C.bright}FLAG COMUNI:${C.reset}`);
   console.log(`  ${C.cyan}--dry-run${C.reset}       Simula senza scrivere sul DB`);
   console.log(`  ${C.cyan}--upsert${C.reset}        Aggiorna prodotti esistenti (import)`);
+  console.log(`  ${C.cyan}--hard-reset${C.reset}    ⚠  Svuota il DB prima di importare (import)`);
   console.log(`  ${C.cyan}--permissive${C.reset}    Accetta categorie UNSORTED (import)`);
   console.log(`  ${C.cyan}--from-revisione${C.reset} Reimporta da da_revisionare.txt (import)`);
   console.log(`  ${C.cyan}--all${C.reset}           Processa anche prodotti già elaborati (variants)`);
-  console.log(`  ${C.cyan}--execute${C.reset}       Applica modifiche prezzi (prices)\n`);
+  console.log(`  ${C.cyan}--execute${C.reset}            Applica modifiche prezzi (prices)`);
+  console.log(`  ${C.cyan}--concurrency=N${C.reset}      N worker paralleli (stress-test, default 8)`);
+  console.log(`  ${C.cyan}--limit=N${C.reset}            Testa solo i primi N prodotti (stress-test)`);
+  console.log(`  ${C.cyan}--fix-pure${C.reset}           Normalizza product_url al formato puro (stress-test)\n`);
   console.log(`${C.bright}ESEMPI:${C.reset}`);
   console.log(`  npx tsx scripts/kitwer-tools.ts import MAGAZZINO/crypto.csv --upsert`);
   console.log(`  npx tsx scripts/kitwer-tools.ts dedup --dry-run`);
   console.log(`  npx tsx scripts/kitwer-tools.ts subcats`);
-  console.log(`  npx tsx scripts/kitwer-tools.ts prices --execute\n`);
+  console.log(`  npx tsx scripts/kitwer-tools.ts prices --execute`);
+  console.log(`  npx tsx scripts/kitwer-tools.ts stress-test`);
+  console.log(`  npx tsx scripts/kitwer-tools.ts stress-test --concurrency=10 --fix-pure`);
+  console.log(`  npx tsx scripts/kitwer-tools.ts stress-test --limit=50 --dry-run\n`);
 }
 
 async function interactiveMenu() {
@@ -1298,6 +2616,8 @@ async function interactiveMenu() {
   // Chiedi opzioni aggiuntive se rilevanti
   const extraArgs: string[] = [];
   if (cmdKey === 'import') {
+    const hr = await confirm('⚠  HARD RESET: svuotare il DB prima dell\'import (dati freschi)?');
+    if (hr) extraArgs.push('--hard-reset');
     const dr = await confirm('Eseguire in modalità UPSERT (aggiorna prodotti esistenti)?');
     if (dr) extraArgs.push('--upsert');
     const perm = await confirm('Modalità PERMISSIVE (accetta UNSORTED)?');
@@ -1310,6 +2630,12 @@ async function interactiveMenu() {
       const all = await confirm('Processare TUTTI i prodotti (anche quelli con varianti)?');
       if (all) extraArgs.push('--all');
     }
+  }
+  if (cmdKey === 'stress-test') {
+    const fp = await confirm('Normalizzare product_url impuri sul DB (--fix-pure)?');
+    if (fp) extraArgs.push('--fix-pure');
+    const dr = await confirm('Modalità DRY-RUN (nessuna scrittura sul DB)?');
+    if (dr) extraArgs.push('--dry-run');
   }
   if (cmdKey === 'prices') {
     const exec = await confirm('Applicare le modifiche al DB (--execute)?');

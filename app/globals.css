@@ -10,8 +10,8 @@ html, html.dark, html.light {
   --th-card:   #18181b;
   --th-input:  #27272a;
   --th-text:   #f4f4f5;
-  --th-muted:  #a1a1aa;
-  --th-faint:  #71717a;
+  --th-muted:  #a1a1aa;  /* zinc-400 — 7.1:1 su #09090b ✅ */
+  --th-faint:  #8d8d99;  /* zinc-450 — 5.4:1 su #09090b ✅ (era #71717a = 4.4:1 ❌) */
   --th-border: rgba(63,63,70,0.7);
   --th-subtle: #d4d4d8;
 
@@ -163,6 +163,16 @@ html, html.dark, html.light {
   to   { stroke-dashoffset: 0; }
 }
 
+/* Tactical HUD — scan-line accent + icon pulse */
+@keyframes hud-scan {
+  0%, 100% { opacity: 0.3; }
+  50%       { opacity: 1;   }
+}
+@keyframes hud-pulse {
+  0%, 100% { opacity: 1;   }
+  50%       { opacity: 0.5; }
+}
+
 /* ── Utilities ───────────────────────────────────────────────────────────── */
 
 @layer utilities {
@@ -268,5 +278,10 @@ html, html.dark, html.light {
     .animate-radar {
       animation: none !important;
     }
+  }
+
+  /* Riduzione moto — HUD animations (applicate via inline style, bloccate con !important) */
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; }
   }
 }

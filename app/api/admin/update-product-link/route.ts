@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 
   const { error } = await supabase
     .from('products')
-    .update({ url: newUrl })
+    .update({ product_url: newUrl })
     .eq('id', body.productId);
 
   if (error) {

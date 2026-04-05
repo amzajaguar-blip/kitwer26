@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { ShoppingBag } from 'lucide-react';
 import type { Product } from '@/types/product';
 import { useCart } from '@/context/CartContext';
-import { getMarkupPrice } from '@/utils/pricing';
 
 interface Props {
   products: Product[];
@@ -32,7 +31,7 @@ export default function RelatedProducts({
       <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
         {products.map((p) => {
           const raw = parseFloat(String(p.price ?? ''));
-          const finalPrice = isNaN(raw) ? null : getMarkupPrice(raw);
+          const finalPrice = isNaN(raw) ? null : raw;
           const imgSrc = p.image_url || p.thumbnailImage || '/placeholder.svg';
           const displayName = p.name || p.title || '';
 
@@ -50,6 +49,7 @@ export default function RelatedProducts({
                     fill
                     className="object-cover"
                     sizes="144px"
+                    unoptimized
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = '/placeholder.svg';
                     }}

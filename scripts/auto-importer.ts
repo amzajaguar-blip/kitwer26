@@ -26,8 +26,8 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { readdirSync, readFileSync, writeFileSync, appendFileSync, mkdirSync } from 'fs';
-import { resolve, join, basename } from 'path';
+import { readdirSync, readFileSync, writeFileSync, appendFileSync, mkdirSync, existsSync } from 'fs';
+import { resolve, join, basename, extname } from 'path';
 import * as XLSX from 'xlsx';
 
 // ──────────────────────────────────────────────
@@ -222,6 +222,8 @@ const KNOWN_CATEGORY_SLUGS = new Set([
   'Smart Security',
   'Tactical Power',
   'PC Hardware',
+  'Smart Home',
+  '3D Printing',
 ]);
 
 /**
@@ -233,6 +235,8 @@ const FILE_CATEGORY_OVERRIDES: Record<string, string> = {
   'smart_security.csv': 'Smart Security',
   'tactila power.csv':  'Tactical Power',
   'pc_hardwer.csv':     'PC Hardware',
+  'smart_home.csv':     'Smart Home',
+  '3d_printing.csv':    '3D Printing',
 };
 
 /**
@@ -1446,11 +1450,22 @@ async function main() {
     let entries: FileEntry[];
 
     if (cliArgs.length > 0) {
-      entries = cliArgs.map((p) => ({
-        filename: basename(p),
-        filePath: resolve(p),
-        isExcel: isXlsx(p),
-      }));
+      entries = cliArgs.map((p) => {
+        const direct = resolve(p);
+        // Se il file esiste direttamente, usalo
+        if (existsSync(direct)) return { filename: basename(p), filePath: direct, isExcel: isXlsx(p) };
+        // Altrimenti cerca una corrispondenza parziale in MAGAZZINO/
+        const keyword = basename(p, extname(p)).toLowerCase();
+        const allMag = existsSync(MAGAZZINO_DIR) ? readdirSync(MAGAZZINO_DIR).filter((f) => isCsv(f) || isXlsx(f)) : [];
+        const match = allMag.find((f) => f.toLowerCase().includes(keyword));
+        if (match) {
+          const found = join(MAGAZZINO_DIR, match);
+          log(C.yellow, 'SCAN', `"${p}" non trovato — uso "${match}" da MAGAZZINO/`);
+          return { filename: match, filePath: found, isExcel: isXlsx(match) };
+        }
+        // Non trovato: restituisce il path originale (errore gestito dopo)
+        return { filename: basename(p), filePath: direct, isExcel: isXlsx(p) };
+      });
       log(C.cyan, 'SCAN', `Modalità forzata: ${entries.length} file specificati da CLI`);
     } else {
       const allFiles = readdirSync(MAGAZZINO_DIR)

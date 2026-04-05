@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
   const titles = items.map((i) => i.product_title);
   const { data: productData, error: productErr } = await supabase
     .from('products')
-    .select('title, url, affiliate_url')
+    .select('title, url, product_url')
     .in('title', titles);
 
   if (productErr) {
@@ -72,8 +72,8 @@ export async function POST(req: NextRequest) {
   }
 
   const urlMap: Record<string, string> = {};
-  (productData ?? []).forEach((p: { title: string; url?: string; affiliate_url?: string }) => {
-    const rawUrl = p.affiliate_url || p.url;
+  (productData ?? []).forEach((p: { title: string; url?: string; product_url?: string }) => {
+    const rawUrl = p.product_url || p.url;
     if (!rawUrl) return;
     const asin = extractAsinFromUrl(rawUrl);
     urlMap[p.title] = asin ? buildAffiliateUrl(asin, locale) : rawUrl;

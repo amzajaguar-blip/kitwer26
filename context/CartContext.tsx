@@ -8,11 +8,7 @@ import {
   ReactNode,
 } from 'react';
 import { Product } from '@/types/product';
-import { getMarkupPrice, MARKUP } from '@/utils/pricing';
-
 // ─── Tipi ────────────────────────────────────────────────────────────────────
-
-export { MARKUP };
 
 export interface CartItem {
   product: Omit<Product, 'url'>; // Mai includere url nel carrello client
@@ -42,8 +38,9 @@ function itemKey(p: any): string {
 }
 
 function calcFinalPrice(price?: string, value?: string): number {
+  // price nel DB è già finale (markup + flat fee applicati in import)
   const n = parseFloat(price ?? value ?? '');
-  return isNaN(n) ? 0 : getMarkupPrice(n);
+  return isNaN(n) ? 0 : n;
 }
 
 // ─── Reducer ─────────────────────────────────────────────────────────────────

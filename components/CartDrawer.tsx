@@ -4,7 +4,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { X, Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
 import { useCart, CartItem } from '@/context/CartContext';
-import { getMarkupPrice } from '@/utils/pricing';
 import { useEffect, useState } from 'react';
 import type { Product } from '@/types/product';
 import { fetchRelatedProducts } from '@/lib/products';
@@ -41,7 +40,7 @@ function CrossSellSection({ cartItems }: { cartItems: CartItem[] }) {
       <div className="flex gap-2.5 overflow-x-auto scrollbar-hide pb-1">
         {suggestions.map((p) => {
           const raw = parseFloat(String(p.price ?? ''));
-          const finalPrice = isNaN(raw) ? null : getMarkupPrice(raw);
+          const finalPrice = isNaN(raw) ? null : raw;
           const imgSrc = p.image_url || p.thumbnailImage || '/placeholder.svg';
           const displayName = p.name || p.title || '';
 
@@ -58,6 +57,7 @@ function CrossSellSection({ cartItems }: { cartItems: CartItem[] }) {
                   fill
                   className="object-cover"
                   sizes="128px"
+                  unoptimized
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = '/placeholder.svg';
                   }}
@@ -146,8 +146,8 @@ export default function CartDrawer() {
                 return (
                   <div key={key} className="flex gap-3 rounded-xl p-2.5" style={{ background: 'var(--th-input)' }}>
                     <img
-                      src={item.product.thumbnailImage || '/placeholder.svg'}
-                      alt={item.product.title}
+                      src={item.product.image_url || item.product.thumbnailImage || '/placeholder.svg'}
+                      alt={item.product.title || item.product.name}
                       className="w-14 h-14 rounded-lg object-contain flex-shrink-0 p-1"
                       style={{ background: 'var(--th-card)' }}
                       loading="lazy"

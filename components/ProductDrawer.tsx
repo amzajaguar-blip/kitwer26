@@ -13,8 +13,8 @@ interface Props {
 }
 
 export default function ProductDrawer({ product, onClose }: Props) {
-  const { locale, formatPrice, getExchangeRate } = useIntl();
-  const [mollieLoading]   = useState(false); // kept for UI compat
+  const { locale, convertPrice, getExchangeRate } = useIntl();
+  const [stripeLoading, setStripeLoading] = useState(false);
   const [imgIndex, setImgIndex]             = useState(0);
   const [failedImages, setFailedImages]     = useState<Set<number>>(new Set());
   const [isZoomed, setIsZoomed]             = useState(false);
@@ -50,22 +50,37 @@ export default function ProductDrawer({ product, onClose }: Props) {
   const currentSrc = variantImageUrl ?? (failedImages.has(imgIndex) ? '/placeholder.svg' : images[imgIndex]);
 
   const raw           = parseFloat(String(product.price ?? ''));
-  const finalPriceNum = isNaN(raw) ? null : Math.round((raw * getExchangeRate() * 1.2 + 3.99) * 100) / 100;
+  const finalPriceNum = isNaN(raw) ? null : Math.round(raw * getExchangeRate() * 100) / 100;
   const inStock       = true;
 
   const goPrev = () => setImgIndex((p) => (p === 0 ? images.length - 1 : p - 1));
   const goNext = () => setImgIndex((p) => (p === images.length - 1 ? 0 : p + 1));
 
-  const handleMollieCheckout = () => {
+  const handleStripeCheckout = async () => {
     if (finalPriceNum === null) return;
-    const params = new URLSearchParams({
-      pid:      String(product.id ?? ''),
-      pname:    product.name,
-      price:    String(finalPriceNum),
-      currency: locale.currency,
-      loc:      locale.marketplace,
-    });
-    window.location.href = `/checkout?${params.toString()}`;
+    setStripeLoading(true);
+    try {
+      const res = await fetch('/api/checkout/stripe', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId:   product.id ?? null,
+          productName: product.name,
+          finalPrice:  finalPriceNum,
+          quantity:    1,
+          currency:    locale.currency,
+          marketplace_locale: locale.marketplace,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Errore checkout');
+      window.location.href = data.checkoutUrl;
+    } catch (err) {
+      console.error('[Stripe checkout]', err);
+      alert("Errore durante l'avvio del pagamento. Riprova.");
+    } finally {
+      setStripeLoading(false);
+    }
   };
 
   return (
@@ -91,6 +106,7 @@ export default function ProductDrawer({ product, onClose }: Props) {
             height={900}
             sizes="100vw"
             className="max-w-full max-h-[90vh] object-contain p-4"
+            unoptimized
             onClick={(e) => e.stopPropagation()}
           />
         </div>
@@ -133,6 +149,7 @@ export default function ProductDrawer({ product, onClose }: Props) {
                 height={340}
                 sizes="(max-width: 768px) 100vw, 33vw"
                 className="w-full h-full object-contain p-3 transition-opacity duration-200 cursor-zoom-in"
+                unoptimized
                 onDoubleClick={() => setIsZoomed(true)}
                 onError={() => setFailedImages((prev) => new Set(prev).add(imgIndex))}
               />
@@ -203,6 +220,7 @@ export default function ProductDrawer({ product, onClose }: Props) {
                       width={56}
                       height={56}
                       className="w-full h-full object-contain"
+                      unoptimized
                       onError={() => setFailedImages((prev) => new Set(prev).add(i))}
                     />
                   </button>
@@ -230,7 +248,7 @@ export default function ProductDrawer({ product, onClose }: Props) {
             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold mb-4 border ${
               inStock
                 ? 'bg-[#00FF94]/10 text-[#00FF94] border-[#00FF94]/20'
-                : 'text-gray-500 border-gray-700'
+                : 'text-th-subtle border-zinc-600'
             }`}
             style={!inStock ? { background: 'var(--th-input)' } : undefined}
           >
@@ -257,18 +275,18 @@ export default function ProductDrawer({ product, onClose }: Props) {
                   Prezzo
                 </p>
                 <p className="text-2xl font-black text-[#00D4FF]">
-                  {finalPriceNum !== null ? formatPrice(raw) : '—'}
+                  {finalPriceNum !== null ? convertPrice(raw) : '—'}
                 </p>
               </div>
 
-              {/* CTA unica — solo Acquista → Mollie */}
+              {/* CTA unica — solo Acquista → Stripe */}
               <div className="flex-1 min-w-[200px]">
                 <button
-                  onClick={handleMollieCheckout}
-                  disabled={mollieLoading || !inStock || finalPriceNum === null}
+                  onClick={handleStripeCheckout}
+                  disabled={stripeLoading || !inStock || finalPriceNum === null}
                   className="flex items-center justify-center gap-2 h-12 px-5 bg-orange-500 hover:bg-orange-400 text-black font-bold rounded-2xl active:scale-95 transition-all hover:shadow-[0_0_20px_rgba(249,115,22,0.5)] disabled:opacity-40 disabled:cursor-not-allowed w-full"
                 >
-                  {mollieLoading ? (
+                  {stripeLoading ? (
                     <><span className="animate-spin inline-block w-4 h-4 border-2 border-black/30 border-t-black rounded-full" /> Caricamento...</>
                   ) : (
                     <><CreditCard size={17} /> Acquista</>

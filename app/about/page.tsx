@@ -3,8 +3,25 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Operative Profile — Kitwer26',
-  description: 'Dossier Intelligence: il team dietro Kitwer26. Sicurezza digitale, hardware crypto, setup tattici.',
+  // absolute: bypassa il template '%s | KITWER26' del layout root
+  title: { absolute: 'Operative Profile — KITWER26' },
+  description: 'Dossier Intelligence: il team dietro KITWER26. Sicurezza digitale, hardware crypto, setup tattici d\'élite.',
+  alternates: { canonical: 'https://kitwer26.com/about' },
+  openGraph: {
+    title: 'Operative Profile — KITWER26',
+    description: 'Dossier Intelligence: il team dietro KITWER26. Sicurezza digitale, hardware crypto, setup tattici d\'élite.',
+    url: 'https://kitwer26.com/about',
+    siteName: 'KITWER26',
+    images: [{ url: '/icon.png', width: 512, height: 512, alt: 'KITWER26' }],
+    type: 'website',
+    locale: 'it_IT',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Operative Profile — KITWER26',
+    description: 'Dossier Intelligence: il team dietro KITWER26.',
+    images: ['/icon.png'],
+  },
 };
 
 const REDACTED = '[████████]';
@@ -23,7 +40,7 @@ export default function AboutPage() {
       <div className="relative z-10 max-w-2xl mx-auto px-5 py-10">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 font-mono text-xs text-zinc-500 hover:text-cyan-400 transition-colors mb-8"
+          className="inline-flex items-center gap-2 font-mono text-xs text-th-subtle hover:text-cyan-400 transition-colors mb-8"
         >
           <ArrowLeft size={14} /> TORNA AL DATABASE
         </Link>
@@ -37,8 +54,8 @@ export default function AboutPage() {
             OPERATIVE PROFILE:{' '}
             <span className="text-cyan-400">KITWER26_FOUNDER</span>
           </h1>
-          <p className="font-mono text-xs text-zinc-600 mt-1 tracking-widest">
-            STATUS: <span className="text-green-400">ACTIVE</span>  ·  LOCATION: <span className="text-zinc-500">ENCRYPTED</span>
+          <p className="font-mono text-xs text-th-subtle mt-1 tracking-widest">
+            STATUS: <span className="text-green-400">ACTIVE</span>  ·  LOCATION: <span className="text-th-subtle">ENCRYPTED</span>
           </p>
         </div>
 
@@ -67,11 +84,11 @@ export default function AboutPage() {
             {[
               { k: 'STATUS',    v: 'ACTIVE',   c: 'text-green-400' },
               { k: 'CLEARANCE', v: 'LEVEL 5',  c: 'text-orange-400' },
-              { k: 'LOCATION',  v: 'ENCRYPTED',c: 'text-zinc-500' },
+              { k: 'LOCATION',  v: 'ENCRYPTED',c: 'text-th-subtle' },
               { k: 'LOGS',      v: 'NONE',     c: 'text-cyan-400' },
             ].map(({ k, v, c }) => (
               <div key={k} className="flex items-center gap-2">
-                <span className="font-mono text-[9px] tracking-widest text-zinc-600 uppercase w-20">{k}:</span>
+                <span className="font-mono text-[9px] tracking-widest text-th-subtle uppercase w-20">{k}:</span>
                 <span className={`font-mono text-[11px] font-bold ${c}`}>{v}</span>
               </div>
             ))}
@@ -87,7 +104,7 @@ export default function AboutPage() {
                 [ MISSION OBJECTIVE ]
               </p>
             </div>
-            <div className="px-4 py-4 leading-relaxed text-zinc-400">
+            <div className="px-4 py-4 leading-relaxed text-th-subtle">
               <p>
                 Kitwer26 nasce dalla convinzione che la sicurezza digitale non debba essere un privilegio
                 di pochi. Selezioniamo, testiamo e curiamo un arsenale di strumenti tecnici per chi vuole
@@ -105,7 +122,7 @@ export default function AboutPage() {
                 [ TECHNICAL EXPERTISE ]
               </p>
             </div>
-            <div className="px-4 py-4 space-y-2 text-zinc-400">
+            <div className="px-4 py-4 space-y-2 text-th-subtle">
               {[
                 { skill: 'Hardware Wallet & Cold Storage',   lvl: '████████░░', pct: '80%' },
                 { skill: 'Sicurezza Fisica & Faraday',       lvl: '███████░░░', pct: '70%' },
@@ -114,9 +131,9 @@ export default function AboutPage() {
                 { skill: 'Privacy Tools & 2FA Hardware',     lvl: '████████░░', pct: '80%' },
               ].map(({ skill, lvl, pct }) => (
                 <div key={skill} className="flex items-center gap-3">
-                  <span className="flex-1 font-sans text-xs text-zinc-400">{skill}</span>
+                  <span className="flex-1 font-sans text-xs text-th-subtle">{skill}</span>
                   <span className="font-mono text-[10px] text-cyan-500/70 tracking-widest">{lvl}</span>
-                  <span className="font-mono text-[10px] text-zinc-600 w-8">{pct}</span>
+                  <span className="font-mono text-[10px] text-th-subtle w-8">{pct}</span>
                 </div>
               ))}
             </div>
@@ -128,7 +145,7 @@ export default function AboutPage() {
                 [ SECURITY PROTOCOLS ]
               </p>
             </div>
-            <div className="px-4 py-4 text-zinc-400 leading-relaxed space-y-3">
+            <div className="px-4 py-4 text-th-subtle leading-relaxed space-y-3">
               <p>
                 Ogni prodotto nel catalogo Kitwer26 viene selezionato secondo tre criteri:{' '}
                 <span className="text-white font-semibold">affidabilità documentata</span>,{' '}
@@ -138,8 +155,8 @@ export default function AboutPage() {
               <p>
                 I link di acquisto puntano esclusivamente ad Amazon IT tramite il programma
                 affiliazione ufficiale. Nessun rivenditore terzo non verificato.{' '}
-                <span className="text-zinc-600 line-through">{REDACTED}</span>
-                <span className="group cursor-pointer text-zinc-700 hover:text-zinc-400 transition-colors ml-2">
+                <span className="text-th-subtle line-through">{REDACTED}</span>
+                <span className="group cursor-pointer text-th-subtle hover:text-white transition-colors ml-2">
                   [informazioni operative riservate]
                 </span>
               </p>
@@ -157,7 +174,7 @@ export default function AboutPage() {
         <div className="mt-6">
           <Link
             href="/legal"
-            className="font-mono text-[10px] text-zinc-700 hover:text-zinc-500 transition-colors underline"
+            className="font-mono text-[10px] text-th-subtle hover:text-white transition-colors underline"
           >
             Legal & Affiliate Disclosure
           </Link>

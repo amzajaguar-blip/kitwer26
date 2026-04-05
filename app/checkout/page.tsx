@@ -72,6 +72,13 @@ function CheckoutForm() {
 
   const isSingleProduct = !!pname && !isNaN(priceRaw) && priceRaw > 0;
 
+  // Simbolo valuta corretto per locale
+  const currencySymbol = currency === 'GBP' ? '£' : currency === 'USD' ? '$' : '€';
+
+  // Formato numero corretto per locale
+  const fmtPrice = (n: number) =>
+    currency === 'EUR' ? n.toFixed(2).replace('.', ',') : n.toFixed(2);
+
   // In modalità carrello usa gli item esistenti
   const items = isSingleProduct
     ? [{ productId: pid || null, productName: pname, finalPrice: priceRaw, quantity: 1 }]
@@ -96,7 +103,10 @@ function CheckoutForm() {
   // ── Validazione (tutto obbligatorio, email formato base) ──────────────────
   const isValid = useMemo(() => {
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
-    const capOk   = /^\d{5}$/.test(form.cap.trim());
+    // UK postcodes sono alfanumerici (es. "SW1A 1AA") — gli altri paesi usano 5 cifre
+    const capOk = loc === 'uk'
+      ? form.cap.trim().length >= 3
+      : /^\d{4,5}$/.test(form.cap.trim());
     return (
       form.name.trim()     &&
       form.surname.trim()  &&
@@ -126,7 +136,7 @@ function CheckoutForm() {
     );
   }
 
-  // ── Submit → Supabase → Mollie ─────────────────────────────────────────────
+  // ── Submit → Supabase → Stripe ─────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValid) return;
@@ -134,11 +144,11 @@ function CheckoutForm() {
     setError('');
 
     try {
-      const res = await fetch('/api/checkout', {
+      const res = await fetch('/api/checkout/stripe', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          // Prodotto principale (per Mollie description)
+          // Prodotto principale (per Stripe description)
           productId:          items[0]?.productId ?? null,
           productName:        items.length === 1
             ? items[0].productName
@@ -169,7 +179,7 @@ function CheckoutForm() {
       // Se siamo in modalità carrello, svuotiamo il carrello
       if (!isSingleProduct) clearCart();
 
-      // Redirect a Mollie
+      // Redirect a Stripe Checkout
       window.location.href = data.checkoutUrl;
 
     } catch (err: unknown) {
@@ -218,7 +228,7 @@ function CheckoutForm() {
                   )}
                 </span>
                 <span className="text-xs font-bold text-[#00D4FF] flex-shrink-0">
-                  €{(item.finalPrice * item.quantity).toFixed(2).replace('.', ',')}
+                  {currencySymbol}{fmtPrice(item.finalPrice * item.quantity)}
                 </span>
               </div>
             ))}
@@ -226,7 +236,7 @@ function CheckoutForm() {
           <div className="flex justify-between items-center mt-3 pt-3 border-t" style={{ borderColor: 'var(--th-border)' }}>
             <span className="text-sm font-semibold" style={{ color: 'var(--th-text)' }}>Totale</span>
             <span className="text-lg font-black text-[#00D4FF]">
-              €{total.toFixed(2).replace('.', ',')}
+              {currencySymbol}{fmtPrice(total)}
             </span>
           </div>
         </div>
@@ -273,22 +283,27 @@ function CheckoutForm() {
 
           <div className="grid grid-cols-2 gap-3">
             <Field
-              label="CAP"
+              label={loc === 'uk' ? 'Postcode' : loc === 'us' ? 'ZIP Code' : 'CAP'}
               value={form.cap}
               onChange={set('cap')}
-              inputMode="numeric"
-              placeholder="00100"
-              maxLength={5}
+              inputMode={loc === 'uk' ? 'text' : 'numeric'}
+              placeholder={loc === 'uk' ? 'SW1A 1AA' : loc === 'us' ? '10001' : '00100'}
+              maxLength={loc === 'uk' ? 8 : 5}
             />
-            <Field label="Città" value={form.city} onChange={set('city')} placeholder="Roma" />
+            <Field
+              label={loc === 'uk' ? 'City' : loc === 'us' ? 'City' : 'Città'}
+              value={form.city}
+              onChange={set('city')}
+              placeholder={loc === 'uk' ? 'London' : loc === 'us' ? 'New York' : 'Roma'}
+            />
           </div>
 
           <Field
-            label="Provincia (es. RM)"
+            label={loc === 'uk' ? 'County (optional)' : loc === 'us' ? 'State (es. NY)' : 'Provincia (es. RM)'}
             value={form.province}
             onChange={set('province')}
-            placeholder="RM"
-            maxLength={2}
+            placeholder={loc === 'uk' ? 'England' : loc === 'us' ? 'NY' : 'RM'}
+            maxLength={loc === 'uk' ? 30 : undefined}
           />
 
           {error && (
@@ -320,17 +335,17 @@ function CheckoutForm() {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
-              Reindirizzamento a Mollie...
+              Reindirizzamento a Stripe...
             </>
           ) : (
             <>
               <CreditCard size={18} />
-              Paga €{total.toFixed(2).replace('.', ',')} con Mollie
+              Paga {currencySymbol}{fmtPrice(total)} con Stripe
             </>
           )}
         </button>
         <p className="text-[10px] text-center mt-2" style={{ color: 'var(--th-faint)' }}>
-          Pagamento sicuro gestito da Mollie · SSL
+          Pagamento sicuro gestito da Stripe · SSL
         </p>
       </div>
     </div>

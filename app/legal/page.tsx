@@ -20,10 +20,10 @@ const SECTIONS = [
         </p>
         <p className="mt-3">
           Ciò significa che quando acquisti un prodotto tramite i nostri link, Kitwer26 riceve una piccola commissione —
-          <span className="text-zinc-300"> senza alcun costo aggiuntivo per te</span>. I prezzi mostrati sul sito
+          <span className="text-white"> senza alcun costo aggiuntivo per te</span>. I prezzi mostrati sul sito
           includono la commissione di selezione e intermediazione applicata da Kitwer26.
         </p>
-        <p className="mt-3 text-zinc-500 text-xs">
+        <p className="mt-3 text-th-subtle text-xs">
           I prezzi e la disponibilità indicati sono soggetti a variazione. Per informazioni aggiornate su prezzi e
           disponibilità, consulta sempre la pagina prodotto su Amazon.it.
         </p>
@@ -62,22 +62,22 @@ const SECTIONS = [
           Kitwer26 raccoglie dati in modo minimale e nel pieno rispetto del{' '}
           <span className="text-cyan-400 font-semibold">Regolamento Generale sulla Protezione dei Dati (GDPR — UE 2016/679)</span>.
         </p>
-        <div className="mt-3 space-y-2 text-zinc-400">
+        <div className="mt-3 space-y-2 text-th-subtle">
           <div className="flex items-start gap-2">
             <span className="text-cyan-500 font-mono shrink-0">▸</span>
-            <p><span className="text-zinc-300 font-semibold">Dati raccolti:</span> indirizzi IP anonimi, preferenze cookie (via consenso), interazioni con il sito per finalità analitiche aggregate.</p>
+            <p><span className="text-white font-semibold">Dati raccolti:</span> indirizzi IP anonimi, preferenze cookie (via consenso), interazioni con il sito per finalità analitiche aggregate.</p>
           </div>
           <div className="flex items-start gap-2">
             <span className="text-cyan-500 font-mono shrink-0">▸</span>
-            <p><span className="text-zinc-300 font-semibold">Terze parti:</span> Google Analytics (se abilitato dall&apos;utente), Google AdSense, Amazon Affiliate tracking cookie.</p>
+            <p><span className="text-white font-semibold">Terze parti:</span> Google Analytics (se abilitato dall&apos;utente), Google AdSense, Amazon Affiliate tracking cookie.</p>
           </div>
           <div className="flex items-start gap-2">
             <span className="text-cyan-500 font-mono shrink-0">▸</span>
-            <p><span className="text-zinc-300 font-semibold">Retention:</span> I dati analitici sono conservati per un massimo di 26 mesi, in linea con le politiche Google.</p>
+            <p><span className="text-white font-semibold">Retention:</span> I dati analitici sono conservati per un massimo di 26 mesi, in linea con le politiche Google.</p>
           </div>
           <div className="flex items-start gap-2">
             <span className="text-cyan-500 font-mono shrink-0">▸</span>
-            <p><span className="text-zinc-300 font-semibold">Diritti:</span> Hai il diritto di accesso, rettifica, cancellazione, limitazione e portabilità dei tuoi dati personali.</p>
+            <p><span className="text-white font-semibold">Diritti:</span> Hai il diritto di accesso, rettifica, cancellazione, limitazione e portabilità dei tuoi dati personali.</p>
           </div>
         </div>
         <p className="mt-3">
@@ -103,7 +103,7 @@ const SECTIONS = [
         <p>
           L&apos;accesso e l&apos;utilizzo di Kitwer26 sono soggetti ai seguenti termini:
         </p>
-        <div className="mt-3 space-y-2 text-zinc-400">
+        <div className="mt-3 space-y-2 text-th-subtle">
           <div className="flex items-start gap-2">
             <span className="text-green-500 font-mono shrink-0">01</span>
             <p>Il contenuto del sito è protetto da copyright. È vietata la riproduzione senza autorizzazione scritta.</p>
@@ -140,7 +140,7 @@ export default function LegalPage() {
       <div className="relative z-10 max-w-2xl mx-auto px-5 py-10">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 font-mono text-xs text-zinc-500 hover:text-cyan-400 transition-colors mb-8"
+          className="inline-flex items-center gap-2 font-mono text-xs text-th-subtle hover:text-cyan-400 transition-colors mb-8"
         >
           <ArrowLeft size={14} /> TORNA AL DATABASE
         </Link>
@@ -154,7 +154,7 @@ export default function LegalPage() {
             LEGAL &{' '}
             <span className="text-orange-400">DISCLOSURE</span>
           </h1>
-          <p className="font-mono text-xs text-zinc-600 mt-1 tracking-widest">
+          <p className="font-mono text-xs text-th-subtle mt-1 tracking-widest">
             KITWER26 · AFFILIATO AMAZON IT · GDPR COMPLIANT
           </p>
         </div>
@@ -168,7 +168,7 @@ export default function LegalPage() {
                   {tag}
                 </p>
               </div>
-              <div className="px-4 py-4 leading-relaxed text-zinc-400">
+              <div className="px-4 py-4 leading-relaxed text-th-subtle">
                 {content}
               </div>
             </section>
@@ -181,7 +181,7 @@ export default function LegalPage() {
                 [ RICHIESTA RIMOZIONE DATI ]
               </p>
             </div>
-            <div className="px-4 py-4 leading-relaxed text-zinc-400">
+            <div className="px-4 py-4 leading-relaxed text-th-subtle">
               <p>
                 In conformità all&apos;art. 17 del GDPR (&quot;Diritto all&apos;oblio&quot;), puoi richiedere la cancellazione
                 dei tuoi dati personali in nostro possesso inviando una mail a:
@@ -190,11 +190,11 @@ export default function LegalPage() {
                 <p className="font-mono text-sm text-cyan-400 tracking-wider">
                   privacy@kitwer26.com
                 </p>
-                <p className="font-mono text-[10px] text-zinc-600 mt-1">
+                <p className="font-mono text-[10px] text-th-subtle mt-1">
                   OGGETTO: GDPR — Richiesta Rimozione Dati
                 </p>
               </div>
-              <p className="mt-3 text-xs text-zinc-500">
+              <p className="mt-3 text-xs text-th-subtle">
                 Le richieste vengono elaborate entro 30 giorni dalla ricezione, come previsto dalla normativa vigente.
               </p>
             </div>
@@ -211,19 +211,19 @@ export default function LegalPage() {
         <div className="mt-6 flex gap-4">
           <Link
             href="/about"
-            className="font-mono text-[10px] text-zinc-700 hover:text-zinc-500 transition-colors underline"
+            className="font-mono text-[10px] text-th-subtle hover:text-white transition-colors underline"
           >
             Operative Profile
           </Link>
           <Link
             href="/privacy-policy"
-            className="font-mono text-[10px] text-zinc-700 hover:text-zinc-500 transition-colors underline"
+            className="font-mono text-[10px] text-th-subtle hover:text-white transition-colors underline"
           >
             Privacy Policy
           </Link>
           <Link
             href="/cookie-policy"
-            className="font-mono text-[10px] text-zinc-700 hover:text-zinc-500 transition-colors underline"
+            className="font-mono text-[10px] text-th-subtle hover:text-white transition-colors underline"
           >
             Cookie Policy
           </Link>

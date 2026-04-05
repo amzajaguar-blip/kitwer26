@@ -64,7 +64,9 @@
       "pcHardware": "PC Hardware",
       "simRacingPro": "Sim Racing Pro",
       "smartSecurity": "Intelligente Sicherheit",
-      "uncategorized": "Ohne Kategorie"
+      "uncategorized": "Ohne Kategorie",
+      "tactical": "Taktisch",
+      "tacticalDrones": "Drohnen & FPV"
     },
     "ticker": {
       "btcPrice": "BTC/USD:",
@@ -99,5 +101,11 @@
       "accept": "Akzeptieren",
       "decline": "Ablehnen"
     }
+  },
+  "categories": {
+    "smartHome": "Smart Home",
+    "printing3d": "3D-Druck",
+    "tactical": "Taktisch",
+    "tacticalDrones": "Drohnen & FPV"
   }
 }

@@ -1,11 +1,13 @@
 'use client';
 
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { ShieldCheck, Zap, CreditCard, ShoppingCart } from 'lucide-react';
 import { Product } from '@/types/product';
 import { useIntl } from '@/context/InternationalizationContext';
 import { useCart } from '@/context/CartContext';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import ProductRating from './ProductRating';
 
 interface Props {
   product: Product;
@@ -27,12 +29,15 @@ function getBadge(category?: string): { text: string; type: 'defcon' | 'verified
 }
 
 export default function ProductCard({ product, onOpenDrawer }: Props) {
-  const { locale, formatPrice, getExchangeRate, t } = useIntl();
+  const { locale, convertPrice, getExchangeRate, t } = useIntl();
   const { addItem, openCart } = useCart();
+  const router = useRouter();
 
+  // price nel DB è già finale (markup + flat fee applicati in import)
+  // convertPrice fa solo conversione valuta, senza re-applicare il markup
   const raw               = getRawPrice(product);
-  const finalPriceNum     = isNaN(raw) ? null : Math.round((raw * getExchangeRate() * 1.2 + 3.99) * 100) / 100;
-  const finalPriceDisplay = isNaN(raw) ? null : formatPrice(raw);
+  const finalPriceNum     = isNaN(raw) ? null : Math.round(raw * getExchangeRate() * 100) / 100;
+  const finalPriceDisplay = isNaN(raw) ? null : convertPrice(raw);
   const badge             = getBadge(product.category);
   // No-zero guard: nascondi i bottoni acquisto se il prezzo calcolato è ≤ 0
   const showPurchaseButtons = finalPriceNum !== null && finalPriceNum > 0;
@@ -42,36 +47,38 @@ export default function ProductCard({ product, onOpenDrawer }: Props) {
     openCart();
   };
 
-  const [imgSrc, setImgSrc]               = useState<string>(
-    product.image_url || product.thumbnailImage || '/placeholder.svg'
-  );
-  const [mollieLoading, setMollieLoading] = useState(false);
+  // Cascata di candidati: tutti gli URL HTTP validi nell'ordine di priorità.
+  // onError avanza al candidato successivo; quando esauriti usa placeholder.svg.
+  const candidates = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    const add = (url?: string | null) => {
+      const u = url?.trim();
+      if (u && u.startsWith('http') && !seen.has(u)) { seen.add(u); out.push(u); }
+    };
+    add(product.image_url);
+    add(product.thumbnailImage);
+    if (Array.isArray(product.image_urls)) product.image_urls.forEach(add);
+    if (Array.isArray(product.images))     product.images.forEach(add);
+    return out;
+  }, [product]);
 
-  const handleMollieCheckout = async () => {
+  const [candidateIdx, setCandidateIdx] = useState(0);
+  const imgSrc = candidateIdx < candidates.length
+    ? candidates[candidateIdx]
+    : '/placeholder.svg';
+
+  const handleStripeCheckout = () => {
     if (finalPriceNum === null) return;
-    setMollieLoading(true);
-    try {
-      const res = await fetch('/api/checkout', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          productId:          product.id ?? null,
-          productName:        product.name,
-          finalPrice:         finalPriceNum,
-          quantity:           1,
-          currency:           locale.currency,
-          marketplace_locale: locale.marketplace,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Errore checkout');
-      window.location.href = data.checkoutUrl;
-    } catch (err) {
-      console.error('[Mollie checkout]', err);
-      alert("Errore durante l'avvio del pagamento. Riprova.");
-    } finally {
-      setMollieLoading(false);
-    }
+    // Redirect al form checkout che raccoglie email + spedizione prima di Stripe
+    const params = new URLSearchParams({
+      pid:      String(product.id ?? ''),
+      pname:    product.name,
+      price:    String(finalPriceNum),
+      currency: locale.currency,
+      loc:      locale.marketplace,
+    });
+    router.push(`/checkout?${params.toString()}`);
   };
 
   return (
@@ -92,7 +99,8 @@ export default function ProductCard({ product, onOpenDrawer }: Props) {
           className="absolute inset-0 w-full h-full object-contain transition-transform duration-300 group-hover:scale-[1.04]"
           loading="lazy"
           priority={false}
-          onError={() => setImgSrc('/placeholder.svg')}
+          unoptimized
+          onError={() => setCandidateIdx((i) => i + 1)}
         />
 
         {/* Crosshair corners on hover */}
@@ -121,21 +129,34 @@ export default function ProductCard({ product, onOpenDrawer }: Props) {
       {/* Info */}
       <div className="flex flex-col gap-2 p-3 flex-1">
         {product.category && (
-          <span className="font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase">
+          <span className="font-mono text-[9px] tracking-[0.2em] text-th-subtle uppercase">
             {product.category.replace(/-/g, ' ')}
           </span>
         )}
 
         <button onClick={() => onOpenDrawer(product)} className="text-left flex-1">
-          <h3 className="font-mono text-xs font-medium leading-snug line-clamp-2 min-h-[2.8em] text-zinc-200 group-hover:text-white transition-colors">
+          <h3 className="font-mono text-xs font-medium leading-snug line-clamp-2 min-h-[2.8em] text-white transition-colors">
             {product.name}
           </h3>
         </button>
 
+        {/* Rating stelle — visibile solo se il prodotto ha una valutazione */}
+        {product.rating != null && product.rating > 0 && (
+          <ProductRating
+            rating={product.rating as number}
+            reviewCount={product.review_count as number | undefined}
+            size="sm"
+          />
+        )}
+
         <p className="font-mono font-bold text-base text-orange-400 tracking-tight mt-auto">
           {finalPriceDisplay !== null
             ? finalPriceDisplay
-            : <span className="text-zinc-600 text-xs font-mono">{t('pricePending')}</span>
+            : (
+              <span className="font-mono text-[9px] tracking-widest uppercase px-2 py-1 border border-orange-500/40 text-orange-400/70 rounded-sm">
+                CONTROLLA PREZZO
+              </span>
+            )
           }
         </p>
 
@@ -144,25 +165,22 @@ export default function ProductCard({ product, onOpenDrawer }: Props) {
           <div className="flex gap-1.5">
             <button
               onClick={handleAddToCart}
-              className="flex-1 min-h-[44px] py-2.5 font-mono font-bold text-[9px] tracking-widest uppercase text-black bg-cyan-500 hover:bg-cyan-400 active:scale-95 transition-all rounded-sm flex items-center justify-center gap-1"
+              className="flex-1 min-h-[44px] py-2 font-mono font-bold text-[8px] tracking-wide uppercase text-black bg-cyan-500 hover:bg-cyan-400 active:scale-95 transition-all rounded-sm flex items-center justify-center gap-1 overflow-hidden"
             >
-              <ShoppingCart size={10} /> {t('buttons.addToCart')}
+              <ShoppingCart size={10} className="shrink-0" />
+              <span className="truncate">{t('addToCart')}</span>
             </button>
             <button
-              onClick={handleMollieCheckout}
-              disabled={mollieLoading}
-              className="flex-1 min-h-[44px] py-2.5 font-mono font-bold text-[9px] tracking-widest uppercase text-black bg-orange-500 hover:bg-orange-400 disabled:opacity-50 active:scale-95 transition-all rounded-sm shadow-[0_0_8px_rgba(249,115,22,0.2)] hover:shadow-[0_0_16px_rgba(249,115,22,0.45)] flex items-center justify-center gap-1"
+              onClick={handleStripeCheckout}
+              className="flex-1 min-h-[44px] py-2 font-mono font-bold text-[8px] tracking-wide uppercase text-black bg-orange-500 hover:bg-orange-400 active:scale-95 transition-all rounded-sm shadow-[0_0_8px_rgba(249,115,22,0.2)] hover:shadow-[0_0_16px_rgba(249,115,22,0.45)] flex items-center justify-center gap-1 overflow-hidden"
             >
-              {mollieLoading ? (
-                <span className="animate-spin inline-block w-3 h-3 border-2 border-black/40 border-t-black rounded-full" />
-              ) : (
-                <><CreditCard size={10} /> {t('buttons.buyNow')}</>
-              )}
+              <CreditCard size={10} className="shrink-0" />
+              <span className="truncate">{t('buyNow')}</span>
             </button>
           </div>
         ) : (
           <div className="min-h-[44px] flex items-center justify-center border border-zinc-700/60 rounded-sm">
-            <span className="font-mono text-[9px] tracking-widest text-zinc-500 uppercase text-center px-2">
+            <span className="font-mono text-[9px] tracking-widest text-th-subtle uppercase text-center px-2">
               {t('contactForAvailability')}
             </span>
           </div>
@@ -170,24 +188,24 @@ export default function ProductCard({ product, onOpenDrawer }: Props) {
 
         <div className="flex items-center justify-center gap-1.5 pt-1 border-t border-zinc-800">
           <Image
-            src="/svg_kitwer/freepik__scatola-pacco-svg-flat-cardboard-box-icon-with-fol__5786-removebg-preview.png"
+            src="/svg_kitwer/freepik__svg-pacco-spedizione-cardboard-box-icon-with-shipp__59072.png"
             alt=""
             aria-hidden="true"
             width={10}
             height={10}
-            className="w-2.5 h-2.5 object-contain invert opacity-40"
+            className="w-2.5 h-2.5 object-contain invert opacity-60"
           />
-          <span className="font-mono text-[9px] text-zinc-700 tracking-wide">{t('shipping')}</span>
-          <span className="text-zinc-700">·</span>
+          <span className="font-mono text-[9px] text-th-subtle tracking-wide">{t('shipping')}</span>
+          <span className="font-mono text-[9px] text-th-subtle">·</span>
           <Image
             src="/svg_kitwer/freepik__svg-support-for-logo-assets-crisp-outlines-layered__59071-removebg-preview.png"
             alt=""
             aria-hidden="true"
             width={10}
             height={10}
-            className="w-2.5 h-2.5 object-contain invert opacity-40"
+            className="w-2.5 h-2.5 object-contain invert opacity-60"
           />
-          <span className="font-mono text-[9px] text-zinc-700 tracking-wide">{t('support')}</span>
+          <span className="font-mono text-[9px] text-th-subtle tracking-wide">{t('support')}</span>
         </div>
       </div>
     </div>

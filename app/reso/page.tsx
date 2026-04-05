@@ -2,7 +2,7 @@ import React from 'react';
 
 export default function ReturnPolicyPage() {
   return (
-    <div className="min-h-screen bg-[#050505] text-gray-300 py-24 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#050505] text-th-subtle py-24 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto bg-[#0a0a0a] border border-white/10 p-8 rounded-xl shadow-2xl">
         <h1 className="text-3xl font-black text-white mb-8 uppercase tracking-tight">
           Politica di Reso e Rimborsi <span className="text-cyan-500">Kitwer 2026</span>
@@ -47,12 +47,12 @@ export default function ReturnPolicyPage() {
             <h2 className="text-xl font-bold text-white mb-2">5. Rimborsi</h2>
             <p>
               Una volta ricevuto e ispezionato il reso (solitamente entro 48 ore dalla ricezione in magazzino), ti invieremo un&apos;email di notifica.
-              Se il reso è approvato, il rimborso verrà processato immediatamente e il credito verrà applicato automaticamente sulla tua carta di credito o sul metodo di pagamento originale (tramite circuito Mollie) entro 5-7 giorni lavorativi. I costi di &quot;Gestione Premium&quot; applicati in fase di acquisto non sono rimborsabili.
+              Se il reso è approvato, il rimborso verrà processato immediatamente e il credito verrà applicato automaticamente sulla tua carta di credito o sul metodo di pagamento originale (tramite Stripe) entro 5-7 giorni lavorativi. I costi di &quot;Gestione Premium&quot; applicati in fase di acquisto non sono rimborsabili.
             </p>
           </section>
 
           <section className="pt-6 border-t border-white/10 mt-8">
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-th-subtle">
               Ultimo aggiornamento: Ottobre 2024. Per ulteriori informazioni, contatta la nostra assistenza tramite la chat in basso a destra.
             </p>
           </section>

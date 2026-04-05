@@ -10,6 +10,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const deepseekKey = process.env.DEEPSEEK_API_KEY;
+  if (!deepseekKey) {
+    return NextResponse.json({ error: 'DEEPSEEK_API_KEY non configurata' }, { status: 500 });
+  }
+
   const { name, category } = body as { name: string; category: string };
 
   const userPrompt =
@@ -24,7 +29,7 @@ export async function POST(req: NextRequest) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+      Authorization: `Bearer ${deepseekKey}`,
     },
     body: JSON.stringify({
       model: 'deepseek-chat',

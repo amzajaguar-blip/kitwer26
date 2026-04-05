@@ -33,6 +33,9 @@ const CATEGORY_OPTIONS: { value: Exclude<Category, 'all'>; label: string }[] = [
   { value: 'hardware-crypto-wallets',             label: 'Hardware Crypto Wallets' },
   { value: 'pc-hardware-high-ticket',             label: 'PC Hardware High-Ticket' },
   { value: 'sicurezza-domotica-high-end',         label: 'Sicurezza & Domotica High-End' },
+  { value: 'PC Hardware',                         label: 'PC Hardware' },
+  { value: 'Smart Home',                          label: 'Smart Home' },
+  { value: '3D Printing',                         label: '3D Printing & Maker' },
 ];
 
 // ─── Componente principale ────────────────────────────────────────────────────
