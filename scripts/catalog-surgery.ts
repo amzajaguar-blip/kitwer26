@@ -39,6 +39,10 @@ const log = (color: string, tag: string, msg: string) =>
 const DRY_RUN = process.argv.includes('--dry-run');
 const stepArg = process.argv.find(a => a.startsWith('--step='));
 const STEPS   = stepArg ? stepArg.replace('--step=', '').split(',').map(Number) : [1, 2, 3, 4];
+if (STEPS.some(isNaN)) {
+  console.error(`\x1b[31m\x1b[1m[FATAL]\x1b[0m --step deve contenere numeri (es. --step=1,3)`);
+  process.exit(1);
+}
 
 interface SurgeryStats {
   anomaliesDeleted:    number;
@@ -74,8 +78,9 @@ async function step1_contextAnomalies(sb: SupabaseClient, stats: SurgeryStats) {
     for (const p of scooters ?? []) log(C.gray, 'DEL', `  → ${p.id} | ${p.name}`);
     if (!DRY_RUN && (scooters?.length ?? 0) > 0) {
       const ids = scooters!.map((p: { id: string }) => p.id);
-      await sb.from('products').delete().in('id', ids);
-      stats.anomaliesDeleted += ids.length;
+      const { error: delErr } = await sb.from('products').delete().in('id', ids);
+      if (delErr) log(C.red, 'ERR', delErr.message);
+      else stats.anomaliesDeleted += ids.length;
     }
   }
 
@@ -91,8 +96,9 @@ async function step1_contextAnomalies(sb: SupabaseClient, stats: SurgeryStats) {
     for (const p of watches ?? []) log(C.gray, 'DEL', `  → ${p.id} | ${p.name}`);
     if (!DRY_RUN && (watches?.length ?? 0) > 0) {
       const ids = watches!.map((p: { id: string }) => p.id);
-      await sb.from('products').delete().in('id', ids);
-      stats.anomaliesDeleted += ids.length;
+      const { error: delErr } = await sb.from('products').delete().in('id', ids);
+      if (delErr) log(C.red, 'ERR', delErr.message);
+      else stats.anomaliesDeleted += ids.length;
     }
   }
 
@@ -109,8 +115,9 @@ async function step1_contextAnomalies(sb: SupabaseClient, stats: SurgeryStats) {
     for (const p of drones ?? []) log(C.gray, 'DEL', `  → ${p.id} | ${p.name}`);
     if (!DRY_RUN && (drones?.length ?? 0) > 0) {
       const ids = drones!.map((p: { id: string }) => p.id);
-      await sb.from('products').delete().in('id', ids);
-      stats.anomaliesDeleted += ids.length;
+      const { error: delErr } = await sb.from('products').delete().in('id', ids);
+      if (delErr) log(C.red, 'ERR', delErr.message);
+      else stats.anomaliesDeleted += ids.length;
     }
   }
 
