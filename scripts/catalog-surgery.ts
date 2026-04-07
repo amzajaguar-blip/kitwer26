@@ -170,29 +170,34 @@ async function step3_powerGridGeneral(sb: SupabaseClient, stats: SurgeryStats) {
   log(C.green, 'STEP-3', `General nullati: ${DRY_RUN ? '[DRY-RUN]' : stats.generalNulled}`);
 }
 
-// ── STEP 4: Disattiva tutti survival-edc-tech (is_active = false) ────────────
+// ── STEP 4: Nascondi tutti survival-edc-tech (price = 0, esclusi da fetchProducts) ─
+// Nota: il DB non ha colonna is_active. fetchProducts filtra .gt('price', 0),
+// quindi price=0 equivale a nascondere il prodotto dal frontend.
+// Ripristino: re-importare da CSV.
 async function step4_survivalDeactivate(sb: SupabaseClient, stats: SurgeryStats) {
-  log(C.cyan, 'STEP-4', 'Disattivazione prodotti survival-edc-tech...');
+  log(C.cyan, 'STEP-4', 'Nascondendo prodotti survival-edc-tech (price → 0)...');
 
-  const { count, error: cntErr } = await sb
+  const { data: toHide, error: cntErr } = await sb
     .from('products')
-    .select('id', { count: 'exact', head: true })
+    .select('id')
     .eq('category', 'survival-edc-tech')
-    .eq('is_active', true);
+    .gt('price', 0);
   if (cntErr) { log(C.red, 'ERR', cntErr.message); return; }
 
-  log(C.yellow, 'SURVIVAL', `Prodotti attivi da disattivare: ${count ?? 0}`);
+  const count = toHide?.length ?? 0;
+  log(C.yellow, 'SURVIVAL', `Prodotti visibili da nascondere: ${count}`);
 
-  if (!DRY_RUN) {
+  if (!DRY_RUN && count > 0) {
+    const ids = toHide!.map((p: { id: string | number }) => p.id);
     const { error: upErr } = await sb
       .from('products')
-      .update({ is_active: false })
-      .eq('category', 'survival-edc-tech');
+      .update({ price: 0 })
+      .in('id', ids);
     if (upErr) log(C.red, 'ERR', upErr.message);
-    else stats.survivalDeactivated = count ?? 0;
+    else stats.survivalDeactivated = count;
   }
 
-  log(C.green, 'STEP-4', `Disattivati: ${DRY_RUN ? '[DRY-RUN]' : stats.survivalDeactivated}`);
+  log(C.green, 'STEP-4', `Nascosti: ${DRY_RUN ? '[DRY-RUN]' : stats.survivalDeactivated}`);
 }
 
 // ── MAIN ──────────────────────────────────────────────────────────────────────
