@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, Suspense } from 'react';
+import { useState, useCallback, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Header from './Header';
 import SearchBar from './SearchBar';
@@ -16,7 +16,7 @@ import BundleSection from './BundleSection';
 import TacticalDealsSection from './TacticalDealsSection';
 import LazyAdBanner from './LazyAdBanner';
 import { useProducts } from '@/hooks/useProducts';
-import { Category, PAGE_SIZE } from '@/lib/products';
+import { Category, PAGE_SIZE, fetchSubCategoryCounts } from '@/lib/products';
 import { Product } from '@/types/product';
 import { useIntl } from '@/context/InternationalizationContext';
 
@@ -56,6 +56,7 @@ function HomepageInner() {
   const showCatalogCTA     = capActive && !cappedHasMore && products.length >= homepageCap;
 
   const [drawerProduct, setDrawerProduct] = useState<Product | null>(null);
+  const [subCounts, setSubCounts] = useState<Record<string, number>>({});
 
   const handleOpenDrawer = (p: Product) => {
     sessionStorage.setItem('kitwer_product_clicked', '1');
@@ -83,6 +84,11 @@ function HomepageInner() {
     const qs = params.toString();
     router.push(qs ? `/?${qs}` : '/', { scroll: false });
   }, [category, setSubCategory, router]);
+
+  useEffect(() => {
+    if (!category || category === 'all') { setSubCounts({}); return; }
+    fetchSubCategoryCounts(category).then(setSubCounts);
+  }, [category]);
 
   return (
     <div className="min-h-screen pt-[88px] overflow-x-hidden bg-zinc-950">
@@ -113,6 +119,7 @@ function HomepageInner() {
             category={category}
             active={subCategory}
             onChange={handleSubCategoryChange}
+            activeCounts={subCounts}
           />
         )}
       </div>
