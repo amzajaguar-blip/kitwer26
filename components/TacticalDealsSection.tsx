@@ -6,6 +6,37 @@ import { useCart } from '@/context/CartContext';
 import { useIntl } from '@/context/InternationalizationContext';
 import type { TacticalDeal } from '@/lib/products';
 
+// ── Lightbox ───────────────────────────────────────────────────────────────────
+function Lightbox({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt}
+        className="max-w-[90vw] max-h-[90vh] object-contain rounded shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      />
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 text-white/70 hover:text-white font-mono text-2xl leading-none"
+        aria-label="Chiudi"
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
 // ── Skeleton card ──────────────────────────────────────────────────────────────
 function SkeletonDeal() {
   return (
@@ -45,6 +76,7 @@ function DealCard({ deal }: { deal: TacticalDeal }) {
   const [imgSrc, setImgSrc]     = useState<string>(() => candidates[0] ?? '/placeholder.svg');
   const [imgIdx, setImgIdx]     = useState(0);
   const [adding, setAdding]     = useState(false);
+  const [zoomedSrc, setZoomedSrc] = useState<string | null>(null);
   const addingTimerRef          = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Cleanup timer al dismount per evitare setState su componente smontato
@@ -81,7 +113,11 @@ function DealCard({ deal }: { deal: TacticalDeal }) {
     <div className="group relative flex flex-col bg-zinc-900 border border-zinc-800 hover:border-amber-500/40 transition-colors duration-200 rounded-sm overflow-hidden hover:shadow-[0_0_16px_rgba(245,158,11,0.12)]">
 
       {/* Image container */}
-      <div className="relative aspect-square bg-zinc-950 overflow-hidden">
+      <div
+        className="relative aspect-square bg-zinc-950 overflow-hidden cursor-zoom-in"
+        onClick={() => setZoomedSrc(imgSrc)}
+        title="Clicca per ingrandire"
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={imgSrc}
@@ -90,6 +126,13 @@ function DealCard({ deal }: { deal: TacticalDeal }) {
           loading="lazy"
           onError={handleImgError}
         />
+        {zoomedSrc && (
+          <Lightbox
+            src={zoomedSrc}
+            alt={deal.name}
+            onClose={() => setZoomedSrc(null)}
+          />
+        )}
 
         {/* Badges top row */}
         <div className="absolute top-2 left-2 flex flex-col gap-1">
