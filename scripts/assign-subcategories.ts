@@ -64,7 +64,7 @@ const SUB_KW: Record<string, Array<[string, string[]]>> = {
   'hardware-crypto-wallets': [
     ['air-gapped',  ['keystone', 'ellipal', 'ngrave', 'passport', 'air-gapped', 'air gapped', 'qr code', 'qr-code', 'seedsigner']],
     ['backup-seed', ['cryptosteel', 'bilodeau', 'stamp seed', 'seed steel', 'seed backup', 'metal backup', 'steel wallet', 'seed capsule', 'mnemonic steel', 'hodlr', 'cobo tablet']],
-    ['premium',     ['stax', 'safe 5', 'touch', 'flex', 'coldcard mk', 'bitbox02', 'jade', 'keystone pro', 'model t', 'shamir', 'cobo vault pro']],
+    ['premium',     ['stax', 'safe 5', 'touch', 'flex', 'coldcard mk', 'bitbox02', 'jade', 'keystone pro', 'model t', 'shamir', 'cobo vault pro', 'ledger stax', 'ledger flex', 'coldcard q', 'foundation passport', 'foundation v2', 'portal hardware']],
     ['entry-level', ['nano s', 'nano x', 'safe 3', 'tangem', 'model one', 'one model', 'foundation passport', 'keepkey', 'onekey mini', 'coldcard mk3']],
     ['backup-seed', ['seed', 'mnemonic', 'backup phrase', 'recovery phrase', 'steel plate']],
     ['entry-level', ['ledger', 'trezor', 'tangem', 'wallet']],          // fallback crypto
@@ -95,7 +95,7 @@ const SUB_KW: Record<string, Array<[string, string[]]>> = {
   'tactical-power-grid': [
     ['solar-panels',    ['solar panel', 'pannello solare', 'fotovoltaic', 'solar charge', 'monocrystalline', 'solar generator', 'foldable solar']],
     ['batteries',       ['18650', 'lithium battery', 'lipo', 'lifepo4', 'rechargeable batter', 'cell battery', 'batterie ricaric', 'nimh', 'button cell']],
-    ['power-stations',  ['power station', 'jackery', 'ecoflow', 'bluetti', 'goal zero', 'generac', 'powerstation', 'portable generator', 'station explorer', 'river max', 'delta pro']],
+    ['power-stations',  ['power station', 'jackery', 'ecoflow', 'bluetti', 'goal zero', 'generac', 'powerstation', 'portable generator', 'station explorer', 'river max', 'delta pro', 'generatore portatile', 'centrale elettrica', 'power box', 'solar generator']],
     ['power-banks',     ['power bank', 'powerbank', 'portable charge', 'anker', 'baseus', 'caricatore portatile', 'batteria esterna', 'external battery']],
     ['solar-panels',    ['solar', 'pannello']],                         // fallback
     ['batteries',       ['batteria', 'battery', 'pile']],               // fallback
@@ -105,7 +105,7 @@ const SUB_KW: Record<string, Array<[string, string[]]>> = {
 
   'sim-racing-accessories-premium': [
     ['handbrakes',      ['handbrake', 'freno a mano', 'e-brake', 'drift brake', 'hydraulic handbrake']],
-    ['shifters',        ['shifter', 'sequential', 'h-pattern', 'gearbox', 'cambio sequenziale', 'h shifter']],
+    ['shifters',        ['shifter', 'sequential', 'h-pattern', 'gearbox', 'cambio sequenziale', 'h shifter', 'short shifter', 'sim shifter', 'fanatec shifter', 'aps', 'pro shifter', 'cambio h', 'v3 shifter', 'clubsport shifter']],
     ['pedals',          ['pedal', 'pedaliera', 'heusinkveld', 'brake pedal', 'load cell', 'clutch pedal', 'sprint pedals', 'invicta pedals']],
     ['cockpit-rigs',    ['cockpit', 'racing rig', 'playseat', 'next level racing', 'gt omega', 'rseat', 'chassis', 'profile frame', 'aluminum profile']],
     ['steering-wheels', ['steering wheel', 'volante', 'fanatec', 'thrustmaster', 'logitech g', 'moza r', 'simagic', 'direct drive', 'wheel base', 'servo base', 'dd pro', 'csl dd', 'gt dd']],
@@ -113,7 +113,7 @@ const SUB_KW: Record<string, Array<[string, string[]]>> = {
 
   'sim-racing': [
     ['handbrakes',      ['handbrake', 'freno a mano', 'e-brake', 'drift brake']],
-    ['shifters',        ['shifter', 'sequential', 'h-pattern', 'gearbox', 'cambio']],
+    ['shifters',        ['shifter', 'sequential', 'h-pattern', 'gearbox', 'cambio', 'short shifter', 'sim shifter', 'fanatec shifter', 'aps', 'pro shifter', 'cambio h', 'v3 shifter', 'clubsport shifter']],
     ['pedals',          ['pedal', 'pedaliera', 'heusinkveld', 'brake', 'load cell', 'clutch']],
     ['cockpit-rigs',    ['cockpit', 'rig', 'playseat', 'next level', 'chassis', 'frame', 'aluminum']],
     ['steering-wheels', ['steering', 'volante', 'fanatec', 'thrustmaster', 'logitech g', 'moza', 'simagic', 'direct drive', 'wheel']],
@@ -124,11 +124,18 @@ const SUB_KW: Record<string, Array<[string, string[]]>> = {
     ['cooling-pads',    ['cooling pad', 'laptop cooler', 'notebook cooler', 'pad raffreddamento', 'laptop stand fan']],
     ['monitor-arms',    ['monitor arm', 'braccio monitor', 'supporto monitor', 'vesa mount', 'dual monitor arm', 'single monitor arm', 'monitor riser', 'monitor stand']],
     ['gaming-chairs',   ['gaming chair', 'secretlab', 'noblechairs', 'dxracer', 'racing chair', 'sedia gaming', 'office chair', 'ergonomic chair', 'chair']],
-    ['desk-accessories',['desk mat', 'tappetino scrivania', 'cable management', 'monitor light', 'screen bar', 'key light', 'laptop arm', 'keyboard tray', 'webcam mount']],
+    ['desk-accessories',['desk mat', 'tappetino scrivania', 'cable management', 'monitor light', 'screen bar', 'key light', 'laptop arm', 'keyboard tray', 'webcam mount', 'monitor riser', 'desk organizer', 'cable tray', 'sotto scrivania', 'supporto cavo', 'hub usb desk', 'porta documenti', 'desk pad']],
     ['vr-headsets',     ['vr ', 'quest', 'headset']],                   // fallback
     ['cooling-pads',    ['cooling', 'raffreddamento']],                  // fallback
     ['monitor-arms',    ['arm', 'braccio', 'supporto']],                 // fallback
     ['desk-accessories',['desk', 'scrivania', 'organizer']],             // fallback
+  ],
+
+  '3D Printing': [
+    ['fdm-printers', ['prusa', 'bambu lab', 'creality', 'voron', 'fdm printer',
+                      'corexy', 'ender 3', 'ender-3', 'bambulab', 'p1s', 'x1 carbon',
+                      'k1 max', 'ratrig', 'sovol', 'anycubic kobra', 'stampante 3d']],
+    ['fdm-printers', ['printer', 'stampante', '3d print']],
   ],
 
   'pc-hardware-high-ticket': [
@@ -145,6 +152,12 @@ const SUB_KW: Record<string, Array<[string, string[]]>> = {
   ],
 
   'sicurezza-domotica-high-end': [
+    ['curtain-motors', ['curtain motor', 'blind motor', 'tenda motorizzata', 'tendina elettrica',
+                        'curtain controller', 'roller blind', 'smart blind', 'motorized curtain',
+                        'somfy', 'ikea fyrtur', 'switchbot curtain']],
+    ['energy-meters',  ['energy meter', 'power meter', 'shelly em', 'clamp meter',
+                        'contatore energia', 'misuratore consumo', 'watt meter',
+                        'smart meter', 'power monitor']],
     ['home-automation', ['home assistant', 'zigbee', 'z-wave', 'hub', 'bridge', 'philips hue', 'smart plug', 'smart switch', 'automation', 'matter ', 'thread ', 'alexa hub']],
     ['alarm-systems',   ['alarm', 'sirena', 'motion sensor', 'detector', 'pir sensor', 'sensore movimento', 'glass break', 'sistema allarme', 'burglar alarm', 'contact sensor']],
     ['smart-locks',     ['smart lock', 'serratura smart', 'deadbolt', 'august smart', 'yale assure', 'schlage', 'nuki', 'electronic lock', 'keypad lock', 'fingerprint lock']],
