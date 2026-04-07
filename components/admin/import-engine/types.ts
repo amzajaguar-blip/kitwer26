@@ -42,7 +42,7 @@ export const UNIFIED_COMMANDS: CommandEntry[] = [
   { label: '▶ Import Completo',          command: 'unified --upsert',                        variant: 'primary'   },
   { label: '▶ Import Permissivo',        command: 'unified --no-asin --upsert --permissive', variant: 'secondary' },
   { label: '▶ Permissivo (Con Scraping)',command: 'unified --permissive',                    variant: 'secondary' },
-  { label: '🖼 Arricchisci Immagini',    command: 'unified --enrich-images',                  variant: 'secondary' },
+  { label: '🖼 Arricchisci Immagini (10)', command: 'unified --enrich-images --limit=10',       variant: 'secondary' },
   { label: '🗑 Rimuovi Senza Immagine',  command: 'unified --remove-no-image',                variant: 'danger'    },
   { label: '🪞 Dedup Immagini',          command: 'unified --remove-duplicates',              variant: 'danger'    },
   { label: '⚠ Hard Reset + Unified',    command: 'unified --hard-reset --force',             variant: 'danger'    },

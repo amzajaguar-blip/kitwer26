@@ -10,15 +10,17 @@ import { CommandButton }          from './import-engine/CommandButton';
 import { TerminalOutput }         from './import-engine/TerminalOutput';
 import { FilteredImportSection }  from './import-engine/FilteredImportSection';
 import { RevalidateSection }      from './import-engine/RevalidateSection';
+import { CleanupSection }         from './import-engine/CleanupSection';
 
 interface ImportEnginePanelProps {
   adminSecret?: string;
 }
 
 export default function ImportEnginePanel({ adminSecret }: ImportEnginePanelProps): React.ReactElement {
-  const [isRunning, setIsRunning] = useState(false);
-  const [lines,     setLines]     = useState<TerminalLine[]>([]);
-  const lineCounter               = useRef(0);
+  const [isRunning,     setIsRunning]     = useState(false);
+  const [activeCommand, setActiveCommand] = useState<string | null>(null);
+  const [lines,         setLines]         = useState<TerminalLine[]>([]);
+  const lineCounter                       = useRef(0);
 
   const addLine = useCallback((text: string, type: TerminalLine['type']): void => {
     lineCounter.current += 1;
@@ -28,10 +30,27 @@ export default function ImportEnginePanel({ adminSecret }: ImportEnginePanelProp
 
   const clearLines = useCallback(() => { setLines([]); }, []);
 
+  const autoRevalidate = useCallback(async (): Promise<void> => {
+    try {
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (adminSecret) headers['x-admin-secret'] = adminSecret;
+      const res = await fetch('/api/admin/revalidate', {
+        method: 'POST', headers,
+        body: JSON.stringify({ target: 'all' }),
+      });
+      addLine(res.ok ? '✓ Cache ISR revalidata automaticamente' : `⚠ Revalidazione cache fallita (HTTP ${res.status})`, res.ok ? 'success' : 'warn');
+    } catch {
+      addLine('⚠ Revalidazione cache non raggiungibile', 'warn');
+    }
+  }, [adminSecret, addLine]);
+
   const runCommand = useCallback(async (command: string): Promise<void> => {
     if (isRunning) return;
     setIsRunning(true);
+    setActiveCommand(command);
     addLine(`❯ ${command}`, 'command');
+
+    let hadError = false;
 
     try {
       const headers: HeadersInit = { 'Content-Type': 'application/json' };
@@ -45,11 +64,19 @@ export default function ImportEnginePanel({ adminSecret }: ImportEnginePanelProp
       if (!res.ok) {
         const err = (await res.json()) as { error?: string };
         addLine(`✗ ${err.error ?? `HTTP ${res.status}`}`, 'error');
+        hadError = true;
         setIsRunning(false);
+        setActiveCommand(null);
         return;
       }
 
-      if (!res.body) { addLine('✗ No response body', 'error'); setIsRunning(false); return; }
+      if (!res.body) {
+        addLine('✗ No response body', 'error');
+        hadError = true;
+        setIsRunning(false);
+        setActiveCommand(null);
+        return;
+      }
 
       const reader  = res.body.getReader();
       const decoder = new TextDecoder();
@@ -69,20 +96,29 @@ export default function ImportEnginePanel({ adminSecret }: ImportEnginePanelProp
             message = p.message ?? p.data ?? rawData;
           } catch { /* raw string */ }
           if (message) addLine(message, eventType === 'success' ? 'success' : eventType === 'error' ? 'error' : eventType === 'warn' ? 'warn' : eventType === 'done' ? 'done' : 'info');
-          if (eventType === 'done') setIsRunning(false);
+          if (eventType === 'error') hadError = true;
+          if (eventType === 'done') { setIsRunning(false); setActiveCommand(null); }
         }
       };
 
       while (true) {
         const { done, value } = await reader.read();
-        if (done) { setIsRunning(false); break; }
+        if (done) { setIsRunning(false); setActiveCommand(null); break; }
         processChunk(decoder.decode(value, { stream: true }));
       }
     } catch (e) {
       addLine(`✗ ${e instanceof Error ? e.message : 'Connection failed'}`, 'error');
+      hadError = true;
       setIsRunning(false);
+      setActiveCommand(null);
     }
-  }, [isRunning, adminSecret, addLine]);
+
+    // Auto-revalida cache ISR dopo ogni operazione (anche con errori parziali)
+    if (!command.includes('--dry-run') && !command.includes('hard-reset')) {
+      await autoRevalidate();
+    }
+    void hadError; // usato in futuro per audit
+  }, [isRunning, adminSecret, addLine, autoRevalidate]);
 
   return (
     <div style={{ background: T.bgPrimary, minHeight: '100vh', padding: '24px', fontFamily: T.font, color: T.text }}>
@@ -96,7 +132,7 @@ export default function ImportEnginePanel({ adminSecret }: ImportEnginePanelProp
         <h2 style={{ color: T.textMuted, fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', margin: '0 0 12px', fontFamily: T.font }}>Kitwer Tools (ASIN + Scraping)</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '8px' }}>
           {COMMANDS.map(({ label, command, variant }) => (
-            <CommandButton key={command} label={label} command={command} variant={variant} disabled={isRunning} onClick={runCommand} />
+            <CommandButton key={command} label={label} command={command} variant={variant} disabled={isRunning} isActive={activeCommand === command} onClick={runCommand} />
           ))}
         </div>
       </section>
@@ -107,10 +143,19 @@ export default function ImportEnginePanel({ adminSecret }: ImportEnginePanelProp
         <p style={{ color: T.textDim, fontSize: '11px', margin: '0 0 12px', fontFamily: T.font }}>Import diretto da CSV/XLSX — nessun scraping Amazon, 100% affidabile</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '8px' }}>
           {UNIFIED_COMMANDS.map(({ label, command, variant }) => (
-            <CommandButton key={command} label={label} command={command} variant={variant} disabled={isRunning} onClick={runCommand} />
+            <CommandButton key={command} label={label} command={command} variant={variant} disabled={isRunning} isActive={activeCommand === command} onClick={runCommand} />
           ))}
         </div>
       </section>
+
+      {/* Pulizia Catalogo */}
+      <CleanupSection
+        adminSecret={adminSecret}
+        isRunning={isRunning}
+        onStart={() => setIsRunning(true)}
+        onDone={() => setIsRunning(false)}
+        addLine={addLine}
+      />
 
       {/* Cache Revalidation */}
       <RevalidateSection adminSecret={adminSecret} />

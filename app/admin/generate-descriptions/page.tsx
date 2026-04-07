@@ -27,15 +27,16 @@ type ProductForDesc = {
 // ─── Costanti ─────────────────────────────────────────────────────────────────
 
 const CATEGORY_OPTIONS: { value: Exclude<Category, 'all'>; label: string }[] = [
-  { value: 'sim-racing',                          label: 'Sim Racing' },
-  { value: 'sim-racing-accessories-premium',      label: 'Accessori Sim Racing Premium' },
+  { value: 'hardware-crypto-wallets',              label: 'Hardware Crypto Wallets' },
+  { value: 'Smart Security',                       label: 'Smart Security' },
+  { value: 'survival-edc-tech',                    label: 'Survival & EDC Tech' },
+  { value: 'sim-racing-accessories-premium',       label: 'Accessori Sim Racing Premium' },
   { value: 'trading-gaming-desk-accessories-premium', label: 'Trading & Gaming Desk' },
-  { value: 'hardware-crypto-wallets',             label: 'Hardware Crypto Wallets' },
-  { value: 'pc-hardware-high-ticket',             label: 'PC Hardware High-Ticket' },
-  { value: 'sicurezza-domotica-high-end',         label: 'Sicurezza & Domotica High-End' },
-  { value: 'PC Hardware',                         label: 'PC Hardware' },
-  { value: 'Smart Home',                          label: 'Smart Home' },
-  { value: '3D Printing',                         label: '3D Printing & Maker' },
+  { value: 'PC Hardware',                          label: 'PC Hardware' },
+  { value: 'Smart Home',                           label: 'Smart Home' },
+  { value: '3D Printing',                          label: '3D Printing & Maker' },
+  { value: 'fpv-drones-tech',                      label: 'FPV Drones & Tech' },
+  { value: 'tactical-power-grid',                  label: 'Tactical Power Grid' },
 ];
 
 // ─── Componente principale ────────────────────────────────────────────────────

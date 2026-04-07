@@ -3,23 +3,19 @@ import { Product } from '@/types/product';
 
 export type Category =
   | 'all'
+  // ── Categorie attive nel DB ───────────────────────────────────────────────
   | 'hardware-crypto-wallets'
   | 'survival-edc-tech'
   | 'trading-gaming-desk-accessories-premium'
   | 'sim-racing-accessories-premium'
-  | 'sim-racing'
-  | 'pc-hardware-high-ticket'
-  | 'sicurezza-domotica-high-end'
-  // categorie forzate da file override (corrispondono esattamente al DB)
   | 'Smart Security'
-  | 'PC Hardware'
   | 'Smart Home'
+  | 'PC Hardware'
   | '3D Printing'
-  | 'tactical-drones-fpv'
+  | 'fpv-drones-tech'
+  | 'tactical-power-grid'
   // prodotti importati ma non ancora classificati
-  | 'UNSORTED'
-  // alias navigabili — alias lato UI per le categorie elite bundle
-  | 'comms-security-shield';
+  | 'UNSORTED';
 
 /** Value used by importer to mark uncategorized rows */
 export const UNSORTED_CAT: Category = 'UNSORTED';
@@ -102,6 +98,41 @@ export const SUB_CATEGORIES: Record<string, { id: string; label: string; slug: s
     { id: 'home-automation', label: 'Home Automation', slug: 'home-automation' },
     { id: 'general',         label: 'General',         slug: 'general' },
   ],
+  'Smart Home': [
+    { id: 'smart-hubs',      label: 'Smart Hubs',      slug: 'smart-hubs' },
+    { id: 'smart-lighting',  label: 'Smart Lighting',  slug: 'smart-lighting' },
+    { id: 'energy-meters',   label: 'Energy Meters',   slug: 'energy-meters' },
+    { id: 'sensors',         label: 'Sensors',         slug: 'sensors' },
+    { id: 'relays',          label: 'Relays & Switches',slug: 'relays' },
+    { id: 'curtain-motors',  label: 'Curtain Motors',  slug: 'curtain-motors' },
+    { id: 'general',         label: 'General',         slug: 'general' },
+  ],
+  '3D Printing': [
+    { id: 'fdm-printers',    label: 'FDM Printers',    slug: 'fdm-printers' },
+    { id: 'hotends-nozzles', label: 'Hotends & Nozzles',slug: 'hotends-nozzles' },
+    { id: 'extruders',       label: 'Extruders',       slug: 'extruders' },
+    { id: 'pei-bed',         label: 'Build Plates',    slug: 'pei-bed' },
+    { id: 'filament-dryer',  label: 'Filament Dryers', slug: 'filament-dryer' },
+    { id: 'maker-tools',     label: 'Maker Tools',     slug: 'maker-tools' },
+    { id: 'general',         label: 'General',         slug: 'general' },
+  ],
+  'tactical-power-grid': [
+    { id: 'power-stations',  label: 'Power Stations',  slug: 'power-stations' },
+    { id: 'solar-panels',    label: 'Solar Panels',    slug: 'solar-panels' },
+    { id: 'cables-chargers', label: 'Cables & Chargers',slug: 'cables-chargers' },
+    { id: 'general',         label: 'General',         slug: 'general' },
+  ],
+  'fpv-drones-tech': [
+    { id: 'rtf-kits',          label: 'RTF Kits',          slug: 'rtf-kits' },
+    { id: 'bnf-drones',        label: 'BNF Drones',        slug: 'bnf-drones' },
+    { id: 'fpv-goggles',       label: 'FPV Goggles',       slug: 'fpv-goggles' },
+    { id: 'radios-elrs',       label: 'Radios ELRS',       slug: 'radios-elrs' },
+    { id: 'batteries-chargers',label: 'Batteries & Chargers',slug: 'batteries-chargers' },
+    { id: 'frames',            label: 'Frames',            slug: 'frames' },
+    { id: 'motors',            label: 'Motors',            slug: 'motors' },
+    { id: 'vtx-cameras',       label: 'VTX & Cameras',     slug: 'vtx-cameras' },
+    { id: 'general',           label: 'General',           slug: 'general' },
+  ],
 };
 
 /**
@@ -123,16 +154,16 @@ export function getSubCategoryDef(category: string, slug: string) {
 
 // ─── Mappa cross-selling: per ogni categoria "core", le categorie "accessori" suggerite ───
 const COMPLEMENTARY_MAP: Record<string, string[]> = {
-  'hardware-crypto-wallets':                   ['survival-edc-tech'],
-  'comms-security-shield':                     ['survival-edc-tech', 'hardware-crypto-wallets'],
-  'survival-edc-tech':                         ['hardware-crypto-wallets'],
-  'trading-gaming-desk-accessories-premium':   ['sim-racing-accessories-premium', 'pc-hardware-high-ticket'],
-  'sim-racing-accessories-premium':            ['trading-gaming-desk-accessories-premium', 'pc-hardware-high-ticket'],
-  'sim-racing':                                ['sim-racing-accessories-premium', 'trading-gaming-desk-accessories-premium'],
-  'pc-hardware-high-ticket':                   ['trading-gaming-desk-accessories-premium', 'sim-racing-accessories-premium'],
-  'sicurezza-domotica-high-end':               ['hardware-crypto-wallets', 'comms-security-shield'],
-  'Smart Security':                            ['hardware-crypto-wallets', 'comms-security-shield'],
+  'hardware-crypto-wallets':                   ['survival-edc-tech', 'Smart Security'],
+  'survival-edc-tech':                         ['hardware-crypto-wallets', 'tactical-power-grid'],
+  'Smart Security':                            ['hardware-crypto-wallets', 'Smart Home'],
+  'Smart Home':                                ['Smart Security', 'tactical-power-grid'],
+  'trading-gaming-desk-accessories-premium':   ['sim-racing-accessories-premium', 'PC Hardware'],
+  'sim-racing-accessories-premium':            ['trading-gaming-desk-accessories-premium', 'PC Hardware'],
   'PC Hardware':                               ['trading-gaming-desk-accessories-premium', 'sim-racing-accessories-premium'],
+  'fpv-drones-tech':                           ['tactical-power-grid', 'trading-gaming-desk-accessories-premium'],
+  'tactical-power-grid':                       ['survival-edc-tech', 'fpv-drones-tech'],
+  '3D Printing':                               ['PC Hardware', 'trading-gaming-desk-accessories-premium'],
 };
 
 /** Restituisce le categorie complementari da mostrare come "prodotti correlati". */
@@ -267,12 +298,8 @@ export async function fetchProducts({
   let query = supabase
     .from('products')
     .select('id, name, category, sub_category, description, image_url, image_urls, product_url, price', { count: 'exact' })
-    // Filtra a livello DB — esclude prodotti senza immagine o prezzo valido
-    .not('image_url', 'is', null)
-    .neq('image_url', '')
-    .neq('image_url', '/placeholder.svg')
-    // Esclude ASIN usato come image ID (pattern: /images/I/B[9chars].)
-    .not('image_url', 'like', '%/I/B_________._')
+    // Filtra a livello DB — esclude prodotti senza prezzo valido
+    // Nota: image_url null/placeholder è ammesso — ProductCard usa fallback graceful
     .not('price', 'is', null)
     .gt('price', 0)
     .range(rangeFrom, rangeTo);

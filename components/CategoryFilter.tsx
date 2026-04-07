@@ -72,9 +72,9 @@ function CategoryFilterContent({ active, onChange }: Props) {
       groupLabel: t('categories.security'),
       groupTag:   'Security',
       items: [
-        { id: 'hardware-crypto-wallets',        label: t('categories.cryptoWallets'),   icon: ICONS.cryptoWallets },
-        { id: 'Smart Security',                 label: t('categories.smartSecurity'),   icon: ICONS.smartSecurity },
-        { id: 'survival-edc-tech',              label: t('categories.survivalEdc'),     icon: ICONS.survivalEdc },
+        { id: 'hardware-crypto-wallets', label: t('categories.cryptoWallets'), icon: ICONS.cryptoWallets },
+        { id: 'Smart Security',          label: t('categories.smartSecurity'), icon: ICONS.smartSecurity },
+        { id: 'survival-edc-tech',       label: t('categories.survivalEdc'),   icon: ICONS.survivalEdc },
       ],
     },
     {
@@ -84,22 +84,22 @@ function CategoryFilterContent({ active, onChange }: Props) {
         { id: 'sim-racing-accessories-premium',          label: t('categories.simRacing'),  icon: ICONS.simRacing },
         { id: 'trading-gaming-desk-accessories-premium', label: t('categories.gamingDesk'), icon: ICONS.pcHardware },
         { id: 'PC Hardware',                             label: t('categories.pcHardware'), icon: ICONS.pcHardware },
-        { id: 'pc-hardware-high-ticket',                 label: 'PC Elite',                 icon: ICONS.pcHardware },
       ],
     },
     {
       groupLabel: 'Smart',
-      groupTag:   'Smart',
+      groupTag:   'Home',
       items: [
-        { id: 'sicurezza-domotica-high-end', label: 'Smart Home Pro', icon: ICONS.smartSecurity },
-        { id: '3D Printing',                 label: '3D Printing',    icon: ICONS.printing3d },
+        { id: 'Smart Home', label: 'Smart Home', icon: ICONS.smartHome    },
+        { id: '3D Printing', label: '3D Printing', icon: ICONS.printing3d },
       ],
     },
     {
       groupLabel: 'Tactical',
-      groupTag:   'FPV',
+      groupTag:   'FPV & Power',
       items: [
-        { id: 'tactical-drones-fpv', label: 'Drones & FPV', icon: ICONS.tacticalDrones },
+        { id: 'fpv-drones-tech',   label: 'Drones & FPV',   icon: ICONS.tacticalDrones },
+        { id: 'tactical-power-grid', label: 'Power Grid', icon: ICONS.tacticalPower  },
       ],
     },
   ];

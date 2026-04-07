@@ -46,6 +46,9 @@ const ALLOWED_BASE = new Set([
   'unified --remove-duplicates',
 ]);
 
+// Regex per enrich-images con limit opzionale: unified --enrich-images --limit=N
+const ENRICH_LIMIT_REGEX = /^unified --enrich-images --limit=\d+$/;
+
 /**
  * Regex per hard-reset con file MAGAZZINO specifici (solo kitwer-tools).
  * Accetta: import --hard-reset --force MAGAZZINO/file.csv ...
@@ -56,7 +59,7 @@ const HARD_RESET_FILES_REGEX =
   /^import --hard-reset --force( MAGAZZINO\/[\w\-.]+\.(?:csv|CSV))+$/;
 
 function isCommandAllowed(cmd: string): boolean {
-  return ALLOWED_BASE.has(cmd) || HARD_RESET_FILES_REGEX.test(cmd);
+  return ALLOWED_BASE.has(cmd) || HARD_RESET_FILES_REGEX.test(cmd) || ENRICH_LIMIT_REGEX.test(cmd);
 }
 
 async function isAuthorized(req: NextRequest): Promise<boolean> {

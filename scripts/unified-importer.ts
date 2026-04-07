@@ -502,51 +502,47 @@ function readFile(filePath: string): ProductRow[] {
 }
 
 // ── Enrich images: aggiorna prodotti con placeholder.svg ──────────
-async function enrichImages() {
+// limit: max prodotti da processare per evitare timeout Vercel (default 10)
+async function enrichImages(limit = 10) {
   const supabase = getSupabase();
-  banner('UNIFIED IMPORTER — Enrich Images', 'Aggiornamento immagini placeholder → Amazon');
+  banner('UNIFIED IMPORTER — Enrich Images', `Aggiornamento immagini placeholder → Amazon (max ${limit} prodotti)`);
 
-  // Leggi tutti i prodotti senza immagine reale (page by page per evitare timeout)
-  const PAGE = 100;
-  let offset = 0;
-  let total = 0;
+  // Leggi i primi `limit` prodotti senza immagine reale
+  const { data, error } = await supabase
+    .from('products')
+    .select('id, name')
+    .or('image_url.eq./placeholder.svg,image_url.is.null,image_url.eq.')
+    .limit(limit);
+
+  if (error) { log(C.red, 'DB', error.message); return; }
+  if (!data || data.length === 0) {
+    log(C.green, 'DONE', 'Nessun prodotto senza immagine trovato.');
+    return;
+  }
+
+  log(C.cyan, 'SCAN', `${data.length} prodotti senza immagine — inizio arricchimento (max ${limit})`);
+
   let updated = 0;
   let failed = 0;
 
-  while (true) {
-    const { data, error } = await supabase
+  const images = await runConcurrent(
+    data as { id: string; name: string }[],
+    (p) => quickFetchImage(p.name),
+    5
+  );
+
+  for (let i = 0; i < data.length; i++) {
+    const imgUrl = images[i];
+    if (imgUrl.includes('placeholder')) { failed++; log(C.yellow, 'SKIP', `"${data[i].name}" — nessuna immagine trovata`); continue; }
+    const { error: upErr } = await supabase
       .from('products')
-      .select('id, name')
-      .or('image_url.eq./placeholder.svg,image_url.is.null')
-      .range(offset, offset + PAGE - 1);
-
-    if (error) { log(C.red, 'DB', error.message); break; }
-    if (!data || data.length === 0) break;
-    total += data.length;
-    log(C.cyan, 'SCAN', `Trovati ${data.length} prodotti senza immagine (offset ${offset})`);
-
-    const images = await runConcurrent(
-      data as { id: string; name: string }[],
-      (p) => quickFetchImage(p.name),
-      5
-    );
-
-    for (let i = 0; i < data.length; i++) {
-      const imgUrl = images[i];
-      if (imgUrl.includes('placeholder')) { failed++; continue; }
-      const { error: upErr } = await supabase
-        .from('products')
-        .update({ image_url: imgUrl, image_urls: [imgUrl] })
-        .eq('id', (data[i] as { id: string }).id);
-      if (upErr) { log(C.red, 'ERR', `"${data[i].name}": ${upErr.message}`); failed++; }
-      else { log(C.green, 'IMG', `✓ "${data[i].name}"`); updated++; }
-    }
-
-    if (data.length < PAGE) break;
-    offset += PAGE;
+      .update({ image_url: imgUrl, image_urls: [imgUrl] })
+      .eq('id', (data[i] as { id: string }).id);
+    if (upErr) { log(C.red, 'ERR', `"${data[i].name}": ${upErr.message}`); failed++; }
+    else { log(C.green, 'IMG', `✓ "${data[i].name}"`); updated++; }
   }
 
-  log(C.green, 'DONE', `Arricchimento completato: ${updated} aggiornati, ${failed} senza immagine (totale scansionati: ${total})`);
+  log(C.green, 'DONE', `Arricchimento completato: ${updated} aggiornati, ${failed} senza immagine su ${data.length} processati.`);
 }
 
 // ── Remove no-image: elimina prodotti ancora con placeholder ──────
@@ -678,8 +674,10 @@ async function main() {
   const enrichImagesMode      = cliArgs.includes('--enrich-images');
   const removeNoImageMode     = cliArgs.includes('--remove-no-image');
   const removeDuplicatesMode  = cliArgs.includes('--remove-duplicates');
+  const limitArg = cliArgs.find(a => a.startsWith('--limit='));
+  const enrichLimit = limitArg ? parseInt(limitArg.split('=')[1], 10) : 10;
 
-  if (enrichImagesMode)     { await enrichImages();     return; }
+  if (enrichImagesMode)     { await enrichImages(enrichLimit);     return; }
   if (removeNoImageMode)    { await removeNoImage();    return; }
   if (removeDuplicatesMode) { await removeDuplicates(); return; }
 
