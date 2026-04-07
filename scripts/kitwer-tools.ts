@@ -2623,12 +2623,16 @@ async function interactiveMenu() {
     const perm = await confirm('Modalità PERMISSIVE (accetta UNSORTED)?');
     if (perm) extraArgs.push('--permissive');
   }
-  if (['dedup','variants','fix-images','subcats'].includes(cmdKey)) {
+  if (['dedup','variants','fix-images','subcats','fill-gallery'].includes(cmdKey)) {
     const dr = await confirm('Eseguire in modalità DRY-RUN (no modifiche al DB)?');
     if (dr) extraArgs.push('--dry-run');
     if (cmdKey === 'variants') {
       const all = await confirm('Processare TUTTI i prodotti (anche quelli con varianti)?');
       if (all) extraArgs.push('--all');
+    }
+    if (cmdKey === 'fill-gallery') {
+      const lim = await confirm('Impostare un limite massimo di prodotti (--limit=N)?');
+      if (lim) extraArgs.push('--limit=20');
     }
   }
   if (cmdKey === 'stress-test') {

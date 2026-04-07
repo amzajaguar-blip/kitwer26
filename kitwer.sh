@@ -2,6 +2,24 @@
 # ══════════════════════════════════════════════════════════
 #  KITWER-TOOLS — Launcher desktop universale
 #  Doppio click dal Desktop oppure: bash kitwer.sh [cmd] [flags]
+#
+#  Comandi disponibili:
+#    import          → Importa prodotti da CSV/XLSX
+#    dedup           → De-duplicazione intelligente prodotti
+#    variants        → Scraping varianti colore/taglia da Amazon
+#    subcats         → Assegna sotto-categorie via keyword matching
+#    fix-images      → Ripara URL immagini rotte nel DB
+#    fill-gallery    → Recupera immagini mancanti via scraping (--limit=N, --dry-run)
+#    sync-product-links → Sincronizza URL prodotti puliti
+#    prices          → Migra e ricalcola prezzi da CSV
+#    clean-db        → Svuota completamente la tabella products
+#    stress-test     → Verifica integrità URL + purity check
+#    verify          → Conteggio prodotti per categoria
+#
+#  Esempi:
+#    ./kitwer.sh fill-gallery --limit=20
+#    ./kitwer.sh fill-gallery --limit=50 --dry-run
+#    ./kitwer.sh dedup --dry-run
 # ══════════════════════════════════════════════════════════
 
 set -e
