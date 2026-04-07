@@ -2445,7 +2445,7 @@ async function fetchGalleryByName(name: string): Promise<string[]> {
 async function cmdFillGallery(args: string[]) {
   const dryRun    = args.includes('--dry-run');
   const forceAll  = args.includes('--all');           // sovrascrive anche chi ha già immagini
-  const limitArg  = parseInt(args.find((a) => a.startsWith('--limit='))?.split('=')[1] ?? '0', 10);
+  const limitArg  = parseInt(args.find((a) => a.startsWith('--limit='))?.split('=')[1] ?? '10', 10);
   const minDelay  = parseInt(args.find((a) => a.startsWith('--delay='))?.split('=')[1] ?? '5000', 10);
 
   banner(
@@ -2468,11 +2468,15 @@ async function cmdFillGallery(args: string[]) {
   };
 
   // Carica prodotti in batch
-  interface P { id:string; name:string; image_url:string|null; image_urls:string[]|null }
+  interface P { id:string; name:string; image_url:string|null; image_urls:string[]|null; affiliate_url:string|null }
   let all: P[] = [];
   let from = 0;
   while (true) {
-    const { data, error } = await supabase.from('products').select('id,name,image_url,image_urls').range(from, from + 999);
+    const { data, error } = await supabase
+      .from('products')
+      .select('id,name,image_url,image_urls,affiliate_url')
+      .gt('price', 0)
+      .range(from, from + 999);
     if (error) { log(C.red, 'FATAL', error.message); return; }
     if (!data?.length) break;
     all = all.concat(data as P[]);
@@ -2510,7 +2514,16 @@ async function cmdFillGallery(args: string[]) {
       break;
     }
 
-    const imgs = await fetchGalleryByName(p.name);
+    // Path 1: ASIN da affiliate_url → scraping Amazon (più affidabile)
+    const asinMatch = p.affiliate_url?.match(/\/dp\/([A-Z0-9]{10})\//i);
+    const asin = asinMatch?.[1] ?? null;
+    let imgs: string[] = [];
+    if (asin) {
+      log(C.cyan, 'ASIN', `Tentativo scraping Amazon per ASIN ${asin}`);
+      imgs = await fetchProductGallery(asin);
+    }
+    // Path 2: fallback DuckDuckGo per nome
+    if (!imgs.length) imgs = await fetchGalleryByName(p.name);
 
     if (!imgs.length) {
       log(C.red, 'NO-IMG', `Nessuna immagine trovata per "${p.name.slice(0, 50)}"`);
@@ -2522,15 +2535,16 @@ async function cmdFillGallery(args: string[]) {
       captchaCount = 0;
       log(C.green, 'FOUND', `${imgs.length} immagini trovate`);
       imgs.slice(0, 3).forEach((u) => log(C.gray, '→', u.slice(0, 80)));
-      found++;
 
-      if (!dryRun) {
+      if (dryRun) {
+        found++;
+      } else {
         const { error: upErr } = await supabase.from('products').update({
           image_url:  imgs[0],
           image_urls: imgs,
         }).eq('id', p.id);
         if (upErr) log(C.red, 'DB-ERR', upErr.message);
-        else log(C.green, 'SAVED', `${imgs.length} immagini salvate`);
+        else { found++; log(C.green, 'SAVED', `${imgs.length} immagini salvate`); }
       }
     }
 
