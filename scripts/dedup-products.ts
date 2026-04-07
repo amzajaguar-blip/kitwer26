@@ -136,6 +136,33 @@ async function main() {
     groups.get(key)!.push(p);
   }
 
+  // 2b. Secondo passaggio: raggruppa anche per affiliate_url normalizzato
+  // (stesso prodotto Amazon, prezzi diversi → duplicato da risolvere)
+  const normalizeUrl = (url: string) =>
+    url.replace(/[?&](tag|linkCode|ascsubtag|ref|qid|sr|keywords)[^&]*/g, '')
+       .replace(/[?&]$/, '')
+       .replace(/\/$/, '');
+
+  const alreadyGrouped = new Set<string>();
+  for (const group of groups.values()) {
+    if (group.length > 1) group.forEach(p => alreadyGrouped.add(String(p.id)));
+  }
+
+  const byUrl = new Map<string, Product[]>();
+  for (const p of products as Product[]) {
+    if (!p.affiliate_url || alreadyGrouped.has(String(p.id))) continue;
+    const key = `url:${normalizeUrl(p.affiliate_url)}`;
+    if (!byUrl.has(key)) byUrl.set(key, []);
+    byUrl.get(key)!.push(p);
+  }
+
+  for (const [key, group] of byUrl.entries()) {
+    if (group.length > 1) {
+      log(C.magenta, 'URL-DUP', `Gruppo ${group.length} per URL: ${key.slice(4, 70)}`);
+      groups.set(key, group);
+    }
+  }
+
   // 3. Filtra gruppi con più di 1 prodotto
   const dupGroups = [...groups.values()].filter((g) => g.length > 1);
   log(C.yellow, 'DUPLICATI', `${dupGroups.length} gruppi con duplicati trovati`);
@@ -150,8 +177,13 @@ async function main() {
   let totalSkipped  = 0;
 
   for (const group of dupGroups) {
-    // Master = nome più lungo
-    const sorted = [...group].sort((a, b) => b.name.length - a.name.length);
+    // Master = prezzo più basso (o ID più piccolo come tiebreaker per stabilità)
+    const sorted = [...group].sort((a, b) => {
+      const pa = a.price ?? Infinity;
+      const pb = b.price ?? Infinity;
+      if (pa !== pb) return pa - pb;
+      return String(a.id).localeCompare(String(b.id));
+    });
     const master  = sorted[0];
     const dups    = sorted.slice(1);
 
