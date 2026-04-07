@@ -298,3 +298,31 @@ export async function fetchProducts({
 
   return { products: (data ?? []) as Product[], total: count };
 }
+
+/**
+ * Ritorna un map sub_category → count prodotti visibili per una data categoria.
+ * "Visibili" = price > 0 (stessa logica di fetchProducts).
+ * Usato da SubCategoryFilter per nascondere sub-cat vuote.
+ */
+export async function fetchSubCategoryCounts(
+  category: string,
+): Promise<Record<string, number>> {
+  if (!category || category === 'all') return {};
+
+  const { data, error } = await supabase
+    .from('products')
+    .select('sub_category')
+    .eq('category', category)
+    .gt('price', 0)
+    .not('sub_category', 'is', null);
+
+  if (error || !data) return {};
+
+  const counts: Record<string, number> = {};
+  for (const row of data) {
+    if (row.sub_category) {
+      counts[row.sub_category] = (counts[row.sub_category] ?? 0) + 1;
+    }
+  }
+  return counts;
+}
