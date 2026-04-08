@@ -347,11 +347,11 @@ async function generateDescription(name: string, category: string): Promise<stri
 
 const USD_TO_EUR_RATE = 1.0;
 const MARKUP          = 1.20;
-const FLAT_FEE        = 3.99;
+const FLAT_FEE        = 0; // Rimossa flat fee — markup puro 20%
 
 function applyKitwerFormula(base: number, currency: 'EUR' | 'USD' | 'UNKNOWN'): number {
   const eur = currency === 'USD' ? base * USD_TO_EUR_RATE : base;
-  return Math.floor(eur * MARKUP + FLAT_FEE) + 0.90;
+  return Math.floor(eur * MARKUP) + 0.90;
 }
 
 function parsePrice(input: string): number {

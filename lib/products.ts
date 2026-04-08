@@ -297,10 +297,9 @@ export async function fetchProducts({
 
   let query = supabase
     .from('products')
-    .select('id, name, category, sub_category, description, image_url, image_urls, product_url, price', { count: 'exact' })
-    // Filtra a livello DB — esclude prodotti senza prezzo valido
-    // Nota: image_url null/placeholder è ammesso — ProductCard usa fallback graceful
-    .not('price', 'is', null)
+    .select('id, name, category, sub_category, description, image_url, image_urls, product_url, price, affiliate_url', { count: 'exact' })
+    // TITAN v2: usa is_active dopo aver eseguito supabase/migrations/20260408_titan_v2.sql
+    // TODO: .eq('is_active', true)
     .gt('price', 0)
     .range(rangeFrom, rangeTo);
 
@@ -340,6 +339,7 @@ export async function fetchSubCategoryCounts(
     .from('products')
     .select('sub_category')
     .eq('category', category)
+    // TODO TITAN v2: .eq('is_active', true)
     .gt('price', 0)
     .not('sub_category', 'is', null);
 

@@ -618,16 +618,14 @@ function roundToNinety(value: number): number {
 }
 
 /**
- * Formula Kitwer completa:
- *   1. Converti da USD a EUR se necessario (tasso USD_TO_EUR_RATE)
- *   2. Markup ×1.20 + commissione 3.99
- *   3. Floor + 0.90 fisso
+ * Formula Kitwer: markup 20% puro + arrotondamento commerciale .90.
+ * Nessuna flat fee.
  *
- * Esempio: 229,99 EUR → Math.floor(229.99×1.20 + 3.99) + 0.90 = 279 + 0.90 = 279.90
+ * Esempio: 229,99 EUR → Math.floor(229.99 × 1.20) + 0.90 = 275 + 0.90 = 275.90
  */
 function applyKitwerFormula(basePrice: number, currency: 'EUR' | 'USD' | 'UNKNOWN'): number {
   const priceEur = currency === 'USD' ? basePrice * USD_TO_EUR_RATE : basePrice;
-  return Math.floor(priceEur * 1.20 + 3.99) + 0.90;
+  return Math.floor(priceEur * 1.20) + 0.90;
 }
 
 function parseCsv(content: string): Product[] {

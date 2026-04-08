@@ -107,7 +107,7 @@ const nextUA = () => USER_AGENTS[_uaIdx++ % USER_AGENTS.length];
 const AFFILIATE_TAG   = 'kitwer26-21';
 const USD_TO_EUR_RATE = 0.92;  // FIX #12 era 1.0 in kitwer-tools, ora tasso reale
 const MARKUP_RATE     = 1.20;
-const FLAT_FEE        = 3.99;  // FIX #18 mancava nel file originale
+const FLAT_FEE        = 0;    // Rimossa flat fee — markup puro 20%
 
 // ── Prezzi ───────────────────────────────────────────────────────
 // FIX #1: gestisce "1.234,56" europeo e "1,234.56" americano
@@ -124,18 +124,11 @@ function parsePrice(input: string): number {
   return isNaN(v) || v < 0 ? NaN : v;
 }
 
-// FIX #2: commercialRound corretto — .90 se < .50, altrimenti .99
-function commercialRound(value: number): number {
-  const floor = Math.floor(value);
-  const frac  = value - floor;
-  return frac < 0.50 ? floor + 0.90 : floor + 0.99;
-}
-
-// FIX #3: formula completa con FLAT_FEE, mai NaN al DB
+// TITAN v2: Math.ceil(base × 1.20) + 0.90 — arrotondamento per ECCESSO, margine sempre ≥ 20%
 function applyPriceFormula(base: number, currency: 'EUR' | 'USD' | 'UNKNOWN'): { price: number; isPending: boolean } {
   if (isNaN(base) || base <= 0) return { price: 0, isPending: true };
   const eur = currency === 'USD' ? base * USD_TO_EUR_RATE : base;
-  return { price: commercialRound(eur * MARKUP_RATE + FLAT_FEE), isPending: false };
+  return { price: Math.ceil(eur * MARKUP_RATE) + 0.90, isPending: false };
 }
 
 // ── Slug ─────────────────────────────────────────────────────────

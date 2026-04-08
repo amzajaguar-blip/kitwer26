@@ -15,8 +15,8 @@ export const USD_TO_EUR = 1 / 1.08; // ≈ 0.9259
 /** Ricarico commerciale del 20% sul prezzo base */
 export const MARKUP = 1.20;
 
-/** Fee fissa di gestione aggiunta dopo il markup */
-export const FLAT_FEE = 3.99;
+/** @deprecated rimossa */
+export const FLAT_FEE = 0;
 
 /**
  * Parsa una stringa prezzo gestendo sia il formato italiano (virgola decimale)
@@ -61,14 +61,15 @@ export function parsePrice(input: string): number {
 }
 
 /**
- * Applica la formula di prezzo: (BasePrice × ExchangeRate × 1.20) + 3.99.
- * Se la valuta di origine è USD, converte prima in EUR (× USD_TO_EUR ≈ 0.926).
- * La flat fee di gestione (3.99€) viene aggiunta DOPO il markup, in modo che
- * il successivo arrotondamento psicologico (.90/.99) avvenga sul totale finale.
+ * Applica la formula TITAN v2: Math.ceil(basePrice × 1.20) + 0.90.
+ * Garantisce sempre margine ≥ 20% con arrotondamento per ECCESSO.
+ * Se la valuta è USD converte prima in EUR (× USD_TO_EUR ≈ 0.926).
  *
- * @param basePrice - Prezzo base numerico
- * @param currency  - Valuta di origine ('EUR' | 'USD'). Default: 'EUR'
- * @returns Prezzo finale con markup + flat fee, o NaN se input non valido
+ * Esempi: 175€ → 210.90 | 129€ → 155.90 | 249€ → 299.90
+ *
+ * @param basePrice - Prezzo Amazon base
+ * @param currency  - Valuta ('EUR' | 'USD'). Default: 'EUR'
+ * @returns Prezzo finale, NaN se input non valido
  */
 export function applyMarkupFormula(basePrice: number, currency = 'EUR'): number {
   if (isNaN(basePrice) || basePrice <= 0) return NaN;
@@ -77,7 +78,7 @@ export function applyMarkupFormula(basePrice: number, currency = 'EUR'): number 
     ? basePrice * USD_TO_EUR
     : basePrice;
 
-  return (inEur * MARKUP) + FLAT_FEE;
+  return Math.ceil(inEur * MARKUP) + 0.90;
 }
 
 /**
