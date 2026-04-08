@@ -1,10 +1,12 @@
 import type { BlogPost } from './types';
-import { ledgerVsTrezor } from '@/content/blog/ledger-vs-trezor';
-import { djiMini2026 }    from '@/content/blog/dji-mini-2026';
+import { ledgerVsTrezor }  from '@/content/blog/ledger-vs-trezor';
+import { djiMini2026 }     from '@/content/blog/dji-mini-2026';
+import { fpvCreator2026 }  from '@/content/blog/fpv-creator-2026';
 
 const ALL_POSTS: BlogPost[] = [
   ledgerVsTrezor,
   djiMini2026,
+  fpvCreator2026,
 ];
 
 export function getAllPosts(): BlogPost[] {

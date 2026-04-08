@@ -14,8 +14,8 @@ export const ledgerVsTrezor: BlogPost = {
   products: [
     { id: 'LEDGER-NX',            namePattern: 'Ledger Nano X' },
     { id: 'TREZOR-S3',            namePattern: 'Trezor Safe 3' },
-    { id: 'BILLFODL-STEEL',       namePattern: 'Billfodl Steel' },
-    { id: 'BUNDLE-CRYPTO-FORTRESS', namePattern: 'Billfodl Steel', affiliateUrl: 'https://www.amazon.it/s?k=billfodl+seed+plate&tag=kitwer26-21' },
+    { id: 'BILLFODL-STEEL',       namePattern: 'Billfodl' },
+    { id: 'BUNDLE-CRYPTO-FORTRESS', namePattern: 'Kitwer26 Crypto Fortress Bundle' },
   ],
   faq: [
     {

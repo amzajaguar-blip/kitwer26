@@ -14,7 +14,7 @@ export const djiMini2026: BlogPost = {
   products: [
     { id: 'DJI-MINI4-PRO',         namePattern: 'DJI Mini 4 Pro' },
     { id: 'TATU-MINI-BUNDLE',      namePattern: 'DJI Mini 3 Pro',  affiliateUrl: 'https://www.amazon.it/s?k=dji+mini+3+pro+tattu+battery&tag=kitwer26-21' },
-    { id: 'BUNDLE-MINI-POWER-PACK', namePattern: 'DJI Mini 3 Pro', affiliateUrl: 'https://www.amazon.it/s?k=dji+mini+3+pro+kit+batterie+tattu&tag=kitwer26-21' },
+    { id: 'BUNDLE-MINI-POWER-PACK', namePattern: 'Kitwer26 DJI Mini Power Pack' },
   ],
   faq: [
     {
