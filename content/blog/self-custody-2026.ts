@@ -4,7 +4,7 @@ export const selfCustody2026: BlogPost = {
   slug:           'guida-self-custody-bitcoin-2026',
   title:          'Guida Self-Custody Bitcoin & Crypto 2026: Protocollo Completo',
   seoTitle:       'Guida Self-Custody Crypto 2026: Hardware Wallet e Backup',
-  seoDescription: 'Come proteggere Bitcoin e crypto con self-custody nel 2026. Guida completa: hardware wallet, seed backup in acciaio, setup air-gap. Prodotti testati con prezzi reali.',
+  seoDescription: 'Come proteggere Bitcoin e crypto con self-custody nel 2026. Guida: hardware wallet, seed backup in acciaio, setup air-gap. Prodotti testati, prezzi reali.',
   excerpt:        'Nel 2026, lasciare le crypto su un exchange non è un rischio di mercato — è un rischio operativo. Questa guida copre il protocollo completo per la self-custody: dalla scelta del wallet al backup indistruttibile della seed phrase.',
   author:         'Kitwer26 Tactical Team',
   authorRole:     'Crypto Security Strategist',
