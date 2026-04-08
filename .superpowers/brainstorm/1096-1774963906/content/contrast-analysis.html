@@ -1,0 +1,111 @@
+<h2>Analisi Contrasto — Testi Secondari su <code style="background:#1a1a1e;padding:2px 6px;border-radius:3px;font-size:0.85em">#09090B</code></h2>
+<p class="subtitle">I colori attuali falliscono WCAG-AA (minimo 4.5:1). Il tema ha già token corretti — basta usarli.</p>
+
+<div class="section">
+  <h3>Stato Attuale — Classi che Falliscono</h3>
+  <div style="display:grid;gap:12px;margin-top:12px">
+
+    <div style="display:flex;align-items:center;gap:16px;background:#09090b;padding:16px;border-radius:6px;border:1px solid #27272a">
+      <div style="width:40px;height:40px;background:#3f3f46;border-radius:4px;flex-shrink:0"></div>
+      <div style="flex:1">
+        <span style="color:#3f3f46;font-family:monospace;font-size:13px;letter-spacing:0.15em">ASSET TATTICI</span>
+        <span style="color:#888;font-size:11px;margin-left:12px">→ text-zinc-700</span>
+      </div>
+      <span style="background:#ef4444;color:white;font-size:11px;padding:2px 8px;border-radius:4px;font-weight:bold">2.5:1 ❌</span>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:16px;background:#09090b;padding:16px;border-radius:6px;border:1px solid #27272a">
+      <div style="width:40px;height:40px;background:#52525b;border-radius:4px;flex-shrink:0"></div>
+      <div style="flex:1">
+        <span style="color:#52525b;font-family:monospace;font-size:13px;letter-spacing:0.15em">ASSET TATTICI</span>
+        <span style="color:#888;font-size:11px;margin-left:12px">→ text-zinc-600</span>
+      </div>
+      <span style="background:#ef4444;color:white;font-size:11px;padding:2px 8px;border-radius:4px;font-weight:bold">3.0:1 ❌</span>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:16px;background:#09090b;padding:16px;border-radius:6px;border:1px solid #27272a">
+      <div style="width:40px;height:40px;background:#71717a;border-radius:4px;flex-shrink:0"></div>
+      <div style="flex:1">
+        <span style="color:#71717a;font-family:monospace;font-size:13px;letter-spacing:0.15em">ASSET TATTICI</span>
+        <span style="color:#888;font-size:11px;margin-left:12px">→ text-zinc-500</span>
+      </div>
+      <span style="background:#f97316;color:white;font-size:11px;padding:2px 8px;border-radius:4px;font-weight:bold">4.4:1 ❌</span>
+    </div>
+
+  </div>
+</div>
+
+<div class="section">
+  <h3>Proposta — Token del Tema già Esistenti</h3>
+  <p class="subtitle" style="margin-bottom:12px">Nessun nuovo colore da aggiungere: <code style="background:#1a1a1e;padding:1px 5px">globals.css</code> ha già i token corretti.</p>
+  <div style="display:grid;gap:12px">
+
+    <div style="display:flex;align-items:center;gap:16px;background:#09090b;padding:16px;border-radius:6px;border:1px solid #27272a">
+      <div style="width:40px;height:40px;background:#8d8d99;border-radius:4px;flex-shrink:0"></div>
+      <div style="flex:1">
+        <span style="color:#8d8d99;font-family:monospace;font-size:13px;letter-spacing:0.15em">ASSET TATTICI</span>
+        <span style="color:#888;font-size:11px;margin-left:12px">→ <strong style="color:#8d8d99">text-th-faint</strong> / #8d8d99 — <em>livello terziario</em></span>
+      </div>
+      <span style="background:#22c55e;color:white;font-size:11px;padding:2px 8px;border-radius:4px;font-weight:bold">5.4:1 ✅</span>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:16px;background:#09090b;padding:16px;border-radius:6px;border:1px solid #27272a">
+      <div style="width:40px;height:40px;background:#a1a1aa;border-radius:4px;flex-shrink:0"></div>
+      <div style="flex:1">
+        <span style="color:#a1a1aa;font-family:monospace;font-size:13px;letter-spacing:0.15em">ASSET TATTICI</span>
+        <span style="color:#888;font-size:11px;margin-left:12px">→ <strong style="color:#a1a1aa">text-th-muted</strong> / #a1a1aa — <em>livello secondario</em></span>
+      </div>
+      <span style="background:#22c55e;color:white;font-size:11px;padding:2px 8px;border-radius:4px;font-weight:bold">7.1:1 ✅</span>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:16px;background:#09090b;padding:16px;border-radius:6px;border:1px solid #27272a">
+      <div style="width:40px;height:40px;background:#d4d4d8;border-radius:4px;flex-shrink:0"></div>
+      <div style="flex:1">
+        <span style="color:#d4d4d8;font-family:monospace;font-size:13px;letter-spacing:0.15em">ASSET TATTICI</span>
+        <span style="color:#888;font-size:11px;margin-left:12px">→ <strong style="color:#d4d4d8">text-th-subtle</strong> / #d4d4d8 — <em>quasi primario</em></span>
+      </div>
+      <span style="background:#22c55e;color:white;font-size:11px;padding:2px 8px;border-radius:4px;font-weight:bold">14.1:1 ✅</span>
+    </div>
+
+  </div>
+</div>
+
+<div class="section">
+  <h3>Mockup HeroSection — Prima vs Dopo</h3>
+  <div class="split">
+    <div class="mockup">
+      <div class="mockup-header">PRIMA (attuale)</div>
+      <div class="mockup-body" style="background:#09090b;display:flex;gap:32px;justify-content:center;padding:24px">
+        <div style="text-align:center">
+          <p style="font-family:monospace;font-weight:bold;font-size:22px;color:#fb923c;margin:0">600+</p>
+          <p style="font-family:monospace;font-size:9px;letter-spacing:0.2em;color:#52525b;text-transform:uppercase;margin:4px 0 0">ASSET TATTICI</p>
+        </div>
+        <div style="text-align:center">
+          <p style="font-family:monospace;font-weight:bold;font-size:22px;color:#fb923c;margin:0">BUNDLE</p>
+          <p style="font-family:monospace;font-size:9px;letter-spacing:0.2em;color:#52525b;text-transform:uppercase;margin:4px 0 0">CONFIGURAZIONI ELITE</p>
+        </div>
+        <div style="text-align:center">
+          <p style="font-family:monospace;font-weight:bold;font-size:22px;color:#fb923c;margin:0">24H</p>
+          <p style="font-family:monospace;font-size:9px;letter-spacing:0.2em;color:#52525b;text-transform:uppercase;margin:4px 0 0">SUPPORTO ATTIVO</p>
+        </div>
+      </div>
+    </div>
+    <div class="mockup">
+      <div class="mockup-header">DOPO (text-th-faint)</div>
+      <div class="mockup-body" style="background:#09090b;display:flex;gap:32px;justify-content:center;padding:24px">
+        <div style="text-align:center">
+          <p style="font-family:monospace;font-weight:bold;font-size:22px;color:#fb923c;margin:0">600+</p>
+          <p style="font-family:monospace;font-size:9px;letter-spacing:0.2em;color:#8d8d99;text-transform:uppercase;margin:4px 0 0">ASSET TATTICI</p>
+        </div>
+        <div style="text-align:center">
+          <p style="font-family:monospace;font-weight:bold;font-size:22px;color:#fb923c;margin:0">BUNDLE</p>
+          <p style="font-family:monospace;font-size:9px;letter-spacing:0.2em;color:#8d8d99;text-transform:uppercase;margin:4px 0 0">CONFIGURAZIONI ELITE</p>
+        </div>
+        <div style="text-align:center">
+          <p style="font-family:monospace;font-weight:bold;font-size:22px;color:#fb923c;margin:0">24H</p>
+          <p style="font-family:monospace;font-size:9px;letter-spacing:0.2em;color:#8d8d99;text-transform:uppercase;margin:4px 0 0">SUPPORTO ATTIVO</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

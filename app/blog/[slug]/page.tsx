@@ -20,19 +20,30 @@ export async function generateMetadata(
 
   const canonical = `https://kitwer26.com/blog/${post.slug}`;
 
+  const seoTitle = post.seoTitle ?? post.title;
+  const seoDesc  = post.seoDescription ?? post.excerpt;
+  const ogImage  = post.ogImage ?? 'https://kitwer26.com/og-image.png';
+
   return {
-    title:       `${post.title} | Kitwer26`,
-    description: post.excerpt,
+    title:       `${seoTitle} | Kitwer26`,
+    description: seoDesc,
     alternates:  { canonical },
     openGraph: {
-      title:       post.title,
-      description: post.excerpt,
+      title:       seoTitle,
+      description: seoDesc,
       url:         canonical,
       type:        'article',
       publishedTime: post.updatedAt,
       modifiedTime:  post.updatedAt,
       authors:       [post.author],
       tags:          post.tags,
+      images:        [{ url: ogImage, width: 1200, height: 630, alt: seoTitle }],
+    },
+    twitter: {
+      card:        'summary_large_image',
+      title:       seoTitle,
+      description: seoDesc,
+      images:      [ogImage],
     },
   };
 }
@@ -45,11 +56,14 @@ function buildJsonLd(
 ): object[] {
   const url = `https://kitwer26.com/blog/${post.slug}`;
 
+  const ogImg = post.ogImage ?? 'https://kitwer26.com/og-image.png';
+
   const article = {
     '@context':         'https://schema.org',
     '@type':            'Article',
-    headline:           post.title,
-    description:        post.excerpt,
+    headline:           post.seoTitle ?? post.title,
+    description:        post.seoDescription ?? post.excerpt,
+    image:              ogImg,
     url,
     datePublished:      post.updatedAt,
     dateModified:       post.updatedAt,

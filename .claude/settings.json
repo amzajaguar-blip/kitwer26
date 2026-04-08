@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /home/locoomo/Scrivania/kitwer26 && npx tsc --noEmit --pretty 2>&1 | head -20"
+          }
+        ]
+      }
+    ]
+  }
+}

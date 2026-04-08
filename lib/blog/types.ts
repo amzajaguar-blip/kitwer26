@@ -25,6 +25,12 @@ export interface BlogPost {
   slug:              string;
   title:             string;
   excerpt:           string;
+  /** SEO title tag (max 60 chars). Defaults to title if omitted. */
+  seoTitle?:         string;
+  /** SEO meta description (150–160 chars). Defaults to excerpt if omitted. */
+  seoDescription?:   string;
+  /** URL to OG image for social previews */
+  ogImage?:          string;
   author:            string;
   authorRole:        string;
   updatedAt:         string;          // ISO date string

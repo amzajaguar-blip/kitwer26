@@ -4,6 +4,8 @@ export const ledgerVsTrezor: BlogPost = {
   slug:         'ledger-nano-x-vs-trezor-safe-3-confronto-2025',
   title:        'Ledger Nano X vs Trezor Safe 3: Protocolli di Difesa Digitale 2026',
   excerpt:      'Nel 2026, la self-custody non è un\'opzione, è un protocollo di sopravvivenza. Confronto tattico tra i due hardware wallet di riferimento per capire quale domina il perimetro.',
+  seoTitle:     'Ledger Nano X vs Trezor Safe 3: Confronto 2026',
+  seoDescription: 'Ledger Nano X o Trezor Safe 3? Confronto tattico su chip, firmware e self-custody. Scopri quale hardware wallet domina nel 2026 e il setup completo Kitwer26.',
   author:       'Kitwer26 Tactical Team',
   authorRole:   'Security Strategist',
   updatedAt:    '2026-04-08',

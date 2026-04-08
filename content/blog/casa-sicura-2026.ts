@@ -4,6 +4,8 @@ export const casaSicura2026: BlogPost = {
   slug:         'kit-sicurezza-casa-zero-cloud-2026-ultraloq-hiseeu',
   title:        'ULTRALOQ U-Bolt Pro + Hiseeu Solar 4K: Kit Sicurezza Casa Zero-Cloud 2026',
   excerpt:      'Nel 2026 proteggere casa non è più una questione di chiavi, ma di gestione degli accessi crittografati. Il bundle Casa Sicura Total (€299) elimina cavi, cloud e abbonamenti mensili. Analisi tecnica completa.',
+  seoTitle:     'ULTRALOQ + Hiseeu: Kit Sicurezza Casa 2026',
+  seoDescription: 'Serratura smart ULTRALOQ + telecamera solare Hiseeu a €299. Setup zero-cloud, no abbonamenti, installabile in 15 minuti. Privacy 100% locale.',
   author:       'Kitwer26 Tactical Team',
   authorRole:   'Physical Security Analyst',
   updatedAt:    '2026-04-08',

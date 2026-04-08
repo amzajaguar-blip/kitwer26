@@ -4,6 +4,8 @@ export const fpvCreator2026: BlogPost = {
   slug:         'guida-fpv-2026-dallo-zero-al-cinematico',
   title:        'Guida FPV 2026: GEPRC Cinelog30 + RadioMaster — Dal Box al Cielo in 24 Ore',
   excerpt:      'Il setup cinematico che i creator FPV usano per fatturare. Confronto tattico tra volare con attrezzatura casuale e volare con il kit giusto. Incluso: perché il caricatore Ovonic X4 è obbligatorio.',
+  seoTitle:     'Guida FPV 2026: GEPRC Cinelog30 + RadioMaster Kit',
+  seoDescription: 'Setup FPV cinematico completo: GEPRC Cinelog30 O4 + RadioMaster Pocket ELRS a €299. Perché Ovonic X4 è obbligatorio per triplicare le sessioni.',
   author:       'Kitwer26 Tactical Team',
   authorRole:   'FPV Ops Specialist',
   updatedAt:    '2026-04-08',

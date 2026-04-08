@@ -4,6 +4,8 @@ export const djiMini2026: BlogPost = {
   slug:         'miglior-dji-mini-2026-confronto',
   title:        'DJI Mini 4 Pro vs Mini 3 Pro + Tattu: Quale Setup Domina il 2026?',
   excerpt:      'Il cielo non aspetta. Confronto tattico tra il flagship DJI e il setup dual-battery che azzera i down-time. Chi sopravvive alla missione?',
+  seoTitle:     'DJI Mini 4 Pro vs Mini 3 Pro + Tattu 2026',
+  seoDescription: 'DJI Mini 4 Pro o Mini 3 Pro con batterie Tattu? Confronto su autonomia, ostacoli e prezzo. Il setup da 120 minuti operativi a €549 vs €749.',
   author:       'Kitwer26 Tactical Team',
   authorRole:   'Aerial Ops Specialist',
   updatedAt:    '2026-04-08',

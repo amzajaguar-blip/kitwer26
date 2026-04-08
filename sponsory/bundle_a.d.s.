@@ -1,0 +1,41 @@
+Bundle 1: "Casa Sicura Total" (Security Focus) - AOV €299
+
+Prodotti: ULTRALOQ U-Bolt Pro (€249) + Hiseeu Solar 4K Camera (€150) -20% bundle = €299.
+
+    Perché funziona: Da "serratura sola" a "kit perimetrale no-fili". Sconta €100, cliente percepisce valore x2.
+
+    Upsell: Aggiungi steel seed plate (€55) per +€50 (AOV €349).
+
+    Prezzo sourcing: ~€220, margine €79 (36%).
+
+Bundle 2: "Sim Pro Starter" (Racing Focus) - AOV €299
+
+Prodotti: MOZA R3 Bundle (€269) + XP1 Loadcell Brake Mod (€150) -15% bundle = €299.
+
+    Perché funziona: Da "volante base" a "setup lap record". Complementari perfetti (ruota + pedale preciso).
+
+    Upsell: Dash display MOZA (€180) per +€100 (AOV €399).
+
+    Prezzo sourcing: ~€210, margine €89 (42%).
+
+Bundle 3: "FPV Creator Kit" (Drone Focus) - AOV €299
+
+Prodotti: GEPRC Cinelog30 O4 (€399) + RadioMaster Pocket ELRS (€119) -25% bundle = €299.
+
+    Perché funziona: Da "drone solo" a "ready-to-fly cinematico". Sconto alto su hero product attrae creator.
+
+    Upsell: Ovonic X4 Charger 4ch (€220) per +€80 (AOV €379).
+
+    Prezzo sourcing: ~€215, margine €84 (39%).
+
+Strategia Implementazione (AOV +30%)
+Step	Azione	Impatto AOV
+1. Pagina Prodotto	"Compra bundle, risparmia €XX" con confronto prezzi 	+25%
+2. Checkout Upsell	Popup "Aggiungi X per €Y (completa kit)"	+15%
+3. Free Shipping Threshold	"€299 = sped. gratis"	+20%
+4. TikTok Ads	Demo bundle "prima/dopo" 15s	Conversioni x3
+
+| Bundle            | Prodotti Principali | Complementari             | Prezzo Totale | Margine |
+| ----------------- | ------------------- | ------------------------- | ------------- | ------- |
+| Pro Security Home | ULTRALOQ + Hiseeu   | Ajax Sensor + Yale Keypad | €399          | 45%     |
+| FPV Cine Creator  | GEPRC + RadioMaster | Tattu Battery + Props     | €399          | 50%     |

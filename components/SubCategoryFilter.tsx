@@ -42,17 +42,6 @@ export default function SubCategoryFilter({ category, active, onChange, activeCo
             </button>
           );
         })}
-
-        <button
-          onClick={() => onChange('')}
-          className={`flex-shrink-0 inline-flex items-center px-2.5 h-6 rounded-full font-mono text-[10px] font-medium tracking-wide transition-all duration-150 active:scale-95 ${
-            active === ''
-              ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/60 shadow-[0_0_8px_rgba(6,182,212,0.25)]'
-              : 'bg-zinc-900 text-th-subtle border border-zinc-700/40 hover:border-zinc-600 hover:text-white'
-          }`}
-        >
-          All
-        </button>
       </div>
     </div>
   );

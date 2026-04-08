@@ -1,0 +1,15 @@
+{
+  "generatedAt": "2026-03-18T13:57:37.919Z",
+  "totalProducts": 621,
+  "summary": {
+    "valid": 621,
+    "perfect": 621,
+    "noProductUrl": 0,
+    "noAsinInUrl": 0,
+    "badAsinFormat": 0,
+    "productUrlFixed": 0,
+    "productUrlTodo": 0
+  },
+  "structuralProblems": [],
+  "productUrlsFixed": []
+}

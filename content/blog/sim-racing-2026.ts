@@ -4,6 +4,8 @@ export const simRacing2026: BlogPost = {
   slug:         'moza-r3-xp1-loadcell-bundle-dominio-lap-record-2026',
   title:        'MOZA R3 + XP1 Loadcell: Il Setup che Separa i Casual dai Competitivi nel 2026',
   excerpt:      'Perché i tuoi tempi sul giro non migliorano? Il segreto non è nel volante — è nel freno. Passare da sensore a molla a cella di carico è l\'unico aggiornamento che trasforma la memoria muscolare. Bundle a €299.',
+  seoTitle:     'MOZA R3 + XP1 Loadcell: Bundle Sim Racing 2026',
+  seoDescription: 'MOZA R3 Direct Drive + XP1 Loadcell a €299 invece di €399. Perché il freno loadcell vale +1.2s/giro e come il bundle Kitwer26 azzera il gap.',
   author:       'Kitwer26 Tactical Team',
   authorRole:   'Sim Racing Performance Analyst',
   updatedAt:    '2026-04-08',
