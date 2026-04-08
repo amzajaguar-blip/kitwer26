@@ -356,9 +356,13 @@ export default function AdminPage() {
             const domain        = AMAZON_DOMAINS[countryCode] ?? 'amazon.it';
             const isForeign     = countryCode !== 'IT';
 
-            // Profitto
+            // Profitto — formula: finalPrice = Math.ceil(base * 1.20) + 0.90
+            // Inversa: base ≈ (collected - 0.90) / 1.20, arrotondata su ogni prodotto
+            // Per un ordine multi-prodotto usiamo l'approssimazione aggregata:
+            // amazonCost = (collected - 0.90 * itemCount) / 1.20
             const collected  = Number(order.total_amount);
-            const amazonCost = Math.round((collected / 1.2) * 100) / 100;
+            const itemCount  = order.order_items.reduce((s, i) => s + i.quantity, 0);
+            const amazonCost = Math.round(((collected - 0.90 * itemCount) / 1.20) * 100) / 100;
             const netProfit  = Math.round((collected - amazonCost) * 100) / 100;
 
             return (
