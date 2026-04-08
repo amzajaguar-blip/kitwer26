@@ -325,9 +325,8 @@ async function handlePaymentConfirmed(
       .from('products')
       .select('name, price, product_url')
       .eq('is_budget_king', true)
-      .not('price',       'is', null)
+      .eq('is_active', true)
       .not('product_url', 'is', null)
-      .gt('price',  0)
       .lte('price', 50)
       .order('price', { ascending: true })
       .limit(3);

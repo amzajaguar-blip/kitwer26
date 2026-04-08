@@ -45,7 +45,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   let productsQuery = sb
     .from('products')
     .select('id, name, category, image_url, price')
-    .not('price', 'is', null);
+    .eq('is_active', true);
 
   for (const word of words) {
     productsQuery = productsQuery.ilike('name', `%${word}%`);

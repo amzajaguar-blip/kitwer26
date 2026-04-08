@@ -20,7 +20,7 @@ export interface BlogProductData {
 
 /**
  * Fetch a product from DB by case-insensitive name pattern.
- * Returns null if not found or price=0 (hidden).
+ * Returns null if not found or is_active=false (hidden).
  */
 export async function fetchBlogProduct(
   namePattern: string,
@@ -32,7 +32,7 @@ export async function fetchBlogProduct(
     .from('products')
     .select('id, name, price, image_url, image_urls, affiliate_url, category')
     .ilike('name', `%${namePattern}%`)
-    .gt('price', 0)
+    .eq('is_active', true)
     .order('price', { ascending: true })
     .limit(1)
     .maybeSingle();

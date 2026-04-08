@@ -266,7 +266,7 @@ async function fetchSlotProduct(
         .select(PRODUCT_SELECT)
         .in('category', slot.categories)
         .eq('sub_category', sub)
-        .gt('price', 0)
+        .eq('is_active', true)
         .order('price', { ascending: false })
         .limit(10)
     )
@@ -283,7 +283,7 @@ async function fetchSlotProduct(
     .select(PRODUCT_SELECT)
     .in('category', slot.fallbackCategories)
     .not('image_url', 'is', null)
-    .gt('price', 0)
+    .eq('is_active', true)
     .order('price', { ascending: false })
     .limit(10);
 

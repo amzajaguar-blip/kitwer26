@@ -238,7 +238,7 @@ export async function getTacticalDeals(limit = 8): Promise<TacticalDeal[]> {
     .from('products')
     .select('id, name, category, sub_category, image_url, image_urls, product_url, price')
     .eq('is_budget_king', true)
-    .not('price', 'is', null)
+    .eq('is_active', true)
     .order('price', { ascending: true })
     .limit(limit);
 
@@ -298,9 +298,7 @@ export async function fetchProducts({
   let query = supabase
     .from('products')
     .select('id, name, category, sub_category, description, image_url, image_urls, product_url, price, affiliate_url', { count: 'exact' })
-    // TITAN v2: usa is_active dopo aver eseguito supabase/migrations/20260408_titan_v2.sql
-    // TODO: .eq('is_active', true)
-    .gt('price', 0)
+    .eq('is_active', true)
     .range(rangeFrom, rangeTo);
 
   if (search.trim()) {
@@ -327,7 +325,7 @@ export async function fetchProducts({
 
 /**
  * Ritorna un map sub_category → count prodotti visibili per una data categoria.
- * "Visibili" = price > 0 (stessa logica di fetchProducts).
+ * "Visibili" = is_active = true (stessa logica di fetchProducts).
  * Usato da SubCategoryFilter per nascondere sub-cat vuote.
  */
 export async function fetchSubCategoryCounts(
@@ -339,8 +337,7 @@ export async function fetchSubCategoryCounts(
     .from('products')
     .select('sub_category')
     .eq('category', category)
-    // TODO TITAN v2: .eq('is_active', true)
-    .gt('price', 0)
+    .eq('is_active', true)
     .not('sub_category', 'is', null);
 
   if (error || !data) return {};
