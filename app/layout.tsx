@@ -41,7 +41,7 @@ export const metadata: Metadata = {
     template: '%s | Kitwer26',
   },
   description:
-    'Kitwer26 è il tuo bunker digitale: scopri le migliori soluzioni per la sicurezza informatica, protezione crypto, setup da gaming professionale e sistemi di continuità energetica.',
+    'Hardware wallet, kit sicurezza casa, sim racing e FPV. Bundle curati con risparmio fino al 25%, spedizione in Italia. Proteggi i tuoi asset digitali e fisici con Kitwer26.',
   keywords: 'hardware wallet, ledger, trezor, sicurezza digitale, crypto, sim racing, setup gaming, faraday bag, yubikey, Italia',
   openGraph: {
     title: 'Kitwer26 | Hardware Tattico & Sicurezza Digitale',
@@ -50,13 +50,13 @@ export const metadata: Metadata = {
     url: 'https://kitwer26.com',
     locale: 'it_IT',
     type: 'website',
-    images: [{ url: '/LOGOKITWER.png', width: 512, height: 512, alt: 'Kitwer26' }],
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Kitwer26 — Hardware Tattico & Sicurezza Digitale' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Kitwer26 | Hardware Tattico & Sicurezza Digitale',
     description: 'Equipaggiamento tattico per la tua sicurezza digitale.',
-    images: ['/LOGOKITWER.png'],
+    images: ['/og-image.png'],
   },
   icons: {
     icon:  [{ url: '/icon.png', sizes: '512x512', type: 'image/png' }],

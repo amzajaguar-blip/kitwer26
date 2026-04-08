@@ -80,7 +80,18 @@ function buildJsonLd(
     keywords: post.tags.join(', '),
   };
 
-  const schemas: object[] = [article];
+  // BreadcrumbList for rich results
+  const breadcrumb = {
+    '@context': 'https://schema.org',
+    '@type':    'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home',  item: 'https://kitwer26.com' },
+      { '@type': 'ListItem', position: 2, name: 'Blog',  item: 'https://kitwer26.com/blog' },
+      { '@type': 'ListItem', position: 3, name: post.seoTitle ?? post.title, item: url },
+    ],
+  };
+
+  const schemas: object[] = [article, breadcrumb];
 
   // FAQPage
   if (post.faq && post.faq.length > 0) {
