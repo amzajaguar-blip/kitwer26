@@ -14,6 +14,7 @@ import CookieBanner from './CookieBanner';
 import HeroSection from './HeroSection';
 import BundleSection from './BundleSection';
 import TacticalDealsSection from './TacticalDealsSection';
+import BlogPreviewSection from './BlogPreviewSection';
 import LazyAdBanner from './LazyAdBanner';
 import { useProducts } from '@/hooks/useProducts';
 import { Category, PAGE_SIZE, fetchSubCategoryCounts } from '@/lib/products';
@@ -102,6 +103,9 @@ function HomepageInner() {
 
       {/* Tactical Deals — Budget King products con pricing comparativo */}
       <TacticalDealsSection />
+
+      {/* Blog preview — 3 articoli recenti */}
+      <BlogPreviewSection />
 
       {/* Divider */}
       <div className="mx-4 border-t border-zinc-800 mb-6" />

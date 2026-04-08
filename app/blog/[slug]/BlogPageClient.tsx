@@ -86,6 +86,7 @@ export default function BlogPageClient({ post, productMap, winnerData }: Props) 
           updatedAt={post.updatedAt}
           category={post.category}
           tags={post.tags}
+          winnerLabel={post.winnerLabel}
         />
 
         <div className="space-y-2">
