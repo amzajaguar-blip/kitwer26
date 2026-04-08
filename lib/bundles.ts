@@ -267,6 +267,7 @@ async function fetchSlotProduct(
         .in('category', slot.categories)
         .eq('sub_category', sub)
         .eq('is_active', true)
+        .not('image_url', 'is', null)
         .order('price', { ascending: false })
         .limit(10)
     )
