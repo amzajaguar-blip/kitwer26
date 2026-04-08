@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { ExternalLink, Zap } from 'lucide-react';
 import TrustBadge from './TrustBadge';
+import { formatEur } from '@/lib/utils/price';
 import type { BlogProductData } from '@/lib/blog/db';
 
 interface BlogProductCardProps {
@@ -22,9 +23,7 @@ export default function BlogProductCard({ product }: BlogProductCardProps) {
   const isBundle     = product.name.toLowerCase().includes('bundle') || product.name.toLowerCase().includes('kit');
   const imageUrl     = product.image_urls?.[0] ?? product.image_url;
   const buyUrl       = product.affiliate_url ?? '#';
-  const price        = product.price > 0
-    ? new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(product.price)
-    : null;
+  const price        = formatEur(product.price);
 
   return (
     <motion.div

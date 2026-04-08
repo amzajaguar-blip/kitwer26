@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 import ArticleHero from '@/components/blog/ArticleHero';
 import ComparisonTable from '@/components/blog/ComparisonTable';
@@ -9,7 +10,7 @@ import type { BlogPost } from '@/lib/blog/types';
 import type { BlogProductData } from '@/lib/blog/db';
 
 // ── Minimal markdown renderer (no external dependency) ───────────────────────
-function SimpleMarkdown({ content }: { content: string }) {
+const SimpleMarkdown = memo(function SimpleMarkdown({ content }: { content: string }) {
   const lines = content.split('\n');
   const elements: React.ReactNode[] = [];
   let i = 0;
@@ -26,7 +27,6 @@ function SimpleMarkdown({ content }: { content: string }) {
     } else if (line.startsWith('> ')) {
       elements.push(<blockquote key={i}><p>{parseInline(line.slice(2))}</p></blockquote>);
     } else if (line.startsWith('- ') || line.startsWith('* ')) {
-      // Collect list items
       const items: string[] = [];
       while (i < lines.length && (lines[i].startsWith('- ') || lines[i].startsWith('* '))) {
         items.push(lines[i].slice(2));
@@ -39,7 +39,7 @@ function SimpleMarkdown({ content }: { content: string }) {
       );
       continue;
     } else if (line.trim() === '') {
-      // skip blank lines
+      // intentional no-op
     } else {
       elements.push(<p key={i}>{parseInline(line)}</p>);
     }
@@ -47,7 +47,7 @@ function SimpleMarkdown({ content }: { content: string }) {
   }
 
   return <>{elements}</>;
-}
+});
 
 function parseInline(text: string): React.ReactNode {
   // Bold **text**, then inline code `code`

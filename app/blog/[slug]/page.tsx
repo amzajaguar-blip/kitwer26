@@ -50,9 +50,8 @@ export async function generateMetadata(
 
 // ── JSON-LD helpers ───────────────────────────────────────────────────────────
 function buildJsonLd(
-  post:        ReturnType<typeof getPostBySlug> & object,
-  productMap:  Record<string, BlogProductData>,
-  winnerData:  BlogProductData | null,
+  post:       ReturnType<typeof getPostBySlug> & object,
+  productMap: Record<string, BlogProductData>,
 ): object[] {
   const url = `https://kitwer26.com/blog/${post.slug}`;
 
@@ -152,7 +151,7 @@ export default async function BlogPostPage(
     ? (productMap[post.winnerProductId] ?? null)
     : null;
 
-  const jsonLdSchemas = buildJsonLd(post, productMap, winnerData);
+  const jsonLdSchemas = buildJsonLd(post, productMap);
 
   return (
     <>

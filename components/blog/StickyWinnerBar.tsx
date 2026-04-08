@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, ExternalLink, Trophy } from 'lucide-react';
+import { formatEur } from '@/lib/utils/price';
 import type { BlogProductData } from '@/lib/blog/db';
 
 interface StickyWinnerBarProps {
@@ -29,9 +30,7 @@ export default function StickyWinnerBar({ product, winnerLabel }: StickyWinnerBa
   }, []);
 
   const buyUrl = product.affiliate_url ?? '#';
-  const price  = product.price > 0
-    ? new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(product.price)
-    : null;
+  const price  = formatEur(product.price);
 
   return (
     <AnimatePresence>

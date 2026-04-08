@@ -107,6 +107,18 @@ const DECIMAL_SEP: Record<string, string> = {
  * @param language - Codice lingua ('it', 'en', 'de', 'fr', 'es'). Default: 'it'
  * @returns Stringa formattata es. "€319,99" oppure "" se importo non valido
  */
+/** Formattatore EUR condiviso — istanziato una volta sola a livello modulo */
+const EUR_FORMATTER = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
+
+/**
+ * Formatta un numero come valuta EUR (es. "€89,00").
+ * @returns Stringa formattata o `null` se il prezzo non è valido.
+ */
+export function formatEur(price: number): string | null {
+  if (!price || price <= 0) return null;
+  return EUR_FORMATTER.format(price);
+}
+
 export function formatPremiumPrice(
   amount: number,
   symbol = '€',
