@@ -216,7 +216,7 @@ export async function POST(req: NextRequest) {
     const host      = req.headers.get('host') ?? 'kitwer26.com';
     const proto     = req.headers.get('x-forwarded-proto') ?? 'http';
     const base      = `${proto}://${host}`;
-    const publicBase = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://kitwer26.com';
+    const publicBase = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.kitwer26.com';
 
     const successUrl = orderId
       ? `${base}/checkout/success?order=${orderId}`

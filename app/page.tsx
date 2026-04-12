@@ -7,7 +7,7 @@ export default async function Page() {
     const { count } = await supabase
       .from('products')
       .select('*', { count: 'exact', head: true })
-      .gt('price', 0);
+      .eq('is_active', true);
     if (count != null) productCount = count;
   } catch {
     // keep fallback

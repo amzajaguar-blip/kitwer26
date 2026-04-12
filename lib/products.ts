@@ -196,6 +196,7 @@ export async function fetchRelatedProducts(
     .from('products')
     .select('id, name, category, description, image_url, image_urls, product_url, price')
     .in('category', searchCats)
+    .eq('is_active', true)
     .neq('id', currentId)
     .not('image_url', 'is', null)
     .limit(limit);

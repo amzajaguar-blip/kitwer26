@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
         customerEmail: order.customer_email,
         customerName:  order.customer_name ?? 'Operatore',
         orderId:       order.id,
-        reviewUrl:     `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://kitwer26.com'}/track/${order.id}`,
+        reviewUrl:     `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.kitwer26.com'}/track/${order.id}`,
       });
 
       await supabase

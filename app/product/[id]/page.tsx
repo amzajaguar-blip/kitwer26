@@ -78,6 +78,7 @@ export default async function ProductPage({ params }: PageProps) {
     .from('products')
     .select('id, name, category, description, image_url, image_urls, product_url, price, variants, sub_category')
     .eq('id', id)
+    .eq('is_active', true)
     .single();
 
   if (error || !data) {

@@ -50,10 +50,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  // Fetch id + updated_at for accurate lastModified per product
+  // Fetch id + updated_at for accurate lastModified per product (only active)
   const { data: products } = await supabase
     .from('products')
-    .select('id, updated_at');
+    .select('id, updated_at')
+    .eq('is_active', true);
 
   const productPages: MetadataRoute.Sitemap = (products ?? []).map((p) => ({
     url:             `${BASE}/product/${p.id}`,

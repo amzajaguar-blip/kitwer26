@@ -51,10 +51,11 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     productsQuery = productsQuery.ilike('name', `%${word}%`);
   }
 
-  // Categoria per le suggestions
+  // Categoria per le suggestions (only active products)
   let catQuery = sb
     .from('products')
     .select('category')
+    .eq('is_active', true)
     .not('category', 'is', null);
 
   for (const word of words) {
