@@ -12,6 +12,8 @@ import CartDrawer from './CartDrawer';
 import Footer from './Footer';
 import CookieBanner from './CookieBanner';
 import HeroSection from './HeroSection';
+import TrustBar from './TrustBar';
+import FeaturedCategories from './FeaturedCategories';
 import BundleSection from './BundleSection';
 import TacticalDealsSection from './TacticalDealsSection';
 import BlogPreviewSection from './BlogPreviewSection';
@@ -92,11 +94,17 @@ function HomepageInner() {
   }, [category]);
 
   return (
-    <div className="min-h-screen pt-[88px] overflow-x-hidden bg-zinc-950">
+    <div className="min-h-screen pt-[88px] pb-16 md:pb-0 overflow-x-hidden bg-zinc-950">
       <Header />
 
       {/* Hero — boot sequence + CTAs */}
       <HeroSection />
+
+      {/* Trust signals */}
+      <TrustBar />
+
+      {/* Featured categories grid */}
+      <FeaturedCategories />
 
       {/* Bundle section */}
       <BundleSection />
@@ -192,6 +200,24 @@ function HomepageInner() {
       <CartDrawer />
 
       <CookieBanner />
+
+      {/* Sticky mobile bottom CTA bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/80 px-4 py-3 safe-area-bottom">
+        <button
+          type="button"
+          onClick={() => {
+            const el = document.getElementById('products');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }}
+          className="w-full inline-flex items-center justify-center gap-2 py-3 font-mono font-bold text-sm tracking-widest uppercase text-black rounded-sm transition-all active:scale-95"
+          style={{
+            background: '#00D4FF',
+            boxShadow: '0 0 16px rgba(0,212,255,0.3)',
+          }}
+        >
+          Esplora il Catalogo
+        </button>
+      </div>
     </div>
   );
 }

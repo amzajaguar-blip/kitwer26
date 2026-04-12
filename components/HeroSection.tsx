@@ -1,71 +1,89 @@
 'use client';
 
+import { Package, Truck, ShieldCheck } from 'lucide-react';
+
 export default function HeroSection() {
   return (
-    <section className="relative overflow-hidden px-4 pt-16 pb-20 sm:pt-24 sm:pb-28">
-      {/* Blueprint grid bg */}
-      <div className="pointer-events-none absolute inset-0 blueprint-grid opacity-60" />
+    <section className="relative overflow-hidden px-4 pt-14 pb-16 sm:pt-20 sm:pb-24 bg-zinc-950">
+      {/* Dot-grid pattern bg */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.07]"
+        style={{
+          backgroundImage:
+            'radial-gradient(circle, rgba(6,182,212,0.5) 1px, transparent 1px)',
+          backgroundSize: '24px 24px',
+        }}
+      />
 
-      {/* Cyan glow — top center */}
+      {/* Cyan glow -- top center */}
       <div
         className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 h-72 w-[480px] blur-3xl opacity-20"
-        style={{ background: 'radial-gradient(ellipse, #06b6d4 0%, transparent 70%)' }}
+        style={{ background: 'radial-gradient(ellipse, #00D4FF 0%, transparent 70%)' }}
       />
-      {/* Orange glow — bottom right */}
+      {/* Accent glow -- bottom right */}
       <div
-        className="pointer-events-none absolute right-0 bottom-0 h-48 w-64 blur-3xl opacity-15"
-        style={{ background: 'radial-gradient(ellipse, #f97316 0%, transparent 70%)' }}
+        className="pointer-events-none absolute right-0 bottom-0 h-48 w-64 blur-3xl opacity-10"
+        style={{ background: 'radial-gradient(ellipse, #a855f7 0%, transparent 70%)' }}
       />
 
       <div className="relative mx-auto max-w-2xl text-center">
         {/* Status chip */}
-        <div className="inline-flex items-center gap-2 mb-8 px-3 py-1.5 rounded-sm border border-cyan-500/30 bg-cyan-500/5">
+        <div className="inline-flex items-center gap-2 mb-6 px-3 py-1.5 rounded-sm border border-cyan-500/30 bg-cyan-500/5">
           <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
           <span className="font-mono text-[10px] tracking-[0.25em] text-cyan-400 uppercase">
-            Secure Connection Established
+            catalogo attivo
           </span>
         </div>
 
         {/* Main title */}
-        <h1 className="font-mono font-extrabold text-5xl sm:text-6xl md:text-7xl leading-none tracking-tight mb-4" style={{ color: '#ff9a3e' }}>
-          KITWER26
+        <h1 className="font-mono font-extrabold text-4xl sm:text-5xl md:text-6xl leading-[1.1] tracking-tight mb-4 text-white">
+          Il Gear che Vuoi.{' '}
+          <span className="block sm:inline" style={{ color: '#00D4FF' }}>
+            Il Prezzo che Meriti.
+          </span>
         </h1>
 
         {/* Subtitle */}
-        <p className="mt-3 text-base sm:text-lg font-sans font-medium text-th-subtle tracking-wide">
-          Premium Hardware &amp; Simulation Gear
+        <p className="mt-2 text-base sm:text-lg font-sans text-zinc-400 max-w-xl mx-auto leading-relaxed">
+          4.790 prodotti tech selezionati &mdash; FPV, Crypto, 3D Printing, Smart Home.
         </p>
 
         {/* Stats row */}
-        <div className="flex items-center justify-center gap-8 mt-8 mb-10">
+        <div className="flex items-center justify-center gap-6 sm:gap-10 mt-8 mb-8">
           {[
-            { val: '600+',   label: 'ASSET TATTICI' },
-            { val: 'BUNDLE', label: 'CONFIGURAZIONI ELITE' },
-            { val: '24H',    label: 'SUPPORTO ATTIVO' },
-          ].map(({ val, label }) => (
+            { icon: Package,     val: '4.790+',          label: 'PRODOTTI' },
+            { icon: Truck,       val: 'Spedizione EU',   label: 'EUROPA' },
+            { icon: ShieldCheck, val: 'Pagamento Sicuro', label: 'CERTIFICATO' },
+          ].map(({ icon: Icon, val, label }) => (
             <div key={label} className="text-center">
-              <p className="font-mono font-bold text-2xl text-orange-400">{val}</p>
-              <p className="font-mono text-[9px] tracking-widest text-th-subtle uppercase mt-0.5">{label}</p>
+              <div className="flex items-center justify-center gap-1.5 mb-1">
+                <Icon size={14} className="text-cyan-400 shrink-0" />
+                <p className="font-mono font-bold text-sm sm:text-base text-white whitespace-nowrap">
+                  {val}
+                </p>
+              </div>
+              <p className="font-mono text-[8px] tracking-widest text-zinc-500 uppercase">
+                {label}
+              </p>
             </div>
           ))}
         </div>
 
-        {/* CTAs — usa scrollIntoView per non inquinare l'URL con hash (#products)
-             che causerebbe auto-scroll al reload successivo */}
+        {/* CTA */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <button
             type="button"
-            onClick={() => document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' })}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-10 py-4 font-mono font-bold text-sm tracking-widest uppercase text-black bg-orange-500 hover:bg-orange-400 active:scale-95 transition-all rounded-sm shadow-[0_0_24px_rgba(249,115,22,0.45)] hover:shadow-[0_0_36px_rgba(249,115,22,0.65)]"
+            onClick={() => {
+              const el = document.getElementById('products');
+              if (el) el.scrollIntoView({ behavior: 'smooth' });
+            }}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 font-mono font-bold text-sm tracking-widest uppercase text-black rounded-sm transition-all active:scale-95"
+            style={{
+              background: '#00D4FF',
+              boxShadow: '0 0 24px rgba(0,212,255,0.35), 0 0 48px rgba(0,212,255,0.15)',
+            }}
           >
-            [ SHOP NOW ]
-          </button>
-          <button
-            type="button"
-            onClick={() => document.getElementById('bundles')?.scrollIntoView({ behavior: 'smooth' })}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-10 py-4 font-mono font-bold text-sm tracking-widest uppercase text-cyan-400 border border-cyan-500/40 hover:bg-cyan-500/10 hover:border-cyan-400 active:scale-95 transition-all rounded-sm"
-          >
-            [ VEDI I BUNDLE ]
+            Esplora il Catalogo &rarr;
           </button>
         </div>
       </div>
