@@ -26,7 +26,7 @@ import { useIntl } from '@/context/InternationalizationContext';
 const ADSENSE_ID   = process.env.NEXT_PUBLIC_ADSENSE_ID   ?? '';
 const ADSENSE_SLOT = process.env.NEXT_PUBLIC_ADSENSE_SLOT ?? '';
 
-function HomepageInner() {
+function HomepageInner({ productCount }: { productCount: number }) {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -98,7 +98,7 @@ function HomepageInner() {
       <Header />
 
       {/* Hero — boot sequence + CTAs */}
-      <HeroSection />
+      <HeroSection productCount={productCount} />
 
       {/* Trust signals */}
       <TrustBar />
@@ -222,10 +222,10 @@ function HomepageInner() {
   );
 }
 
-export default function HomepageClient() {
+export default function HomepageClient({ productCount }: { productCount: number }) {
   return (
     <Suspense>
-      <HomepageInner />
+      <HomepageInner productCount={productCount} />
     </Suspense>
   );
 }

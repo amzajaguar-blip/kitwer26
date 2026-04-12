@@ -2,7 +2,8 @@
 
 import { Package, Truck, ShieldCheck } from 'lucide-react';
 
-export default function HeroSection() {
+export default function HeroSection({ productCount }: { productCount: number }) {
+  const formattedCount = productCount.toLocaleString('it-IT') + '+';
   return (
     <section className="relative overflow-hidden px-4 pt-14 pb-16 sm:pt-20 sm:pb-24 bg-zinc-950">
       {/* Dot-grid pattern bg */}
@@ -45,13 +46,13 @@ export default function HeroSection() {
 
         {/* Subtitle */}
         <p className="mt-2 text-base sm:text-lg font-sans text-zinc-400 max-w-xl mx-auto leading-relaxed">
-          4.790 prodotti tech selezionati &mdash; FPV, Crypto, 3D Printing, Smart Home.
+          {formattedCount} prodotti tech selezionati &mdash; FPV, Crypto, 3D Printing, Smart Home.
         </p>
 
         {/* Stats row */}
         <div className="flex items-center justify-center gap-6 sm:gap-10 mt-8 mb-8">
           {[
-            { icon: Package,     val: '4.790+',          label: 'PRODOTTI' },
+            { icon: Package,     val: formattedCount,     label: 'PRODOTTI' },
             { icon: Truck,       val: 'Spedizione EU',   label: 'EUROPA' },
             { icon: ShieldCheck, val: 'Pagamento Sicuro', label: 'CERTIFICATO' },
           ].map(({ icon: Icon, val, label }) => (
