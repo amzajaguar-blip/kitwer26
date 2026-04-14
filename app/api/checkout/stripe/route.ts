@@ -123,18 +123,16 @@ export async function POST(req: NextRequest) {
     const { data: orderData, error: orderErr } = await supabase
       .from('orders')
       .insert({
-        status:            'pending_stripe_payment',
-        total_amount:      parseFloat(totalAmountEur.toFixed(2)),
-        customer_name:     customer?.name     ?? '',
-        customer_surname:  customer?.surname  ?? '',
-        customer_address:  customer?.address  ?? '',
-        customer_cap:      customer?.cap      ?? '',
-        customer_city:     customer?.city     ?? '',
-        customer_province: customer?.province ?? '',
-        customer_phone:    customer?.phone    ?? '',
-        customer_email:    customer?.email    ?? null,
-        customer_country:  locale,
-        payment_currency:  stripeCurrency.toUpperCase(),
+        status:           'pending_stripe_payment',
+        total_amount:     parseFloat(totalAmountEur.toFixed(2)),
+        customer_name:    customer?.name    ?? '',
+        customer_surname: customer?.surname ?? '',
+        customer_address: customer?.address ?? '',
+        customer_cap:     customer?.cap     ?? '',
+        customer_city:    customer?.city    ?? '',
+        customer_phone:   customer?.phone   ?? '',
+        customer_email:   customer?.email   ?? null,
+        customer_country: countryCode,
       })
       .select().single();
 
@@ -254,12 +252,7 @@ export async function POST(req: NextRequest) {
         });
         stripeCustomerId = stripeCustomer.id;
 
-        // Salva stripe_customer_id sull'ordine per future referenze
-        if (orderId) {
-          await supabase.from('orders')
-            .update({ stripe_customer_id: stripeCustomer.id })
-            .eq('id', orderId);
-        }
+        // stripe_customer_id — colonna opzionale, aggiungere con migrazione se necessario
       } catch (custErr) {
         // Non fatale — procediamo senza customer pre-creato
         console.warn('[stripe-checkout] Customer creation failed:', custErr);
@@ -371,12 +364,7 @@ export async function POST(req: NextRequest) {
     const checkoutUrl = session.url;
     if (!checkoutUrl) throw new Error('URL checkout non ricevuto da Stripe');
 
-    // Salva stripe session ID sull'ordine
-    if (orderId && session.id) {
-      await supabase.from('orders')
-        .update({ stripe_payment_id: session.id })
-        .eq('id', orderId);
-    }
+    // stripe_payment_id — salvato nei metadati Stripe, aggiungere colonna DB se necessario
 
     audit('payment.stripe.session.created', {
       orderId:    orderId ?? undefined,
