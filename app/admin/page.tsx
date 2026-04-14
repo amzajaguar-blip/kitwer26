@@ -531,7 +531,7 @@ export default function AdminPage() {
                                     className="flex items-center gap-1 px-3 h-8 bg-[#00D4FF] text-[#0A0A0A] text-[11px] font-black rounded-lg active:scale-95 transition-transform"
                                   >
                                     <ExternalLink size={11} />
-                                    Acquista
+                                    Vedi Offerta
                                   </a>
                                 ) : (
                                   <span className="text-[10px] text-gray-700">no link</span>

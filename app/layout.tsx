@@ -3,7 +3,6 @@ import { JetBrains_Mono, Inter } from 'next/font/google';
 import Script from 'next/script';
 import './globals.css';
 
-import { CartProvider } from '@/context/CartContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { InternationalizationProvider } from '@/context/InternationalizationContext';
 import TacticalSupportBot from '@/components/TacticalSupportBot';
@@ -97,7 +96,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <InternationalizationProvider>
           <ThemeProvider>
-            <CartProvider>{children}</CartProvider>
+            {children}
           </ThemeProvider>
         </InternationalizationProvider>
         <PageTracker />

@@ -1,18 +1,21 @@
 'use client';
 
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import { ShieldCheck, Zap, CreditCard, ShoppingCart } from 'lucide-react';
+import { ShieldCheck, Zap, ExternalLink } from 'lucide-react';
 import { Product } from '@/types/product';
 import { useIntl } from '@/context/InternationalizationContext';
-import { useCart } from '@/context/CartContext';
 import { useState, useMemo } from 'react';
 import ProductRating from './ProductRating';
+import { buildAffiliateLink } from '@/lib/affiliate';
 
 interface Props {
   product: Product;
   onOpenDrawer: (product: Product) => void;
+  /** Pass priority={true} for cards visible above the fold (first 3-4 in the grid). */
+  priority?: boolean;
 }
+
+// Affiliate-first: no cart, no internal checkout
 
 function getRawPrice(p: Product): number {
   const v = parseFloat(String(p.price ?? ''));
@@ -28,10 +31,8 @@ function getBadge(category?: string): { text: string; type: 'defcon' | 'verified
   return { text: 'VERIFICATO', type: 'verified' };
 }
 
-export default function ProductCard({ product, onOpenDrawer }: Props) {
-  const { locale, convertPrice, getExchangeRate, t } = useIntl();
-  const { addItem, openCart } = useCart();
-  const router = useRouter();
+export default function ProductCard({ product, onOpenDrawer, priority = false }: Props) {
+  const { convertPrice, getExchangeRate, t } = useIntl();
 
   // price nel DB è già finale (markup + flat fee applicati in import)
   // convertPrice fa solo conversione valuta, senza re-applicare il markup
@@ -42,10 +43,12 @@ export default function ProductCard({ product, onOpenDrawer }: Props) {
   // No-zero guard: nascondi i bottoni acquisto se il prezzo calcolato è ≤ 0
   const showPurchaseButtons = finalPriceNum !== null && finalPriceNum > 0;
 
-  const handleAddToCart = () => {
-    addItem(product);
-    openCart();
-  };
+  // Affiliate link — built from product_url (server-stored Amazon URL).
+  // The CTA href routes through /track/product/[id] for click logging,
+  // then 302-redirects to the affiliate URL server-side.
+  // affiliateUrl is used only to decide whether the button should be enabled.
+  const affiliateUrl = buildAffiliateLink(product.product_url);
+  const trackUrl     = product.id ? `/track/product/${product.id}` : null;
 
   // Cascata di candidati: tutti gli URL HTTP validi nell'ordine di priorità.
   // onError avanza al candidato successivo; quando esauriti usa placeholder.svg.
@@ -68,18 +71,6 @@ export default function ProductCard({ product, onOpenDrawer }: Props) {
     ? candidates[candidateIdx]
     : '/placeholder.svg';
 
-  const handleStripeCheckout = () => {
-    if (finalPriceNum === null) return;
-    // Redirect al form checkout che raccoglie email + spedizione prima di Stripe
-    const params = new URLSearchParams({
-      pid:      String(product.id ?? ''),
-      pname:    product.name,
-      price:    String(finalPriceNum),
-      currency: locale.currency,
-      loc:      locale.marketplace,
-    });
-    router.push(`/checkout?${params.toString()}`);
-  };
 
   return (
     <div className="group relative flex flex-col bg-zinc-900 border border-zinc-700/60 hover:border-cyan-500/50 shadow-sm hover:shadow-[0_0_20px_rgba(168,85,247,0.2)] transition-all duration-200 rounded-sm">
@@ -97,8 +88,8 @@ export default function ProductCard({ product, onOpenDrawer }: Props) {
           height={600}
           sizes="(max-width: 768px) 100vw, 300px"
           className="absolute inset-0 w-full h-full object-contain transition-transform duration-300 group-hover:scale-[1.04]"
-          loading="lazy"
-          priority={false}
+          loading={priority ? undefined : 'lazy'}
+          priority={priority}
           unoptimized
           onError={() => setCandidateIdx((i) => i + 1)}
         />
@@ -160,28 +151,30 @@ export default function ProductCard({ product, onOpenDrawer }: Props) {
           }
         </p>
 
-        {/* Dual CTA — Carrello + Acquista Ora */}
-        {showPurchaseButtons ? (
-          <div className="flex gap-1.5">
-            <button
-              onClick={handleAddToCart}
-              className="flex-1 min-h-[44px] py-2 font-mono font-bold text-[8px] tracking-wide uppercase text-black bg-cyan-500 hover:bg-cyan-400 active:scale-95 transition-all rounded-sm flex items-center justify-center gap-1 overflow-hidden"
-            >
-              <ShoppingCart size={10} className="shrink-0" />
-              <span className="truncate">{t('addToCart')}</span>
-            </button>
-            <button
-              onClick={handleStripeCheckout}
-              className="flex-1 min-h-[44px] py-2 font-mono font-bold text-[8px] tracking-wide uppercase text-black bg-orange-500 hover:bg-orange-400 active:scale-95 transition-all rounded-sm shadow-[0_0_8px_rgba(249,115,22,0.2)] hover:shadow-[0_0_16px_rgba(249,115,22,0.45)] flex items-center justify-center gap-1 overflow-hidden"
-            >
-              <CreditCard size={10} className="shrink-0" />
-              <span className="truncate">{t('buyNow')}</span>
-            </button>
-          </div>
+        {/* CTA affiliato Amazon */}
+        {showPurchaseButtons && affiliateUrl && trackUrl ? (
+          <a
+            href={trackUrl}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className="min-h-[44px] py-2 font-mono font-bold text-[8px] tracking-wide uppercase text-black bg-orange-500 hover:bg-orange-400 active:scale-95 transition-all rounded-sm shadow-[0_0_8px_rgba(249,115,22,0.2)] hover:shadow-[0_0_16px_rgba(249,115,22,0.45)] flex items-center justify-center gap-1 overflow-hidden"
+          >
+            <ExternalLink size={10} className="shrink-0" />
+            <span className="truncate">Vedi Offerta</span>
+          </a>
+        ) : showPurchaseButtons ? (
+          <button
+            disabled
+            title="Prodotto temporaneamente non disponibile"
+            className="min-h-[44px] py-2 font-mono font-bold text-[8px] tracking-wide uppercase text-black bg-orange-500/40 rounded-sm flex items-center justify-center gap-1 overflow-hidden opacity-40 cursor-not-allowed"
+          >
+            <ExternalLink size={10} className="shrink-0" />
+            <span className="truncate">Non disponibile</span>
+          </button>
         ) : (
           <div className="min-h-[44px] flex items-center justify-center border border-zinc-700/60 rounded-sm">
             <span className="font-mono text-[9px] tracking-widest text-th-subtle uppercase text-center px-2">
-              {t('contactForAvailability')}
+              Controlla disponibilita
             </span>
           </div>
         )}

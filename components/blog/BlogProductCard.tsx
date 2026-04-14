@@ -68,7 +68,7 @@ export default function BlogProductCard({ product }: BlogProductCardProps) {
           className="inline-flex shrink-0 items-center gap-2 border border-orange-500 bg-orange-500/10 px-4 py-2.5 font-mono text-sm font-bold uppercase tracking-widest text-orange-400 transition-all hover:bg-orange-500 hover:text-zinc-950 active:scale-95"
         >
           <Zap className="h-4 w-4" />
-          Acquista
+          Vedi Offerta
           <ExternalLink className="h-3.5 w-3.5" />
         </a>
       )}

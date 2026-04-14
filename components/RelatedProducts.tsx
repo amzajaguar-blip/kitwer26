@@ -2,9 +2,9 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { ShoppingBag } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import type { Product } from '@/types/product';
-import { useCart } from '@/context/CartContext';
+import { buildAffiliateLink } from '@/lib/affiliate';
 
 interface Props {
   products: Product[];
@@ -15,8 +15,6 @@ export default function RelatedProducts({
   products,
   title = 'Spesso Acquistati Insieme',
 }: Props) {
-  const { addItem, openCart } = useCart();
-
   if (!products.length) return null;
 
   return (
@@ -25,7 +23,7 @@ export default function RelatedProducts({
         className="text-[11px] font-bold uppercase tracking-widest mb-3"
         style={{ color: 'var(--th-faint)' }}
       >
-        🔗 {title}
+        {title}
       </h3>
 
       <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
@@ -34,6 +32,7 @@ export default function RelatedProducts({
           const finalPrice = isNaN(raw) ? null : raw;
           const imgSrc = p.image_url || p.thumbnailImage || '/placeholder.svg';
           const displayName = p.name || p.title || '';
+          const affiliateUrl = buildAffiliateLink(p.product_url);
 
           return (
             <div
@@ -67,20 +66,28 @@ export default function RelatedProducts({
 
                 {finalPrice !== null && (
                   <p className="text-sm font-black text-[#00D4FF] mb-2">
-                    €{finalPrice.toFixed(2).replace('.', ',')}
+                    {finalPrice.toFixed(2).replace('.', ',')}
                   </p>
                 )}
 
-                <button
-                  onClick={() => {
-                    addItem(p);
-                    openCart();
-                  }}
-                  className="w-full h-7 bg-[#00D4FF] text-[#0A0A0A] text-[11px] font-bold rounded-lg flex items-center justify-center gap-1 active:scale-95 transition-transform"
-                >
-                  <ShoppingBag size={11} />
-                  Aggiungi
-                </button>
+                {affiliateUrl ? (
+                  <a
+                    href={affiliateUrl}
+                    target="_blank"
+                    rel="noopener noreferrer sponsored"
+                    className="w-full h-7 bg-orange-500 text-black text-[11px] font-bold rounded-lg flex items-center justify-center gap-1 active:scale-95 transition-transform"
+                  >
+                    <ExternalLink size={11} />
+                    Amazon
+                  </a>
+                ) : (
+                  <Link
+                    href={`/product/${p.id}`}
+                    className="w-full h-7 bg-zinc-700 text-white text-[11px] font-bold rounded-lg flex items-center justify-center gap-1 active:scale-95 transition-transform"
+                  >
+                    Dettagli
+                  </Link>
+                )}
               </div>
             </div>
           );

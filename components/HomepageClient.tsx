@@ -8,13 +8,12 @@ import CategoryFilter from './CategoryFilter';
 import SubCategoryFilter from './SubCategoryFilter';
 import ProductGrid from './ProductGrid';
 import ProductDrawer from './ProductDrawer';
-import CartDrawer from './CartDrawer';
 import Footer from './Footer';
 import CookieBanner from './CookieBanner';
 import HeroSection from './HeroSection';
 import TrustBar from './TrustBar';
 import FeaturedCategories from './FeaturedCategories';
-import BundleSection from './BundleSection';
+import GoldEdgeSection from './GoldEdgeSection';
 import TacticalDealsSection from './TacticalDealsSection';
 import BlogPreviewSection from './BlogPreviewSection';
 import LazyAdBanner from './LazyAdBanner';
@@ -106,8 +105,8 @@ function HomepageInner({ productCount }: { productCount: number }) {
       {/* Featured categories grid */}
       <FeaturedCategories />
 
-      {/* Bundle section */}
-      <BundleSection />
+      {/* GoldEdge Selection — top-tier featured products */}
+      <GoldEdgeSection />
 
       {/* Tactical Deals — Budget King products con pricing comparativo */}
       <TacticalDealsSection />
@@ -197,8 +196,6 @@ function HomepageInner({ productCount }: { productCount: number }) {
 
       {/* Drawers */}
       <ProductDrawer product={drawerProduct} onClose={() => setDrawerProduct(null)} />
-      <CartDrawer />
-
       <CookieBanner />
 
       {/* Sticky mobile bottom CTA bar */}

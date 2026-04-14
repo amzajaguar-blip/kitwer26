@@ -28,12 +28,8 @@ export type AuditEventName =
   | 'email.confirmation.sent'
   | 'email.confirmation.failed'
   | 'email.recovery.sent'
-  | 'email.recovery.failed'
-  | 'payment.stripe.session.created'
-  | 'payment.stripe.webhook.received'
-  | 'payment.stripe.webhook.sig_failed'
-  | 'payment.stripe.completed'
-  | 'payment.stripe.failed';
+  | 'email.recovery.failed';
+  // Removed: affiliate-only model — payment.stripe.* events no longer applicable
 
 export type AuditSeverity = 'INFO' | 'WARN' | 'CRITICAL';
 
@@ -54,11 +50,7 @@ const EVENT_CATEGORY: Record<AuditEventName, string> = {
   'email.confirmation.failed':      'CRITICAL_ERROR',
   'email.recovery.sent':                 'PAYMENT_FAILED',
   'email.recovery.failed':               'CRITICAL_ERROR',
-  'payment.stripe.session.created':      'PAYMENT_INITIATED',
-  'payment.stripe.webhook.received':     'PAYMENT_INITIATED',
-  'payment.stripe.webhook.sig_failed':   'AUTH_FAILURE',
-  'payment.stripe.completed':            'PAYMENT_COMPLETED',
-  'payment.stripe.failed':               'PAYMENT_FAILED',
+  // Removed: affiliate-only model — payment.stripe.* events deleted
 };
 
 // ── Context ────────────────────────────────────────────────────────────────────

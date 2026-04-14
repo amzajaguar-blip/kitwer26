@@ -63,7 +63,7 @@ export default function StickyWinnerBar({ product, winnerLabel }: StickyWinnerBa
                 className="inline-flex shrink-0 items-center gap-2 rounded-none border border-orange-500 bg-orange-500 px-4 py-2.5 font-mono text-sm font-extrabold uppercase tracking-widest text-zinc-950 transition-opacity active:opacity-80"
               >
                 <Zap className="h-4 w-4" />
-                Acquista
+                Vedi Offerta
                 <ExternalLink className="h-3.5 w-3.5" />
               </a>
             )}

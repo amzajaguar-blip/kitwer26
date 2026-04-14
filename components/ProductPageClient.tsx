@@ -2,7 +2,8 @@
 
 import Image from 'next/image';
 import { useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, CreditCard, ExternalLink } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { buildAffiliateLink } from '@/lib/affiliate';
 import type { Product, ProductVariant } from '@/types/product';
 import { useIntl } from '@/context/InternationalizationContext';
 import Link from 'next/link';
@@ -142,7 +143,7 @@ function stripHtml(html: string): string {
 }
 
 export default function ProductPageClient({ product, relatedProducts = [] }: Props) {
-  const { locale, convertPrice, getExchangeRate } = useIntl();
+  const { convertPrice, getExchangeRate } = useIntl();
 
   /** Rileva ASIN fake su Amazon CDN */
   const isRealImage = (url?: string | null): url is string => {
@@ -210,6 +211,11 @@ export default function ProductPageClient({ product, relatedProducts = [] }: Pro
   };
   const inStock       = true;
 
+  // Affiliate link — built from product_url.
+  // affiliateUrl gates button state; actual href routes through /track/product/[id].
+  const affiliateUrl = buildAffiliateLink(product.product_url);
+  const trackUrl     = product.id ? `/track/product/${product.id}` : null;
+
   const desc        = stripHtml(product.description ?? '');
   const isLongDesc  = desc.length > DESC_TRUNCATE;
   const displayDesc = isLongDesc && !descExpanded
@@ -218,36 +224,8 @@ export default function ProductPageClient({ product, relatedProducts = [] }: Pro
 
   const showSecurityBullets = isSecurityCategory(product.category);
 
-  const [stripeLoading, setStripeLoading] = useState(false);
-
   const goPrev = () => setIndex((p) => (p === 0 ? images.length - 1 : p - 1));
   const goNext = () => setIndex((p) => (p === images.length - 1 ? 0 : p + 1));
-
-  const handleStripeCheckout = async () => {
-    if (finalPriceNum === null) return;
-    setStripeLoading(true);
-    try {
-      const res = await fetch('/api/checkout/stripe', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          productId:   product.id ?? null,
-          productName: product.name,
-          finalPrice:  finalPriceNum,
-          quantity:    1,
-          currency:    locale.currency,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Errore checkout');
-      window.location.href = data.checkoutUrl;
-    } catch (err) {
-      console.error('[Stripe checkout]', err);
-      alert("Errore durante l'avvio del pagamento. Riprova.");
-    } finally {
-      setStripeLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen flex flex-col bg-zinc-950">
@@ -267,6 +245,48 @@ export default function ProductPageClient({ product, relatedProducts = [] }: Pro
 
       {/* Scrollable content */}
       <main className="flex-1 px-4 pb-36 pt-3 overflow-y-auto">
+        {/* ── ABOVE-FOLD CTA HERO — first visible element for ad traffic ── */}
+        <div className="max-w-md mx-auto mb-4 rounded-sm border border-amber-500/30 bg-zinc-900/60 p-4">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex-1 min-w-0">
+              <p className="font-mono text-[9px] tracking-[0.25em] text-amber-400/70 uppercase mb-1">
+                {product.category?.replace(/-/g, ' ') ?? 'Prodotto'}
+              </p>
+              <h1 className="font-mono font-bold text-base text-white leading-snug line-clamp-2">
+                {product.name}
+              </h1>
+            </div>
+            {finalPriceNum !== null && (
+              <div className="shrink-0 text-right">
+                <p className="font-mono text-[9px] text-th-subtle uppercase tracking-widest">Prezzo</p>
+                <p className="font-mono font-black text-2xl text-orange-400">
+                  {convertPrice(raw)}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {affiliateUrl && trackUrl ? (
+            <a
+              href={trackUrl}
+              target="_blank"
+              rel="noopener noreferrer sponsored"
+              className="flex items-center justify-center gap-2 h-14 px-4 font-mono font-bold text-sm tracking-widest uppercase text-black bg-orange-500 hover:bg-orange-400 active:scale-95 transition-all rounded-sm shadow-[0_0_18px_rgba(249,115,22,0.5)] w-full"
+            >
+              <ExternalLink size={16} />
+              [ VEDI OFFERTA SU AMAZON ]
+            </a>
+          ) : (
+            <button
+              type="button"
+              disabled
+              className="flex items-center justify-center gap-2 h-14 font-mono font-bold text-sm tracking-widest uppercase text-zinc-500 border border-zinc-700 rounded-sm w-full cursor-not-allowed"
+            >
+              [ NON DISPONIBILE ]
+            </button>
+          )}
+        </div>
+
         {/* Carousel */}
         <section className="max-w-md mx-auto">
           <div className="relative w-full aspect-square rounded-sm overflow-hidden bg-zinc-900 border border-zinc-700/60">
@@ -359,16 +379,6 @@ export default function ProductPageClient({ product, relatedProducts = [] }: Pro
         {/* Product info */}
         <section className="max-w-md mx-auto mt-4 space-y-4">
           {/* Category tag */}
-          {product.category && (
-            <span className="inline-block font-mono text-[10px] tracking-[0.25em] text-cyan-500/80 uppercase">
-              {product.category.replace(/-/g, ' ')}
-            </span>
-          )}
-
-          <h1 className="font-mono font-bold text-xl leading-snug text-white">
-            {product.name}
-          </h1>
-
           {/* Stock */}
           <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm font-mono text-[10px] font-semibold border ${
             inStock
@@ -476,20 +486,29 @@ export default function ProductPageClient({ product, relatedProducts = [] }: Pro
               )}
             </div>
 
-            {/* CTA unica — solo Acquista → Stripe */}
+            {/* CTA affiliato Amazon */}
             <div className="flex-1">
-              <button
-                type="button"
-                onClick={handleStripeCheckout}
-                disabled={stripeLoading || !inStock || finalPriceNum === null}
-                className="flex items-center justify-center gap-2 h-12 px-4 font-mono font-bold text-xs tracking-widest uppercase text-black bg-orange-500 hover:bg-orange-400 active:scale-95 transition-all rounded-sm disabled:opacity-40 shadow-[0_0_12px_rgba(249,115,22,0.4)] w-full"
-              >
-                {stripeLoading ? (
-                  <><span className="animate-spin inline-block w-4 h-4 border-2 border-black/30 border-t-black rounded-full" /> CARICAMENTO...</>
-                ) : (
-                  <><CreditCard size={15} /> [ ACQUISTA ]</>
-                )}
-              </button>
+              {affiliateUrl && trackUrl ? (
+                <a
+                  href={trackUrl}
+                  target="_blank"
+                  rel="noopener noreferrer sponsored"
+                  className="flex items-center justify-center gap-2 h-12 px-4 font-mono font-bold text-xs tracking-widest uppercase text-black bg-orange-500 hover:bg-orange-400 active:scale-95 transition-all rounded-sm shadow-[0_0_12px_rgba(249,115,22,0.4)] w-full"
+                >
+                  <ExternalLink size={15} />
+                  [ ACQUISTA SU AMAZON ]
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  title="Prodotto temporaneamente non disponibile"
+                  className="flex items-center justify-center gap-2 h-12 px-4 font-mono font-bold text-xs tracking-widest uppercase text-black bg-orange-500/40 rounded-sm opacity-40 cursor-not-allowed w-full"
+                >
+                  <ExternalLink size={15} />
+                  [ NON DISPONIBILE ]
+                </button>
+              )}
             </div>
           </div>
 

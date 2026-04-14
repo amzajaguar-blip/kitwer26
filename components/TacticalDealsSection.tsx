@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { ShoppingCart, Zap, RefreshCw, AlertTriangle, TrendingDown } from 'lucide-react';
-import { useCart } from '@/context/CartContext';
+import { ExternalLink, Zap, RefreshCw, AlertTriangle, TrendingDown } from 'lucide-react';
 import { useIntl } from '@/context/InternationalizationContext';
+import { buildAffiliateLink } from '@/lib/affiliate';
 import type { TacticalDeal } from '@/lib/products';
 
 // ── Lightbox ───────────────────────────────────────────────────────────────────
@@ -57,8 +57,7 @@ function SkeletonDeal() {
 
 // ── Deal Card ──────────────────────────────────────────────────────────────────
 function DealCard({ deal }: { deal: TacticalDeal }) {
-  const { addItem, openCart } = useCart();
-  const { convertPrice }      = useIntl();
+  const { convertPrice } = useIntl();
 
   // Candidati memoizzati — ricalcolati solo se deal cambia
   const candidates = useMemo(() => {
@@ -75,11 +74,10 @@ function DealCard({ deal }: { deal: TacticalDeal }) {
   // imgSrc inizializzato da candidates[0] — stesso criterio startsWith('http')
   const [imgSrc, setImgSrc]     = useState<string>(() => candidates[0] ?? '/placeholder.svg');
   const [imgIdx, setImgIdx]     = useState(0);
-  const [adding, setAdding]     = useState(false);
   const [zoomedSrc, setZoomedSrc] = useState<string | null>(null);
   const addingTimerRef          = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Cleanup timer al dismount per evitare setState su componente smontato
+  // Cleanup timer al dismount
   useEffect(() => () => { if (addingTimerRef.current) clearTimeout(addingTimerRef.current); }, []);
 
   const handleImgError = () => {
@@ -92,22 +90,9 @@ function DealCard({ deal }: { deal: TacticalDeal }) {
     }
   };
 
-  const handleAcquire = () => {
-    if (adding) return;
-    setAdding(true);
-    addItem({
-      id:         deal.id,
-      name:       deal.name,
-      price:      deal.rawPrice,
-      image_url:  deal.image_url ?? undefined,
-      image_urls: deal.image_urls ?? undefined,
-      category:   deal.category,
-      sub_category: deal.sub_category ?? undefined,
-    });
-    openCart();
-    if (addingTimerRef.current) clearTimeout(addingTimerRef.current);
-    addingTimerRef.current = setTimeout(() => setAdding(false), 800);
-  };
+  // Affiliate link — built from product_url; route through /track/ for analytics
+  const affiliateUrl = buildAffiliateLink(deal.product_url);
+  const trackUrl = deal.id ? `/track/product/${deal.id}` : affiliateUrl;
 
   return (
     <div className="group relative flex flex-col bg-zinc-900 border border-zinc-800 hover:border-amber-500/40 transition-colors duration-200 rounded-sm overflow-hidden hover:shadow-[0_0_16px_rgba(245,158,11,0.12)]">
@@ -122,6 +107,8 @@ function DealCard({ deal }: { deal: TacticalDeal }) {
         <img
           src={imgSrc}
           alt={deal.name}
+          width={400}
+          height={400}
           className="absolute inset-0 w-full h-full object-contain p-2 transition-transform duration-300 group-hover:scale-[1.04]"
           loading="lazy"
           onError={handleImgError}
@@ -195,22 +182,26 @@ function DealCard({ deal }: { deal: TacticalDeal }) {
           </span>
         </div>
 
-        {/* CTA */}
-        <button
-          onClick={handleAcquire}
-          disabled={adding}
-          className="mt-1 w-full h-9 flex items-center justify-center gap-1.5 font-mono font-bold text-[10px] tracking-widest uppercase text-black bg-amber-500 hover:bg-amber-400 disabled:opacity-60 active:scale-95 transition-all rounded-sm shadow-[0_0_8px_rgba(245,158,11,0.25)] hover:shadow-[0_0_16px_rgba(245,158,11,0.45)]"
-        >
-          {adding ? (
-            <svg className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-          ) : (
-            <ShoppingCart size={11} />
-          )}
-          {adding ? 'AGGIUNTO' : '[ ACQUISCI ASSET ]'}
-        </button>
+        {/* CTA affiliato Amazon */}
+        {trackUrl ? (
+          <a
+            href={trackUrl}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className="mt-1 w-full h-9 flex items-center justify-center gap-1.5 font-mono font-bold text-[10px] tracking-widest uppercase text-black bg-amber-500 hover:bg-amber-400 active:scale-95 transition-all rounded-sm shadow-[0_0_8px_rgba(245,158,11,0.25)] hover:shadow-[0_0_16px_rgba(245,158,11,0.45)]"
+          >
+            <ExternalLink size={11} />
+            [ ACQUISTA SU AMAZON ]
+          </a>
+        ) : (
+          <button
+            disabled
+            className="mt-1 w-full h-9 flex items-center justify-center gap-1.5 font-mono font-bold text-[10px] tracking-widest uppercase text-black/50 bg-amber-500/30 rounded-sm cursor-not-allowed"
+          >
+            <ExternalLink size={11} />
+            LINK NON DISPONIBILE
+          </button>
+        )}
       </div>
     </div>
   );

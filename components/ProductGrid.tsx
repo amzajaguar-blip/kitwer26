@@ -120,7 +120,7 @@ export default function ProductGrid({
                 animationFillMode: 'forwards',
               }}
             >
-              <ProductCard product={p} onOpenDrawer={onOpenDrawer} />
+              <ProductCard product={p} onOpenDrawer={onOpenDrawer} priority={i < 4} />
             </div>
           </CardBoundary>
         ))}

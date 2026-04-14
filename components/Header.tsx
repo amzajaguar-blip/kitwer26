@@ -1,14 +1,14 @@
 'use client';
 
 import Image from 'next/image';
-import { ShoppingBag } from 'lucide-react';
-import { useCart } from '@/context/CartContext';
 import TickerBar from './TickerBar';
 import LocaleSelector from './LocaleSelector';
 
+/**
+ * Header — Affiliate-First Mode (2026-04-14)
+ * Carrello interno disabilitato. Nessun link a /checkout.
+ */
 export default function Header() {
-  const { totalItems, openCart } = useCart();
-
   return (
     <header className="fixed top-0 left-0 right-0 z-50 flex flex-col border-b border-zinc-800/80 bg-zinc-950/95 backdrop-blur-xl">
       {/* Ticker */}
@@ -40,19 +40,8 @@ export default function Header() {
           />
         </div>
 
-        {/* Cart */}
-        <button
-          onClick={openCart}
-          className="relative w-10 h-10 flex items-center justify-center rounded-sm border border-zinc-700/60 hover:border-cyan-500/50 bg-zinc-900 hover:bg-zinc-800 text-th-subtle transition-all active:scale-95 min-h-[44px] min-w-[44px]"
-          aria-label="Carrello"
-        >
-          <ShoppingBag size={18} />
-          {totalItems > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-orange-500 text-black font-mono text-[9px] font-black rounded-sm flex items-center justify-center px-1 leading-none">
-              {totalItems > 99 ? '99+' : totalItems}
-            </span>
-          )}
-        </button>
+        {/* Placeholder a destra per mantenere il layout bilanciato */}
+        <div className="w-10" />
       </div>
     </header>
   );

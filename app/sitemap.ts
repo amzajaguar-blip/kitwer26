@@ -1,6 +1,5 @@
 import { MetadataRoute } from 'next';
 import { createClient } from '@supabase/supabase-js';
-import { BUNDLE_META } from '@/lib/bundles';
 import { getAllPosts } from '@/lib/blog/posts';
 
 const BASE = 'https://kitwer26.com';
@@ -31,21 +30,13 @@ const BLOG_PAGES: MetadataRoute.Sitemap = [
   })),
 ];
 
-// ── Bundle pages ──────────────────────────────────────────────────────────────
-const BUNDLE_PAGES: MetadataRoute.Sitemap = BUNDLE_META.map((b) => ({
-  url:             `${BASE}/bundle/${b.id}`,
-  lastModified:    SITE_UPDATED,
-  changeFrequency: 'weekly' as const,
-  priority:        0.9,
-}));
-
 // ── Dynamic product pages ─────────────────────────────────────────────────────
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
-    return [...STATIC_PAGES, ...BLOG_PAGES, ...BUNDLE_PAGES];
+    return [...STATIC_PAGES, ...BLOG_PAGES];
   }
 
   const supabase = createClient(supabaseUrl, supabaseKey);
@@ -63,5 +54,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority:        0.85,
   }));
 
-  return [...STATIC_PAGES, ...BLOG_PAGES, ...BUNDLE_PAGES, ...productPages];
+  return [...STATIC_PAGES, ...BLOG_PAGES, ...productPages];
 }

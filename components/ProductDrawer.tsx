@@ -1,11 +1,12 @@
 'use client';
 
 import Image from 'next/image';
-import { X, CreditCard, ChevronLeft, ChevronRight, ZoomIn } from 'lucide-react';
+import { X, ExternalLink, ChevronLeft, ChevronRight, ZoomIn } from 'lucide-react';
 import { Product } from '@/types/product';
 import { useIntl } from '@/context/InternationalizationContext';
 import { useState, useMemo, useEffect } from 'react';
 import VariantSelector from './VariantSelector';
+import { buildAffiliateLink } from '@/lib/affiliate';
 
 interface Props {
   product: Product | null;
@@ -14,7 +15,6 @@ interface Props {
 
 export default function ProductDrawer({ product, onClose }: Props) {
   const { locale, convertPrice, getExchangeRate } = useIntl();
-  const [stripeLoading, setStripeLoading] = useState(false);
   const [imgIndex, setImgIndex]             = useState(0);
   const [failedImages, setFailedImages]     = useState<Set<number>>(new Set());
   const [isZoomed, setIsZoomed]             = useState(false);
@@ -53,35 +53,13 @@ export default function ProductDrawer({ product, onClose }: Props) {
   const finalPriceNum = isNaN(raw) ? null : Math.round(raw * getExchangeRate() * 100) / 100;
   const inStock       = true;
 
+  // Affiliate link — built from product_url.
+  // affiliateUrl used to gate button state; actual href routes through /track/product/[id].
+  const affiliateUrl = buildAffiliateLink(product.product_url);
+  const trackUrl     = product.id ? `/track/product/${product.id}` : null;
+
   const goPrev = () => setImgIndex((p) => (p === 0 ? images.length - 1 : p - 1));
   const goNext = () => setImgIndex((p) => (p === images.length - 1 ? 0 : p + 1));
-
-  const handleStripeCheckout = async () => {
-    if (finalPriceNum === null) return;
-    setStripeLoading(true);
-    try {
-      const res = await fetch('/api/checkout/stripe', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          productId:   product.id ?? null,
-          productName: product.name,
-          finalPrice:  finalPriceNum,
-          quantity:    1,
-          currency:    locale.currency,
-          marketplace_locale: locale.marketplace,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Errore checkout');
-      window.location.href = data.checkoutUrl;
-    } catch (err) {
-      console.error('[Stripe checkout]', err);
-      alert("Errore durante l'avvio del pagamento. Riprova.");
-    } finally {
-      setStripeLoading(false);
-    }
-  };
 
   return (
     <>
@@ -279,19 +257,28 @@ export default function ProductDrawer({ product, onClose }: Props) {
                 </p>
               </div>
 
-              {/* CTA unica — solo Acquista → Stripe */}
+              {/* CTA affiliato Amazon */}
               <div className="flex-1 min-w-[200px]">
-                <button
-                  onClick={handleStripeCheckout}
-                  disabled={stripeLoading || !inStock || finalPriceNum === null}
-                  className="flex items-center justify-center gap-2 h-12 px-5 bg-orange-500 hover:bg-orange-400 text-black font-bold rounded-2xl active:scale-95 transition-all hover:shadow-[0_0_20px_rgba(249,115,22,0.5)] disabled:opacity-40 disabled:cursor-not-allowed w-full"
-                >
-                  {stripeLoading ? (
-                    <><span className="animate-spin inline-block w-4 h-4 border-2 border-black/30 border-t-black rounded-full" /> Caricamento...</>
-                  ) : (
-                    <><CreditCard size={17} /> Acquista</>
-                  )}
-                </button>
+                {affiliateUrl && trackUrl ? (
+                  <a
+                    href={trackUrl}
+                    target="_blank"
+                    rel="noopener noreferrer sponsored"
+                    className="flex items-center justify-center gap-2 h-12 px-5 bg-orange-500 hover:bg-orange-400 text-black font-bold rounded-2xl active:scale-95 transition-all hover:shadow-[0_0_20px_rgba(249,115,22,0.5)] w-full"
+                  >
+                    <ExternalLink size={17} />
+                    Vedi Offerta
+                  </a>
+                ) : (
+                  <button
+                    disabled
+                    title="Prodotto temporaneamente non disponibile"
+                    className="flex items-center justify-center gap-2 h-12 px-5 bg-orange-500/40 text-black font-bold rounded-2xl w-full opacity-40 cursor-not-allowed"
+                  >
+                    <ExternalLink size={17} />
+                    Non disponibile
+                  </button>
+                )}
               </div>
             </div>
 
