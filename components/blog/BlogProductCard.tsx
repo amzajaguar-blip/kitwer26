@@ -22,7 +22,7 @@ export default function BlogProductCard({ product }: BlogProductCardProps) {
   const badgeVariant = getBadgeVariant(product.category);
   const isBundle     = product.name.toLowerCase().includes('bundle') || product.name.toLowerCase().includes('kit');
   const imageUrl     = product.image_urls?.[0] ?? product.image_url;
-  const buyUrl       = product.affiliate_url ?? '#';
+  const buyUrl       = product.id ? `/track/product/${product.id}` : '#';
   const price        = formatEur(product.price);
 
   return (

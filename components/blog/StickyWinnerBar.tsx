@@ -29,7 +29,7 @@ export default function StickyWinnerBar({ product, winnerLabel }: StickyWinnerBa
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const buyUrl = product.affiliate_url ?? '#';
+  const buyUrl = product.id ? `/track/product/${product.id}` : '#';
   const price  = formatEur(product.price);
 
   return (
