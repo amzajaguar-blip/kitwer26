@@ -125,8 +125,8 @@ export default function AboutPage() {
             <div className="px-4 py-4 space-y-2 text-th-subtle">
               {[
                 { skill: 'Hardware Wallet & Cold Storage',   lvl: '████████░░', pct: '80%' },
-                { skill: 'Sicurezza Fisica & Faraday',       lvl: '███████░░░', pct: '70%' },
-                { skill: 'Sistemi Energetici Off-Grid',      lvl: '██████░░░░', pct: '60%' },
+                { skill: 'FPV Drones & Racing Gear',           lvl: '███████░░░', pct: '70%' },
+                { skill: 'Smart Home & IoT Security',        lvl: '██████░░░░', pct: '60%' },
                 { skill: 'Sim Racing & Setup Premium',       lvl: '█████████░', pct: '90%' },
                 { skill: 'Privacy Tools & 2FA Hardware',     lvl: '████████░░', pct: '80%' },
               ].map(({ skill, lvl, pct }) => (

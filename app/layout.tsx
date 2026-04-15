@@ -36,25 +36,25 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL('https://kitwer26.com'),
   title: {
-    default:  'Kitwer26 | Hardware Tattico & Sicurezza Digitale',
+    default:  'Kitwer26 | Crypto Wallets, FPV Drones, Sim Racing & Smart Home',
     template: '%s | Kitwer26',
   },
   description:
-    'Hardware wallet, kit sicurezza casa, sim racing e FPV. Bundle curati con risparmio fino al 25%, spedizione in Italia. Proteggi i tuoi asset digitali e fisici con Kitwer26.',
-  keywords: 'hardware wallet, ledger, trezor, sicurezza digitale, crypto, sim racing, setup gaming, faraday bag, yubikey, Italia',
+    'Curated tech gear across 4 verticals: hardware wallets, FPV drones, sim racing rigs, smart home. GoldEdge selection on Amazon.',
+  keywords: 'hardware wallet, ledger, trezor, fpv drone, geprc, sim racing, moza, smart home, goldedge',
   openGraph: {
-    title: 'Kitwer26 | Hardware Tattico & Sicurezza Digitale',
-    description: 'Equipaggiamento tattico per la tua sicurezza digitale. Hardware wallet, privacy tools, sim racing, bundle esclusivi.',
+    title: 'Kitwer26 | Crypto Wallets, FPV Drones, Sim Racing & Smart Home',
+    description: 'Premium tech gear curated from Amazon — crypto wallets, FPV drones, sim racing, smart home.',
     siteName: 'Kitwer26',
     url: 'https://kitwer26.com',
     locale: 'it_IT',
     type: 'website',
-    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Kitwer26 — Hardware Tattico & Sicurezza Digitale' }],
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Kitwer26 — Crypto Wallets, FPV Drones, Sim Racing & Smart Home' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Kitwer26 | Hardware Tattico & Sicurezza Digitale',
-    description: 'Equipaggiamento tattico per la tua sicurezza digitale.',
+    title: 'Kitwer26 | Crypto Wallets, FPV Drones, Sim Racing & Smart Home',
+    description: 'Premium tech gear curated from Amazon — crypto wallets, FPV drones, sim racing, smart home.',
     images: ['/og-image.png'],
   },
   icons: {
@@ -82,7 +82,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="it" className={`dark ${jetbrainsMono.variable} ${inter.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`dark ${jetbrainsMono.variable} ${inter.variable}`} suppressHydrationWarning>
       <head>
         {/* Anti-flash: forza dark prima che React idrati */}
         <script

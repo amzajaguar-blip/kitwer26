@@ -78,7 +78,9 @@ export function InternationalizationProvider({ children }: { children: ReactNode
     const saved = localStorage.getItem('kitwer26-locale');
     if (saved) {
       try {
-        setLocale(JSON.parse(saved));
+        const savedLocale: LocaleData = JSON.parse(saved);
+        setLocale(savedLocale);
+        document.documentElement.lang = savedLocale.language ?? 'en';
         return;
       } catch {
         console.warn('[i18n] Invalid locale in localStorage, falling back to geo detection');
@@ -91,14 +93,16 @@ export function InternationalizationProvider({ children }: { children: ReactNode
       .then((data: { currency: string; locale: string; language: string; symbol: string; flag: string; label: string }) => {
         const marketplace = data.locale as AmazonLocale;
         if (!MARKETPLACE[marketplace]) return; // unknown locale — keep default
-        setLocale({
+        const resolvedLocale: LocaleData = {
           language:    data.language as Language,
           marketplace,
           currency:    data.currency,
           symbol:      data.symbol,
           flag:        data.flag,
           label:       data.label,
-        });
+        };
+        setLocale(resolvedLocale);
+        document.documentElement.lang = resolvedLocale.language ?? 'en';
       })
       .catch(() => {
         // Network error or server unavailable — keep default (EUR/it)
