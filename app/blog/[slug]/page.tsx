@@ -22,7 +22,18 @@ export async function generateMetadata(
 
   const seoTitle = post.seoTitle ?? post.title;
   const seoDesc  = post.seoDescription ?? post.excerpt;
-  const ogImage  = post.ogImage ?? 'https://kitwer26.com/og-image.png';
+
+  // Fallback chain: explicit ogImage → first resolved product image → site default
+  let firstProductImage: string | null = null;
+  try {
+    const refs = post.products ?? [];
+    for (const ref of refs) {
+      const data = await fetchBlogProduct(ref.namePattern, ref.affiliateUrl);
+      if (data?.image_url) { firstProductImage = data.image_url; break; }
+    }
+  } catch { /* ignore — fall through to default */ }
+
+  const ogImage  = post.ogImage ?? firstProductImage ?? 'https://kitwer26.com/og-image.png';
 
   return {
     title:       `${seoTitle} | Kitwer26`,
