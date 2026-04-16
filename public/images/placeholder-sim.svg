@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <rect width="400" height="400" fill="#09090b"/>
+  <defs>
+    <pattern id="scanline" width="4" height="4" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="0" x2="4" y2="0" stroke="rgba(245,158,11,0.04)" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="400" height="400" fill="url(#scanline)"/>
+  <!-- Track outline -->
+  <ellipse cx="200" cy="200" r="110" ry="80" fill="none" stroke="rgba(245,158,11,0.12)" stroke-width="1"/>
+  <ellipse cx="200" cy="200" r="80" ry="55" fill="none" stroke="rgba(245,158,11,0.08)" stroke-width="1"/>
+  <!-- Steering wheel rim -->
+  <circle cx="200" cy="195" r="55" fill="none" stroke="rgba(245,158,11,0.5)" stroke-width="2"/>
+  <circle cx="200" cy="195" r="40" fill="none" stroke="rgba(245,158,11,0.2)" stroke-width="1"/>
+  <!-- Wheel spokes -->
+  <line x1="200" y1="140" x2="200" y2="165" stroke="rgba(245,158,11,0.5)" stroke-width="2"/>
+  <line x1="200" y1="225" x2="200" y2="250" stroke="rgba(245,158,11,0.5)" stroke-width="2"/>
+  <line x1="153" y1="168" x2="173" y2="183" stroke="rgba(245,158,11,0.5)" stroke-width="2"/>
+  <line x1="247" y1="168" x2="227" y2="183" stroke="rgba(245,158,11,0.5)" stroke-width="2"/>
+  <!-- Center hub -->
+  <circle cx="200" cy="195" r="10" fill="none" stroke="rgba(245,158,11,0.6)" stroke-width="1.5"/>
+  <circle cx="200" cy="195" r="3" fill="rgba(245,158,11,0.7)"/>
+  <!-- Stem -->
+  <line x1="200" y1="250" x2="200" y2="270" stroke="rgba(245,158,11,0.35)" stroke-width="2"/>
+  <text x="200" y="315" text-anchor="middle" font-family="monospace" font-size="10" fill="rgba(245,158,11,0.3)" letter-spacing="4">SIM RACING</text>
+</svg>

@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { ShieldCheck, Zap, ExternalLink } from 'lucide-react';
+import { ShieldCheck, Zap, ExternalLink, Lock, Radio } from 'lucide-react';
 import { Product } from '@/types/product';
 import { useIntl } from '@/context/InternationalizationContext';
 import { useState, useMemo } from 'react';
@@ -11,47 +11,115 @@ import { buildAffiliateLink } from '@/lib/affiliate';
 interface Props {
   product: Product;
   onOpenDrawer: (product: Product) => void;
-  /** Pass priority={true} for cards visible above the fold (first 3-4 in the grid). */
   priority?: boolean;
 }
 
-// Affiliate-first: no cart, no internal checkout
+// ── Per-category accent config ──────────────────────────────────────────────
+const CAT_ACCENT: Record<string, {
+  color:       string;
+  colorMuted:  string;
+  colorGlow:   string;
+  badgeText:   string;
+  badgeBg:     string;
+  placeholder: string; // fallback SVG path
+  Icon:        React.ElementType;
+}> = {
+  'FPV Drones': {
+    color:       '#00D4FF',
+    colorMuted:  'rgba(0,212,255,0.15)',
+    colorGlow:   'rgba(0,212,255,0.22)',
+    badgeText:   'FPV · VERIFICATO',
+    badgeBg:     'rgba(0,212,255,0.90)',
+    placeholder: '/placeholder.svg',
+    Icon:        Radio,
+  },
+  'Sim Racing': {
+    color:       '#F59E0B',
+    colorMuted:  'rgba(245,158,11,0.15)',
+    colorGlow:   'rgba(245,158,11,0.22)',
+    badgeText:   'SIM · VERIFICATO',
+    badgeBg:     'rgba(245,158,11,0.90)',
+    placeholder: '/images/placeholder-sim.svg',
+    Icon:        Zap,
+  },
+  'Crypto Wallets': {
+    color:       '#00FF94',
+    colorMuted:  'rgba(0,255,148,0.15)',
+    colorGlow:   'rgba(0,255,148,0.22)',
+    badgeText:   'CRYPTO · SICURO',
+    badgeBg:     'rgba(0,255,148,0.90)',
+    placeholder: '/images/placeholder-crypto.svg',
+    Icon:        Lock,
+  },
+  'Cyber Security': {
+    color:       '#FF4444',
+    colorMuted:  'rgba(255,68,68,0.15)',
+    colorGlow:   'rgba(255,68,68,0.22)',
+    badgeText:   'CYBER · DEFCON 1',
+    badgeBg:     'rgba(255,68,68,0.90)',
+    placeholder: '/images/placeholder-cyber.svg',
+    Icon:        ShieldCheck,
+  },
+};
+
+const DEFAULT_ACCENT = {
+  color:       '#a1a1aa',
+  colorMuted:  'rgba(161,161,170,0.12)',
+  colorGlow:   'rgba(161,161,170,0.15)',
+  badgeText:   'VERIFICATO',
+  badgeBg:     'rgba(6,182,212,0.90)',
+  placeholder: '/placeholder.svg',
+  Icon:        ShieldCheck,
+};
+
+// ── Dev-only affiliate audit ───────────────────────────────────────────────────
+// Logs missing/non-Amazon product_urls to the console during development.
+// Zero runtime cost in production.
+function auditAffiliateUrl(
+  productId: string | undefined,
+  productUrl: string | null | undefined,
+  built: string | null,
+) {
+  if (process.env.NODE_ENV !== 'development') return;
+  if (!productUrl) {
+    console.warn(`[affiliate-audit] id=${productId ?? '?'}: product_url null/empty — CTA disabled`);
+  } else if (!built) {
+    console.warn(`[affiliate-audit] id=${productId ?? '?'}: buildAffiliateLink returned null for: ${productUrl}`);
+  } else if (!built.includes('amazon')) {
+    console.info(`[affiliate-audit] id=${productId ?? '?'}: non-Amazon URL used as-is: ${built}`);
+  }
+}
 
 function getRawPrice(p: Product): number {
   const v = parseFloat(String(p.price ?? ''));
   return isNaN(v) || v <= 0 ? NaN : v;
 }
 
-function getBadge(category?: string): { text: string; type: 'defcon' | 'verified' } {
-  if (!category) return { text: 'VERIFICATO', type: 'verified' };
-  const c = category.toLowerCase();
-  if (c.includes('crypto') || c.includes('comms') || c.includes('sicurezza')) {
-    return { text: 'DEFCON 1', type: 'defcon' };
-  }
-  return { text: 'VERIFICATO', type: 'verified' };
-}
-
 export default function ProductCard({ product, onOpenDrawer, priority = false }: Props) {
   const { convertPrice, getExchangeRate, t } = useIntl();
+  const acc = CAT_ACCENT[product.category ?? ''] ?? DEFAULT_ACCENT;
 
-  // price nel DB è già finale (markup + flat fee applicati in import)
-  // convertPrice fa solo conversione valuta, senza re-applicare il markup
   const raw               = getRawPrice(product);
   const finalPriceNum     = isNaN(raw) ? null : Math.round(raw * getExchangeRate() * 100) / 100;
   const finalPriceDisplay = isNaN(raw) ? null : convertPrice(raw);
-  const badge             = getBadge(product.category);
-  // No-zero guard: nascondi i bottoni acquisto se il prezzo calcolato è ≤ 0
   const showPurchaseButtons = finalPriceNum !== null && finalPriceNum > 0;
 
-  // Affiliate link — built from product_url (server-stored Amazon URL).
-  // The CTA href routes through /track/product/[id] for click logging,
-  // then 302-redirects to the affiliate URL server-side.
-  // affiliateUrl is used only to decide whether the button should be enabled.
   const affiliateUrl = buildAffiliateLink(product.product_url);
   const trackUrl     = product.id ? `/track/product/${product.id}` : null;
 
-  // Cascata di candidati: tutti gli URL HTTP validi nell'ordine di priorità.
-  // onError avanza al candidato successivo; quando esauriti usa placeholder.svg.
+  // Affiliate audit (dev-only)
+  auditAffiliateUrl(product.id, product.product_url, affiliateUrl);
+
+  // Badge priority: Budget King > Selezione di Punta > category default
+  // Note: is_top_tier requires DB migration (ALTER TABLE ... ADD COLUMN is_top_tier).
+  // Until migrated it will always be undefined/falsy — safe to reference.
+  const badgeText = product.is_budget_king
+    ? '★ BUDGET KING'
+    : product.is_top_tier
+    ? '★ SELEZIONE DI PUNTA'
+    : acc.badgeText;
+
+  // Image cascade
   const candidates = useMemo(() => {
     const seen = new Set<string>();
     const out: string[] = [];
@@ -69,13 +137,29 @@ export default function ProductCard({ product, onOpenDrawer, priority = false }:
   const [candidateIdx, setCandidateIdx] = useState(0);
   const imgSrc = candidateIdx < candidates.length
     ? candidates[candidateIdx]
-    : '/placeholder.svg';
-
+    : acc.placeholder;
 
   return (
-    <div className="group relative flex flex-col bg-zinc-900 border border-zinc-700/60 hover:border-cyan-500/50 shadow-sm hover:shadow-[0_0_20px_rgba(168,85,247,0.2)] transition-all duration-200 rounded-sm">
-
-      {/* Image — nessun link esterno, solo drawer interno */}
+    <div
+      className="group relative flex flex-col bg-zinc-900 shadow-sm transition-all duration-200 rounded-sm"
+      style={{
+        border: `1px solid ${acc.color}20`,
+        '--cat-color': acc.color,
+        '--cat-glow': acc.colorGlow,
+        '--cat-muted': acc.colorMuted,
+      } as React.CSSProperties}
+      onMouseEnter={e => {
+        const el = e.currentTarget as HTMLElement;
+        el.style.borderColor = `${acc.color}55`;
+        el.style.boxShadow = `0 0 24px ${acc.colorGlow}, inset 0 0 24px ${acc.colorMuted}`;
+      }}
+      onMouseLeave={e => {
+        const el = e.currentTarget as HTMLElement;
+        el.style.borderColor = `${acc.color}20`;
+        el.style.boxShadow = 'none';
+      }}
+    >
+      {/* Image — opens drawer on click */}
       <button
         onClick={() => onOpenDrawer(product)}
         className="relative w-full aspect-square overflow-hidden bg-zinc-950 active:opacity-80 rounded-t-sm"
@@ -91,47 +175,46 @@ export default function ProductCard({ product, onOpenDrawer, priority = false }:
           loading={priority ? undefined : 'lazy'}
           priority={priority}
           unoptimized
-          onError={() => setCandidateIdx((i) => i + 1)}
+          onError={() => setCandidateIdx(i => i + 1)}
         />
 
-        {/* Crosshair corners on hover */}
+        {/* Category-colored crosshair corners on hover */}
         <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-          <span className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-orange-500" />
-          <span className="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-orange-500" />
-          <span className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-orange-500" />
-          <span className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-orange-500" />
+          <span className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2" style={{ borderColor: acc.color }} />
+          <span className="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2" style={{ borderColor: acc.color }} />
+          <span className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2" style={{ borderColor: acc.color }} />
+          <span className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2" style={{ borderColor: acc.color }} />
         </div>
 
         {/* Badge */}
         <div
-          className={`absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-sm font-mono text-[9px] font-bold tracking-widest uppercase ${
-            badge.type === 'defcon'
-              ? 'bg-orange-500/90 text-black'
-              : 'bg-cyan-500/90 text-black'
-          }`}
+          className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-sm font-mono text-[8px] font-black tracking-widest uppercase text-black"
+          style={{ background: acc.badgeBg }}
         >
-          {badge.type === 'defcon' ? <Zap size={8} /> : <ShieldCheck size={8} />}
-          {badge.text}
+          <acc.Icon size={8} />
+          {badgeText}
         </div>
 
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all pointer-events-none" />
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-all pointer-events-none" />
       </button>
 
       {/* Info */}
       <div className="flex flex-col gap-2 p-3 flex-1">
         {product.category && (
-          <span className="font-mono text-[9px] tracking-[0.2em] text-th-subtle uppercase">
+          <span
+            className="font-mono text-[8px] tracking-[0.2em] uppercase font-bold"
+            style={{ color: `${acc.color}80` }}
+          >
             {product.category.replace(/-/g, ' ')}
           </span>
         )}
 
         <button onClick={() => onOpenDrawer(product)} className="text-left flex-1">
-          <h3 className="font-mono text-xs font-medium leading-snug line-clamp-2 min-h-[2.8em] text-white transition-colors">
+          <h3 className="font-mono text-xs font-medium leading-snug line-clamp-2 min-h-[2.8em] text-white transition-colors group-hover:text-zinc-100">
             {product.name}
           </h3>
         </button>
 
-        {/* Rating stelle — visibile solo se il prodotto ha una valutazione */}
         {product.rating != null && product.rating > 0 && (
           <ProductRating
             rating={product.rating as number}
@@ -140,24 +223,40 @@ export default function ProductCard({ product, onOpenDrawer, priority = false }:
           />
         )}
 
-        <p className="font-mono font-bold text-base text-orange-400 tracking-tight mt-auto">
+        <p
+          className="font-mono font-black text-base tracking-tight mt-auto"
+          style={{ color: acc.color, textShadow: `0 0 10px ${acc.colorGlow}` }}
+        >
           {finalPriceDisplay !== null
             ? finalPriceDisplay
             : (
-              <span className="font-mono text-[9px] tracking-widest uppercase px-2 py-1 border border-orange-500/40 text-orange-400/70 rounded-sm">
+              <span
+                className="font-mono text-[9px] tracking-widest uppercase px-2 py-1 border rounded-sm"
+                style={{ borderColor: `${acc.color}40`, color: `${acc.color}70` }}
+              >
                 CONTROLLA PREZZO
               </span>
             )
           }
         </p>
 
-        {/* CTA affiliato Amazon */}
+        {/* CTA */}
         {showPurchaseButtons && affiliateUrl && trackUrl ? (
           <a
             href={trackUrl}
             target="_blank"
             rel="noopener noreferrer sponsored"
-            className="min-h-[44px] py-2 font-mono font-bold text-[8px] tracking-wide uppercase text-black bg-orange-500 hover:bg-orange-400 active:scale-95 transition-all rounded-sm shadow-[0_0_8px_rgba(249,115,22,0.2)] hover:shadow-[0_0_16px_rgba(249,115,22,0.45)] flex items-center justify-center gap-1 overflow-hidden"
+            className="min-h-[44px] py-2 font-mono font-bold text-[8px] tracking-wide uppercase text-black active:scale-95 transition-all rounded-sm flex items-center justify-center gap-1 overflow-hidden"
+            style={{
+              background: acc.color,
+              boxShadow: `0 0 10px ${acc.colorGlow}`,
+            }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLElement).style.boxShadow = `0 0 20px ${acc.colorGlow}, 0 0 40px ${acc.colorMuted}`;
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLElement).style.boxShadow = `0 0 10px ${acc.colorGlow}`;
+            }}
           >
             <ExternalLink size={10} className="shrink-0" />
             <span className="truncate">Vedi Offerta</span>
@@ -165,21 +264,22 @@ export default function ProductCard({ product, onOpenDrawer, priority = false }:
         ) : showPurchaseButtons ? (
           <button
             disabled
-            title="Prodotto temporaneamente non disponibile"
-            className="min-h-[44px] py-2 font-mono font-bold text-[8px] tracking-wide uppercase text-black bg-orange-500/40 rounded-sm flex items-center justify-center gap-1 overflow-hidden opacity-40 cursor-not-allowed"
+            className="min-h-[44px] py-2 font-mono font-bold text-[8px] tracking-wide uppercase text-black/50 rounded-sm flex items-center justify-center gap-1 overflow-hidden opacity-40 cursor-not-allowed"
+            style={{ background: acc.color }}
           >
             <ExternalLink size={10} className="shrink-0" />
             <span className="truncate">Non disponibile</span>
           </button>
         ) : (
-          <div className="min-h-[44px] flex items-center justify-center border border-zinc-700/60 rounded-sm">
-            <span className="font-mono text-[9px] tracking-widest text-th-subtle uppercase text-center px-2">
-              Controlla disponibilita
+          <div className="min-h-[44px] flex items-center justify-center border rounded-sm" style={{ borderColor: `${acc.color}25` }}>
+            <span className="font-mono text-[9px] tracking-widest uppercase text-center px-2" style={{ color: `${acc.color}60` }}>
+              Verifica disponibilità
             </span>
           </div>
         )}
 
-        <div className="flex items-center justify-center gap-1.5 pt-1 border-t border-zinc-800">
+        {/* Footer bar */}
+        <div className="flex items-center justify-center gap-1.5 pt-1 border-t" style={{ borderColor: `${acc.color}12` }}>
           <Image
             src="/svg_kitwer/freepik__svg-pacco-spedizione-cardboard-box-icon-with-shipp__59072.png"
             alt=""
