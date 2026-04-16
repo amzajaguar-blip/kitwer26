@@ -46,7 +46,7 @@ export default function HeroSection({ productCount }: { productCount: number }) 
 
         {/* Subtitle */}
         <p className="mt-2 text-base sm:text-lg font-sans text-zinc-400 max-w-xl mx-auto leading-relaxed">
-          {formattedCount} prodotti tech selezionati &mdash; FPV, Crypto, Sim Racing, Smart Home.
+          {formattedCount} prodotti tech selezionati &mdash; FPV, Crypto, Sim Racing, Cyber Security.
         </p>
 
         {/* Stats row */}

@@ -105,7 +105,7 @@ function HomepageInner({ productCount }: { productCount: number }) {
       {/* Featured categories grid */}
       <FeaturedCategories />
 
-      {/* GoldEdge Selection — top-tier featured products */}
+      {/* Selezione di Punta — top-tier featured products */}
       <GoldEdgeSection />
 
       {/* Tactical Deals — Budget King products con pricing comparativo */}

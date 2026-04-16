@@ -6,17 +6,17 @@ import { ArrowUpRight, BookOpen, Shield, Radio, Zap, Cpu } from 'lucide-react';
 import { getAllPosts } from '@/lib/blog/posts';
 
 const CAT_ICON: Record<string, React.ReactNode> = {
-  'Crypto Security': <Shield className="h-3 w-3" />,
-  'FPV & Droni':     <Radio className="h-3 w-3" />,
+  'Crypto Wallets':  <Shield className="h-3 w-3" />,
+  'FPV Drones':      <Radio className="h-3 w-3" />,
   'Sim Racing':      <Zap className="h-3 w-3" />,
-  'Smart Security':  <Cpu className="h-3 w-3" />,
+  'Cyber Security':  <Cpu className="h-3 w-3" />,
 };
 
 const CAT_COLOR: Record<string, string> = {
-  'Crypto Security': 'text-cyan-400 border-cyan-500/40',
-  'FPV & Droni':     'text-orange-400 border-orange-500/40',
+  'Crypto Wallets':  'text-cyan-400 border-cyan-500/40',
+  'FPV Drones':      'text-orange-400 border-orange-500/40',
   'Sim Racing':      'text-yellow-400 border-yellow-500/40',
-  'Smart Security':  'text-green-400 border-green-500/40',
+  'Cyber Security':  'text-red-400 border-red-500/40',
 };
 
 export default function BlogPreviewSection() {

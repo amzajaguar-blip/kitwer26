@@ -9,25 +9,25 @@ import type { BlogPost } from '@/lib/blog/types';
 
 // Category → icon + color mapping
 const CAT_META: Record<string, { icon: React.ReactNode; accent: string; label: string }> = {
-  'Crypto Security': {
+  'Crypto Wallets': {
     icon:   <Shield className="h-3.5 w-3.5" />,
     accent: 'text-cyan-400 border-cyan-500/40 bg-cyan-500/10',
-    label:  'Crypto Security',
+    label:  'Crypto Wallets',
   },
-  'FPV & Droni': {
+  'FPV Drones': {
     icon:   <Radio className="h-3.5 w-3.5" />,
     accent: 'text-orange-400 border-orange-500/40 bg-orange-500/10',
-    label:  'FPV & Droni',
+    label:  'FPV Drones',
   },
   'Sim Racing': {
     icon:   <Zap className="h-3.5 w-3.5" />,
     accent: 'text-yellow-400 border-yellow-500/40 bg-yellow-500/10',
     label:  'Sim Racing',
   },
-  'Smart Security': {
+  'Cyber Security': {
     icon:   <Cpu className="h-3.5 w-3.5" />,
-    accent: 'text-green-400 border-green-500/40 bg-green-500/10',
-    label:  'Smart Security',
+    accent: 'text-red-400 border-red-500/40 bg-red-500/10',
+    label:  'Cyber Security',
   },
 };
 const DEFAULT_META = {

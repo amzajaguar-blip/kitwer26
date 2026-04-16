@@ -27,16 +27,11 @@ type ProductForDesc = {
 // ─── Costanti ─────────────────────────────────────────────────────────────────
 
 const CATEGORY_OPTIONS: { value: Exclude<Category, 'all'>; label: string }[] = [
-  { value: 'hardware-crypto-wallets',              label: 'Hardware Crypto Wallets' },
-  { value: 'Smart Security',                       label: 'Smart Security' },
-  { value: 'survival-edc-tech',                    label: 'Survival & EDC Tech' },
-  { value: 'sim-racing-accessories-premium',       label: 'Accessori Sim Racing Premium' },
-  { value: 'trading-gaming-desk-accessories-premium', label: 'Trading & Gaming Desk' },
-  { value: 'PC Hardware',                          label: 'PC Hardware' },
-  { value: 'Smart Home',                           label: 'Smart Home' },
-  { value: '3D Printing',                          label: '3D Printing & Maker' },
-  { value: 'fpv-drones-tech',                      label: 'FPV Drones & Tech' },
-  { value: 'tactical-power-grid',                  label: 'Tactical Power Grid' },
+  { value: 'Crypto Wallets', label: 'Crypto Wallets' },
+  { value: 'FPV Drones',     label: 'FPV Drones' },
+  { value: 'Sim Racing',     label: 'Sim Racing' },
+  { value: 'Cyber Security', label: 'Cyber Security' },
+  { value: 'fpv-drones-tech', label: 'FPV Drones (legacy DB)' },
 ];
 
 // ─── Componente principale ────────────────────────────────────────────────────

@@ -9,20 +9,12 @@ import { createClient } from '@supabase/supabase-js';
 export const runtime = 'nodejs';
 
 const CATEGORY_LABELS: Record<string, string> = {
-  'hardware-crypto-wallets':               'Crypto Wallets',
-  'Smart Security':                         'Smart Security',
-  'survival-edc-tech':                      'Survival EDC',
-  'comms-security-shield':                  'Comms & Security',
-  'tactical-power-grid':                    'Tactical Power',
-  'sim-racing-accessories-premium':         'Sim Racing',
-  'trading-gaming-desk-accessories-premium':'Gaming Desk',
-  'PC Hardware':                            'PC Hardware',
-  'pc-hardware-high-ticket':               'PC Elite',
-  'sicurezza-domotica-high-end':           'Smart Home Pro',
-  '3D Printing':                            '3D Printing',
-  'tactical-drones-fpv':                    'Drones & FPV',
-  'fpv-drones-tech':                        'FPV Tech',
-  'Smart Home':                             'Smart Home',
+  'Crypto Wallets': 'Crypto Wallets',
+  'FPV Drones':     'FPV Drones',
+  'Sim Racing':     'Sim Racing',
+  'Cyber Security': 'Cyber Security',
+  // legacy slugs still present in DB — mapped for display only
+  'fpv-drones-tech': 'FPV Drones',
 };
 
 const getSupabase = () =>

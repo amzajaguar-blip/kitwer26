@@ -11,7 +11,7 @@ import { createClient } from '@supabase/supabase-js';
  *    - shipped:       ordini spediti questo mese
  *    - revenue:       totale incassato (confirmed + shipped + delivered)
  *    - margin:        revenue * 20%
- *    - stuckPayments: sessioni Stripe avviate e non confermate > 1h (da monitorare)
+ *    - stuckPayments: sessioni avviate e non confermate > 1h (da monitorare)
  */
 export async function GET(_req: NextRequest) {
   const supabase = createClient(
@@ -50,11 +50,11 @@ export async function GET(_req: NextRequest) {
       .select('total_amount')
       .in('status', ['confirmed', 'shipped', 'delivered']),
 
-    // Sessioni Stripe bloccate (pagamento avviato ma non confermato da > 1h)
+    // Sessioni bloccate (pagamento avviato ma non confermato da > 1h)
     supabase
       .from('orders')
       .select('*', { count: 'exact', head: true })
-      .eq('status', 'pending_stripe_payment')
+      .eq('status', 'pending_payment')
       .lt('created_at', oneHourAgo),
   ]);
 

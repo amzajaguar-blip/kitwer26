@@ -36,25 +36,25 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL('https://kitwer26.com'),
   title: {
-    default:  'Kitwer26 | Crypto Wallets, FPV Drones, Sim Racing & Smart Home',
+    default:  'Kitwer26 | Crypto Wallets, FPV Drones, Sim Racing & Cyber Security',
     template: '%s | Kitwer26',
   },
   description:
-    'Curated tech gear across 4 verticals: hardware wallets, FPV drones, sim racing rigs, smart home. GoldEdge selection on Amazon.',
-  keywords: 'hardware wallet, ledger, trezor, fpv drone, geprc, sim racing, moza, smart home, goldedge',
+    'Selezione di Punta per tech enthusiast: hardware wallet, droni FPV, sim racing e strumenti cyber security. Link affiliati Amazon IT.',
+  keywords: 'hardware wallet, ledger, trezor, fpv drone, geprc, sim racing, moza, cyber security, yubikey, privacy',
   openGraph: {
-    title: 'Kitwer26 | Crypto Wallets, FPV Drones, Sim Racing & Smart Home',
-    description: 'Premium tech gear curated from Amazon — crypto wallets, FPV drones, sim racing, smart home.',
+    title: 'Kitwer26 | Crypto Wallets, FPV Drones, Sim Racing & Cyber Security',
+    description: 'Selezione di Punta per tech enthusiast: hardware wallet, droni FPV, sim racing e strumenti cyber security.',
     siteName: 'Kitwer26',
     url: 'https://kitwer26.com',
     locale: 'it_IT',
     type: 'website',
-    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Kitwer26 — Crypto Wallets, FPV Drones, Sim Racing & Smart Home' }],
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Kitwer26 — Crypto Wallets, FPV Drones, Sim Racing & Cyber Security' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Kitwer26 | Crypto Wallets, FPV Drones, Sim Racing & Smart Home',
-    description: 'Premium tech gear curated from Amazon — crypto wallets, FPV drones, sim racing, smart home.',
+    title: 'Kitwer26 | Crypto Wallets, FPV Drones, Sim Racing & Cyber Security',
+    description: 'Selezione di Punta per tech enthusiast: hardware wallet, droni FPV, sim racing e strumenti cyber security.',
     images: ['/og-image.png'],
   },
   icons: {

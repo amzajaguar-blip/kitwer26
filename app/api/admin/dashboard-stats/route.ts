@@ -28,10 +28,9 @@ export async function GET(_req: NextRequest) {
       `${supabaseUrl}/rest/v1/orders?created_at=gte.${since}&status=in.(confirmed,shipped,delivered)&select=total_amount,created_at,status`,
       { headers },
     ),
-    // Carrelli abbandonati: sessioni Stripe avviate ma mai confermate, più vecchie di 1 ora,
-    // nelle ultime 24 ore (per evitare di contare la storia intera)
+    // Sessioni pending più vecchie di 1 ora nelle ultime 24 ore
     fetch(
-      `${supabaseUrl}/rest/v1/orders?status=in.(pending_stripe_payment,pending)&created_at=gte.${since24h}&created_at=lt.${oneHourAgo}&select=id`,
+      `${supabaseUrl}/rest/v1/orders?status=in.(pending,pending_payment)&created_at=gte.${since24h}&created_at=lt.${oneHourAgo}&select=id`,
       { headers },
     ),
   ]);

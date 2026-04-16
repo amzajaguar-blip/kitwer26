@@ -126,7 +126,7 @@ export default function AboutPage() {
               {[
                 { skill: 'Hardware Wallet & Cold Storage',   lvl: '████████░░', pct: '80%' },
                 { skill: 'FPV Drones & Racing Gear',           lvl: '███████░░░', pct: '70%' },
-                { skill: 'Smart Home & IoT Security',        lvl: '██████░░░░', pct: '60%' },
+                { skill: 'Cyber Security & Privacy Tools',    lvl: '██████████', pct: '100%' },
                 { skill: 'Sim Racing & Setup Premium',       lvl: '█████████░', pct: '90%' },
                 { skill: 'Privacy Tools & 2FA Hardware',     lvl: '████████░░', pct: '80%' },
               ].map(({ skill, lvl, pct }) => (

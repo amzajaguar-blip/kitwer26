@@ -72,34 +72,16 @@ function CategoryFilterContent({ active, onChange }: Props) {
       groupLabel: t('categories.security'),
       groupTag:   'Security',
       items: [
-        { id: 'hardware-crypto-wallets', label: t('categories.cryptoWallets'), icon: ICONS.cryptoWallets },
-        { id: 'Smart Security',          label: t('categories.smartSecurity'), icon: ICONS.smartSecurity },
-        { id: 'survival-edc-tech',       label: t('categories.survivalEdc'),   icon: ICONS.survivalEdc },
-      ],
-    },
-    {
-      groupLabel: t('categories.workstation'),
-      groupTag:   'Workstation',
-      items: [
-        { id: 'sim-racing-accessories-premium',          label: t('categories.simRacing'),  icon: ICONS.simRacing },
-        { id: 'trading-gaming-desk-accessories-premium', label: t('categories.gamingDesk'), icon: ICONS.pcHardware },
-        { id: 'PC Hardware',                             label: t('categories.pcHardware'), icon: ICONS.pcHardware },
-      ],
-    },
-    {
-      groupLabel: 'Smart',
-      groupTag:   'Home',
-      items: [
-        { id: 'Smart Home', label: 'Smart Home', icon: ICONS.smartHome    },
-        { id: '3D Printing', label: '3D Printing', icon: ICONS.printing3d },
+        { id: 'Crypto Wallets', label: t('categories.cryptoWallets'), icon: ICONS.cryptoWallets },
+        { id: 'Cyber Security', label: t('categories.cyberSecurity'), icon: ICONS.security },
       ],
     },
     {
       groupLabel: 'Tactical',
-      groupTag:   'FPV & Power',
+      groupTag:   'FPV & Racing',
       items: [
-        { id: 'fpv-drones-tech',   label: 'Drones & FPV',   icon: ICONS.tacticalDrones },
-        { id: 'tactical-power-grid', label: 'Power Grid', icon: ICONS.tacticalPower  },
+        { id: 'FPV Drones', label: 'FPV Drones', icon: ICONS.tacticalDrones },
+        { id: 'Sim Racing', label: t('categories.simRacing'), icon: ICONS.simRacing },
       ],
     },
   ];

@@ -36,7 +36,7 @@ export default function GoldEdgeSection() {
         <Zap size={14} className="text-amber-400 shrink-0" />
         <div>
           <p className="font-mono text-[9px] tracking-[0.3em] text-amber-400/70 uppercase font-bold">
-            GoldEdge Selection
+            Selezione di Punta
           </p>
           <p className="font-mono text-[11px] text-th-subtle tracking-wide">
             Prodotti premium selezionati per massima qualità e valore
@@ -76,7 +76,7 @@ export default function GoldEdgeSection() {
                 {/* Elite badge */}
                 <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-amber-500/90 rounded-sm">
                   <span className="font-mono text-[7px] font-bold text-black uppercase tracking-wider">
-                    GoldEdge
+                    Top Gear
                   </span>
                 </div>
               </div>

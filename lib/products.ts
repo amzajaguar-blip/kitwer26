@@ -3,17 +3,13 @@ import { Product } from '@/types/product';
 
 export type Category =
   | 'all'
-  // ── Categorie attive nel DB ───────────────────────────────────────────────
-  | 'hardware-crypto-wallets'
-  | 'survival-edc-tech'
-  | 'trading-gaming-desk-accessories-premium'
-  | 'sim-racing-accessories-premium'
-  | 'Smart Security'
-  | 'Smart Home'
-  | 'PC Hardware'
-  | '3D Printing'
+  // ── 4 categorie canoniche ──────────────────────────────────────────────────
+  | 'Sim Racing'
+  | 'FPV Drones'
+  | 'Crypto Wallets'
+  | 'Cyber Security'
+  // ── Legacy slug DB (fpv-drones-tech ancora presente in Supabase) ──────────
   | 'fpv-drones-tech'
-  | 'tactical-power-grid'
   // prodotti importati ma non ancora classificati
   | 'UNSORTED';
 
@@ -29,109 +25,50 @@ export const PAGE_SIZE = 12;
  * Fallback: se un prodotto non corrisponde a nessuna regola, sub_category = 'general'
  */
 export const SUB_CATEGORIES: Record<string, { id: string; label: string; slug: string }[]> = {
-  'hardware-crypto-wallets': [
+  'Crypto Wallets': [
     { id: 'entry-level', label: 'Entry Level', slug: 'entry-level' },
     { id: 'premium',     label: 'Premium',     slug: 'premium' },
     { id: 'air-gapped',  label: 'Air-Gapped',  slug: 'air-gapped' },
     { id: 'backup-seed', label: 'Backup Seed', slug: 'backup-seed' },
     { id: 'general',     label: 'General',     slug: 'general' },
   ],
-  'survival-edc-tech': [
-    { id: 'multitools',      label: 'Multitools',        slug: 'multitools' },
-    { id: 'water-filter',    label: 'Water Filter',      slug: 'water-filter' },
-    { id: 'cordage-shelter', label: 'Cordage & Shelter', slug: 'cordage-shelter' },
-    { id: 'medical-kit',     label: 'Medical Kit',       slug: 'medical-kit' },
-    { id: 'navigation',      label: 'Navigation',        slug: 'navigation' },
-    { id: 'general',         label: 'General',           slug: 'general' },
+  'Cyber Security': [
+    { id: 'hardware-keys',  label: 'Hardware Keys',  slug: 'hardware-keys' },
+    { id: 'vpn-routers',    label: 'VPN Routers',    slug: 'vpn-routers' },
+    { id: 'faraday-rfid',   label: 'Faraday & RFID', slug: 'faraday-rfid' },
+    { id: 'privacy-tools',  label: 'Privacy Tools',  slug: 'privacy-tools' },
+    { id: 'general',        label: 'General',        slug: 'general' },
   ],
-  'sim-racing-accessories-premium': [
-    { id: 'steering-wheels', label: 'Steering Wheels',  slug: 'steering-wheels' },
-    { id: 'pedals',          label: 'Pedals',           slug: 'pedals' },
+  'Sim Racing': [
+    { id: 'steering-wheels', label: 'Steering Wheels', slug: 'steering-wheels' },
+    { id: 'pedals',          label: 'Pedals',          slug: 'pedals' },
     { id: 'shifters',        label: 'Shifters',         slug: 'shifters' },
-    { id: 'cockpit-rigs',    label: 'Cockpits & Rigs',  slug: 'cockpit-rigs' },
-    { id: 'handbrakes',      label: 'Handbrakes',       slug: 'handbrakes' },
-    { id: 'general',         label: 'General',          slug: 'general' },
-  ],
-  'sim-racing': [
-    { id: 'steering-wheels', label: 'Steering Wheels',  slug: 'steering-wheels' },
-    { id: 'pedals',          label: 'Pedals',           slug: 'pedals' },
-    { id: 'shifters',        label: 'Shifters',         slug: 'shifters' },
-    { id: 'cockpit-rigs',    label: 'Cockpits & Rigs',  slug: 'cockpit-rigs' },
-    { id: 'handbrakes',      label: 'Handbrakes',       slug: 'handbrakes' },
-    { id: 'general',         label: 'General',          slug: 'general' },
-  ],
-  'trading-gaming-desk-accessories-premium': [
-    { id: 'monitor-arms',     label: 'Monitor Arms',    slug: 'monitor-arms' },
-    { id: 'gaming-chairs',    label: 'Gaming Chairs',   slug: 'gaming-chairs' },
-    { id: 'desk-accessories', label: 'Desk Accessories',slug: 'desk-accessories' },
-    { id: 'cooling-pads',     label: 'Cooling Pads',    slug: 'cooling-pads' },
-    { id: 'vr-headsets',      label: 'VR / Headsets',   slug: 'vr-headsets' },
-    { id: 'general',          label: 'General',         slug: 'general' },
-  ],
-  'pc-hardware-high-ticket': [
-    { id: 'gpus',        label: 'GPUs',        slug: 'gpus' },
-    { id: 'cpus',        label: 'CPUs',        slug: 'cpus' },
-    { id: 'memory',      label: 'Memory / RAM',slug: 'memory' },
-    { id: 'storage',     label: 'Storage',     slug: 'storage' },
-    { id: 'cpu-cooling', label: 'CPU Cooling', slug: 'cpu-cooling' },
-    { id: 'general',     label: 'General',     slug: 'general' },
-  ],
-  'PC Hardware': [
-    { id: 'gpus',        label: 'GPUs',        slug: 'gpus' },
-    { id: 'cpus',        label: 'CPUs',        slug: 'cpus' },
-    { id: 'memory',      label: 'Memory / RAM',slug: 'memory' },
-    { id: 'storage',     label: 'Storage',     slug: 'storage' },
-    { id: 'cpu-cooling', label: 'CPU Cooling', slug: 'cpu-cooling' },
-    { id: 'general',     label: 'General',     slug: 'general' },
-  ],
-  'sicurezza-domotica-high-end': [
-    { id: 'smart-cameras',   label: 'Smart Cameras',   slug: 'smart-cameras' },
-    { id: 'smart-locks',     label: 'Smart Locks',     slug: 'smart-locks' },
-    { id: 'alarm-systems',   label: 'Alarm Systems',   slug: 'alarm-systems' },
-    { id: 'home-automation', label: 'Home Automation', slug: 'home-automation' },
+    { id: 'cockpit-rigs',    label: 'Cockpits & Rigs', slug: 'cockpit-rigs' },
+    { id: 'handbrakes',      label: 'Handbrakes',      slug: 'handbrakes' },
     { id: 'general',         label: 'General',         slug: 'general' },
   ],
-  'Smart Security': [
-    { id: 'smart-cameras',   label: 'Smart Cameras',   slug: 'smart-cameras' },
-    { id: 'smart-locks',     label: 'Smart Locks',     slug: 'smart-locks' },
-    { id: 'alarm-systems',   label: 'Alarm Systems',   slug: 'alarm-systems' },
-    { id: 'home-automation', label: 'Home Automation', slug: 'home-automation' },
-    { id: 'general',         label: 'General',         slug: 'general' },
+  'FPV Drones': [
+    { id: 'rtf-kits',           label: 'RTF Kits',            slug: 'rtf-kits' },
+    { id: 'bnf-drones',         label: 'BNF Drones',          slug: 'bnf-drones' },
+    { id: 'fpv-goggles',        label: 'FPV Goggles',         slug: 'fpv-goggles' },
+    { id: 'radios-elrs',        label: 'Radios ELRS',         slug: 'radios-elrs' },
+    { id: 'batteries-chargers', label: 'Batteries & Chargers',slug: 'batteries-chargers' },
+    { id: 'frames',             label: 'Frames',              slug: 'frames' },
+    { id: 'motors',             label: 'Motors',              slug: 'motors' },
+    { id: 'vtx-cameras',        label: 'VTX & Cameras',       slug: 'vtx-cameras' },
+    { id: 'general',            label: 'General',             slug: 'general' },
   ],
-  'Smart Home': [
-    { id: 'smart-hubs',      label: 'Smart Hubs',      slug: 'smart-hubs' },
-    { id: 'smart-lighting',  label: 'Smart Lighting',  slug: 'smart-lighting' },
-    { id: 'energy-meters',   label: 'Energy Meters',   slug: 'energy-meters' },
-    { id: 'sensors',         label: 'Sensors',         slug: 'sensors' },
-    { id: 'relays',          label: 'Relays & Switches',slug: 'relays' },
-    { id: 'curtain-motors',  label: 'Curtain Motors',  slug: 'curtain-motors' },
-    { id: 'general',         label: 'General',         slug: 'general' },
-  ],
-  '3D Printing': [
-    { id: 'fdm-printers',    label: 'FDM Printers',    slug: 'fdm-printers' },
-    { id: 'hotends-nozzles', label: 'Hotends & Nozzles',slug: 'hotends-nozzles' },
-    { id: 'extruders',       label: 'Extruders',       slug: 'extruders' },
-    { id: 'pei-bed',         label: 'Build Plates',    slug: 'pei-bed' },
-    { id: 'filament-dryer',  label: 'Filament Dryers', slug: 'filament-dryer' },
-    { id: 'maker-tools',     label: 'Maker Tools',     slug: 'maker-tools' },
-    { id: 'general',         label: 'General',         slug: 'general' },
-  ],
-  'tactical-power-grid': [
-    { id: 'power-stations',  label: 'Power Stations',  slug: 'power-stations' },
-    { id: 'solar-panels',    label: 'Solar Panels',    slug: 'solar-panels' },
-    { id: 'cables-chargers', label: 'Cables & Chargers',slug: 'cables-chargers' },
-    { id: 'general',         label: 'General',         slug: 'general' },
-  ],
+  // Legacy DB slug — still has active products in Supabase
   'fpv-drones-tech': [
-    { id: 'rtf-kits',          label: 'RTF Kits',          slug: 'rtf-kits' },
-    { id: 'bnf-drones',        label: 'BNF Drones',        slug: 'bnf-drones' },
-    { id: 'fpv-goggles',       label: 'FPV Goggles',       slug: 'fpv-goggles' },
-    { id: 'radios-elrs',       label: 'Radios ELRS',       slug: 'radios-elrs' },
-    { id: 'batteries-chargers',label: 'Batteries & Chargers',slug: 'batteries-chargers' },
-    { id: 'frames',            label: 'Frames',            slug: 'frames' },
-    { id: 'motors',            label: 'Motors',            slug: 'motors' },
-    { id: 'vtx-cameras',       label: 'VTX & Cameras',     slug: 'vtx-cameras' },
-    { id: 'general',           label: 'General',           slug: 'general' },
+    { id: 'rtf-kits',           label: 'RTF Kits',            slug: 'rtf-kits' },
+    { id: 'bnf-drones',         label: 'BNF Drones',          slug: 'bnf-drones' },
+    { id: 'fpv-goggles',        label: 'FPV Goggles',         slug: 'fpv-goggles' },
+    { id: 'radios-elrs',        label: 'Radios ELRS',         slug: 'radios-elrs' },
+    { id: 'batteries-chargers', label: 'Batteries & Chargers',slug: 'batteries-chargers' },
+    { id: 'frames',             label: 'Frames',              slug: 'frames' },
+    { id: 'motors',             label: 'Motors',              slug: 'motors' },
+    { id: 'vtx-cameras',        label: 'VTX & Cameras',       slug: 'vtx-cameras' },
+    { id: 'general',            label: 'General',             slug: 'general' },
   ],
 };
 
@@ -154,16 +91,12 @@ export function getSubCategoryDef(category: string, slug: string) {
 
 // ─── Mappa cross-selling: per ogni categoria "core", le categorie "accessori" suggerite ───
 const COMPLEMENTARY_MAP: Record<string, string[]> = {
-  'hardware-crypto-wallets':                   ['survival-edc-tech', 'Smart Security'],
-  'survival-edc-tech':                         ['hardware-crypto-wallets', 'tactical-power-grid'],
-  'Smart Security':                            ['hardware-crypto-wallets', 'Smart Home'],
-  'Smart Home':                                ['Smart Security', 'tactical-power-grid'],
-  'trading-gaming-desk-accessories-premium':   ['sim-racing-accessories-premium', 'PC Hardware'],
-  'sim-racing-accessories-premium':            ['trading-gaming-desk-accessories-premium', 'PC Hardware'],
-  'PC Hardware':                               ['trading-gaming-desk-accessories-premium', 'sim-racing-accessories-premium'],
-  'fpv-drones-tech':                           ['tactical-power-grid', 'trading-gaming-desk-accessories-premium'],
-  'tactical-power-grid':                       ['survival-edc-tech', 'fpv-drones-tech'],
-  '3D Printing':                               ['PC Hardware', 'trading-gaming-desk-accessories-premium'],
+  'Crypto Wallets': ['Cyber Security', 'Sim Racing'],
+  'Cyber Security': ['Crypto Wallets', 'FPV Drones'],
+  'FPV Drones':     ['Sim Racing', 'Cyber Security'],
+  'Sim Racing':     ['FPV Drones', 'Crypto Wallets'],
+  // legacy DB slug
+  'fpv-drones-tech': ['Sim Racing', 'Cyber Security'],
 };
 
 /** Restituisce le categorie complementari da mostrare come "prodotti correlati". */

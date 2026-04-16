@@ -1,48 +1,44 @@
 'use client';
 
 import Link from 'next/link';
-import { Radio, Shield, Printer, Zap, ArrowRight } from 'lucide-react';
+import { Radio, Shield, Zap, Lock, ArrowRight } from 'lucide-react';
 
 const CATEGORIES = [
   {
-    name: 'FPV Drones',
-    description: 'Kit completi, ricambi e accessori',
-    count: '320+',
-    icon: Radio,
-    href: '/?cat=fpv-drones-tech',
-    accent: '#00D4FF',
-    accentBorder: 'border-cyan-500/30',
-    accentBg: 'bg-cyan-500/10',
-    accentText: 'text-cyan-400',
-  },
-  {
     name: 'Crypto Wallets',
     description: 'Hardware wallet e sicurezza digitale',
-    count: '180+',
     icon: Shield,
-    href: '/?cat=hardware-crypto-wallets',
+    href: '/?cat=Crypto+Wallets',
     accent: '#00FF94',
     accentBorder: 'border-emerald-500/30',
     accentBg: 'bg-emerald-500/10',
     accentText: 'text-emerald-400',
   },
   {
-    name: '3D Printing',
-    description: 'Stampanti, filamenti e upgrade',
-    count: '250+',
-    icon: Printer,
-    href: '/?cat=3D+Printing',
+    name: 'FPV Drones',
+    description: 'Kit completi, ricambi e accessori',
+    icon: Radio,
+    href: '/?cat=FPV+Drones',
+    accent: '#00D4FF',
+    accentBorder: 'border-cyan-500/30',
+    accentBg: 'bg-cyan-500/10',
+    accentText: 'text-cyan-400',
+  },
+  {
+    name: 'Sim Racing',
+    description: 'Volanti, pedali e cockpit',
+    icon: Zap,
+    href: '/?cat=Sim+Racing',
     accent: '#F59E0B',
     accentBorder: 'border-amber-500/30',
     accentBg: 'bg-amber-500/10',
     accentText: 'text-amber-400',
   },
   {
-    name: 'Tactical Power',
-    description: 'Power station e batterie',
-    count: '150+',
-    icon: Zap,
-    href: '/?cat=tactical-power-grid',
+    name: 'Cyber Security',
+    description: 'Chiavi hardware, router VPN e privacy tools',
+    icon: Lock,
+    href: '/?cat=Cyber+Security',
     accent: '#EF4444',
     accentBorder: 'border-red-500/30',
     accentBg: 'bg-red-500/10',
@@ -66,7 +62,7 @@ export default function FeaturedCategories() {
 
         {/* Cards grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {CATEGORIES.map(({ name, description, count, icon: Icon, href, accentBorder, accentBg, accentText }) => (
+          {CATEGORIES.map(({ name, description, icon: Icon, href, accentBorder, accentBg, accentText }) => (
             <Link
               key={name}
               href={href}
@@ -90,7 +86,7 @@ export default function FeaturedCategories() {
               {/* Bottom row */}
               <div className="flex items-center justify-between mt-auto">
                 <span className={`font-mono text-[10px] font-bold ${accentText}`}>
-                  {count} prodotti
+                  Selezionati
                 </span>
                 <ArrowRight
                   size={14}
