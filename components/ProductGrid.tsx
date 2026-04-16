@@ -36,15 +36,24 @@ interface ProductGridProps {
 
 function SkeletonCard() {
   return (
-    <div className="flex flex-col bg-[#111111] rounded-xl overflow-hidden border border-gray-800/50 animate-pulse">
-      <div className="aspect-square bg-[#1A1A1A]" />
-      <div className="p-2.5 flex flex-col gap-2">
-        <div className="h-2 bg-[#1A1A1A] rounded-full w-1/3" />
-        <div className="h-2.5 bg-[#1A1A1A] rounded-full w-full" />
-        <div className="h-2.5 bg-[#1A1A1A] rounded-full w-3/4" />
+    <div className="flex flex-col bg-zinc-900 rounded-sm overflow-hidden border border-zinc-800/60 animate-pulse">
+      <div className="aspect-square bg-zinc-800/50" />
+      <div className="p-3 flex flex-col gap-2">
+        {/* Category label */}
+        <div className="h-1.5 bg-zinc-800 rounded-full w-1/4" />
+        {/* Title lines */}
+        <div className="h-2.5 bg-zinc-800 rounded-full w-full" />
+        <div className="h-2.5 bg-zinc-800 rounded-full w-3/4" />
+        {/* Price + CTA row */}
         <div className="flex justify-between items-center mt-1">
-          <div className="h-3.5 bg-[#1A1A1A] rounded-full w-1/3" />
-          <div className="w-7 h-7 bg-[#1A1A1A] rounded-full" />
+          <div className="h-4 bg-zinc-800 rounded-full w-1/3" />
+        </div>
+        <div className="h-11 bg-zinc-800 rounded-sm w-full mt-1" />
+        {/* Footer bar */}
+        <div className="h-px bg-zinc-800 w-full mt-1" />
+        <div className="flex justify-center gap-2 mt-1">
+          <div className="h-1.5 bg-zinc-800 rounded-full w-10" />
+          <div className="h-1.5 bg-zinc-800 rounded-full w-10" />
         </div>
       </div>
     </div>
@@ -132,7 +141,7 @@ export default function ProductGrid({
       {/* Spinner visibile mentre carica */}
       {loadingMore && (
         <div className="flex justify-center py-6">
-          <svg className="animate-spin w-5 h-5 text-cyan-400" fill="none" viewBox="0 0 24 24">
+          <svg className="animate-spin w-5 h-5 text-zinc-500" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>

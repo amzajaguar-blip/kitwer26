@@ -39,7 +39,7 @@ function CountUp({ target, prefix = '' }: { target: number; prefix?: string }) {
 }
 
 // ── Asset card (scroll items) ─────────────────────────────────────────────────
-function AssetCard({ p, idx }: { p: Product; idx: number }) {
+function AssetCard({ p, idx, priority = false }: { p: Product; idx: number; priority?: boolean }) {
   const acc = accent(p.category);
   const price = parseFloat(String(p.price ?? ''));
   const aff = buildAffiliateLink(p.product_url);
@@ -107,6 +107,7 @@ function AssetCard({ p, idx }: { p: Product; idx: number }) {
           className="object-contain p-2.5 transition-transform duration-300 group-hover:scale-[1.05]"
           sizes="152px"
           unoptimized
+          priority={priority}
         />
       </div>
 
@@ -195,6 +196,7 @@ function HeroCard({ p }: { p: Product }) {
           className="object-contain p-4 group-hover:scale-[1.04] transition-transform duration-500"
           sizes="188px"
           unoptimized
+          priority
         />
         {/* Corner category code */}
         <div
@@ -276,9 +278,9 @@ export default function SelezioneSection() {
 
       {/* Header row ──────────────────────────────────────────────── */}
       <div className="flex items-end justify-between mb-5 relative">
-        <div>
+        <div className="mx-auto sm:mx-0 text-center sm:text-left">
           {/* Eyebrow */}
-          <div className="flex items-center gap-2 mb-1.5">
+          <div className="flex items-center justify-center sm:justify-start gap-2 mb-1.5">
             <Lock size={9} className="text-amber-400/60" />
             <span className="font-mono text-[8px] tracking-[0.4em] text-amber-400/60 uppercase font-bold">
               Classificato · Tier-1
@@ -324,7 +326,7 @@ export default function SelezioneSection() {
         />
 
         {/* Rest */}
-        {rest.map((p, i) => <AssetCard key={p.id} p={p} idx={i} />)}
+        {rest.map((p, i) => <AssetCard key={p.id} p={p} idx={i} priority={i < 3} />)}
       </div>
 
       {/* Bottom rule */}
