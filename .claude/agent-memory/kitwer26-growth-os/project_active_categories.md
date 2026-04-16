@@ -1,15 +1,16 @@
 ---
-name: Active DB Categories — 2026-04-15
-description: Only fpv-drones-tech and 3D Printing have active products (price > 0) in Supabase as of 2026-04-15
+name: Active DB Categories — confirmed live 2026-04-16
+description: All 4 canonical categories active in Supabase as of 2026-04-16 post-deploy sanity check: FPV Drones, Sim Racing, Crypto Wallets, Cyber Security — 120 products total
 type: project
 ---
 
-As of 2026-04-15, querying Supabase for `price > 0` returns only two distinct categories:
-- `fpv-drones-tech` — 414 products
-- `3D Printing` — 586 products
+As of 2026-04-16 (post IRON_REPAIR_V1 + deploy), all 4 canonical categories are populated in DB:
+- `FPV Drones` — 30 products (seeded 2026-04-15/16)
+- `Sim Racing` — 30 products
+- `Crypto Wallets` — 30 products
+- `Cyber Security` — 30 products
+TOTAL: 120 active products. Old categories (`fpv-drones-tech`, `3D Printing`) no longer exist in DB post-TRUNCATE.
 
-The 4 canonical frontend categories (Crypto Wallets, Smart Security, Sim Racing, FPV Drones) are not yet populated in DB with these exact names. `fpv-drones-tech` is the DB slug for FPV Drones.
+**Why:** TABULA RASA + seed_catalog.ts (IRON_REPAIR_V1) wiped old data and rebuilt with 4 canonical category names matching frontend exactly.
 
-**Why:** This means blog posts tied to Crypto Wallets, Smart Security, or Sim Racing cannot have real ogImage URLs from DB — those posts were removed from ALL_POSTS per fallback rule.
-
-**How to apply:** When adding new blog posts or assigning ogImages, always query DB first. Do not invent image URLs. If canonical category has no DB products, remove the post per the established fallback policy.
+**How to apply:** Blog ogImages can now reference real product image_urls from any of the 4 categories. Category filter, FeaturedCategories, and StructuredData all use these exact 4 string names. Legacy `fpv-drones-tech` slug still present in lib/products.ts Category type as safety valve — do not remove until confirmed zero DB rows with that slug.

@@ -66,7 +66,8 @@
       "smartSecurity": "Smart Security",
       "uncategorized": "Uncategorized",
       "tactical": "Tactical",
-      "tacticalDrones": "Drones & FPV"
+      "tacticalDrones": "Drones & FPV",
+      "cyberSecurity": "Cyber Security"
     },
     "ticker": {
       "btcPrice": "BTC/USD:",

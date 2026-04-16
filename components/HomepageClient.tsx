@@ -13,7 +13,7 @@ import CookieBanner from './CookieBanner';
 import HeroSection from './HeroSection';
 import TrustBar from './TrustBar';
 import FeaturedCategories from './FeaturedCategories';
-import GoldEdgeSection from './GoldEdgeSection';
+import SelezioneSection from './SelezioneSection';
 import TacticalDealsSection from './TacticalDealsSection';
 import BlogPreviewSection from './BlogPreviewSection';
 import LazyAdBanner from './LazyAdBanner';
@@ -106,7 +106,7 @@ function HomepageInner({ productCount }: { productCount: number }) {
       <FeaturedCategories />
 
       {/* Selezione di Punta — top-tier featured products */}
-      <GoldEdgeSection />
+      <SelezioneSection />
 
       {/* Tactical Deals — Budget King products con pricing comparativo */}
       <TacticalDealsSection />
