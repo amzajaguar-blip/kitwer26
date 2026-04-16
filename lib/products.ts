@@ -231,7 +231,7 @@ export async function fetchProducts({
 
   let query = supabase
     .from('products')
-    .select('id, name, category, sub_category, description, image_url, image_urls, product_url, price, affiliate_url', { count: 'exact' })
+    .select('id, name, category, sub_category, image_url, image_urls, product_url, price, rating, review_count, is_budget_king', { count: 'exact' })
     .eq('is_active', true)
     .range(rangeFrom, rangeTo);
 

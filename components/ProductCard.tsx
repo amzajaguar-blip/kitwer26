@@ -30,7 +30,7 @@ const CAT_ACCENT: Record<string, {
     colorGlow:   'rgba(0,212,255,0.22)',
     badgeText:   'FPV · VERIFICATO',
     badgeBg:     'rgba(0,212,255,0.90)',
-    placeholder: '/placeholder.svg',
+    placeholder: '/images/placeholder-fpv.svg',
     Icon:        Radio,
   },
   'Sim Racing': {
@@ -119,13 +119,16 @@ export default function ProductCard({ product, onOpenDrawer, priority = false }:
     ? '★ SELEZIONE DI PUNTA'
     : acc.badgeText;
 
-  // Image cascade
+  // Image cascade — Amazon URLs downsampled from SL1500 → SL400 (~5× smaller)
   const candidates = useMemo(() => {
     const seen = new Set<string>();
     const out: string[] = [];
     const add = (url?: string | null) => {
-      const u = url?.trim();
-      if (u && u.startsWith('http') && !seen.has(u)) { seen.add(u); out.push(u); }
+      let u = url?.trim();
+      if (!u || !u.startsWith('http')) return;
+      // Downsize Amazon product images: AC_SL1500 → AC_SL400
+      u = u.replace(/\._AC_SL\d+_/, '._AC_SL400_');
+      if (!seen.has(u)) { seen.add(u); out.push(u); }
     };
     add(product.image_url);
     add(product.thumbnailImage);
@@ -174,7 +177,7 @@ export default function ProductCard({ product, onOpenDrawer, priority = false }:
           className="absolute inset-0 w-full h-full object-contain transition-transform duration-300 group-hover:scale-[1.04]"
           loading={priority ? undefined : 'lazy'}
           priority={priority}
-          unoptimized
+          unoptimized={imgSrc.startsWith('http')}
           onError={() => setCandidateIdx(i => i + 1)}
         />
 
