@@ -217,18 +217,17 @@ export default function BlogIndexPage() {
         </div>
       )}
 
-      {/* Catalog links — internal linking */}
       <div className="mt-16 border-t border-zinc-800 pt-10">
         <p className="mb-4 font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-600">
           Esplora il catalogo
         </p>
         <div className="flex flex-wrap gap-3">
-          {([
+          {[
             { cat: 'Crypto Wallets', label: 'Hardware Wallet' },
             { cat: 'FPV Drones',     label: 'FPV Drones'     },
             { cat: 'Sim Racing',     label: 'Sim Racing'      },
             { cat: 'Cyber Security', label: 'Cyber Security'  },
-          ] as const).map(({ cat, label }) => (
+          ].map(({ cat, label }) => (
             <Link
               key={cat}
               href={`/?cat=${encodeURIComponent(cat)}`}

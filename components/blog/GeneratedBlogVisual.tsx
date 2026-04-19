@@ -18,15 +18,12 @@ function cn(...parts: Array<string | undefined | false>): string {
   return parts.filter(Boolean).join(' ');
 }
 
-function getIcon(category: string): ReactNode {
-  const normalized = category.toLowerCase();
-
-  if (normalized.includes('crypto')) return <Wallet className="h-4 w-4" />;
-  if (normalized.includes('fpv') || normalized.includes('drone')) return <Radio className="h-4 w-4" />;
-  if (normalized.includes('sim')) return <Zap className="h-4 w-4" />;
-  if (normalized.includes('smart')) return <Home className="h-4 w-4" />;
-  if (normalized.includes('security')) return <Cpu className="h-4 w-4" />;
-
+function getIcon(motif: ReturnType<typeof getBlogVisualTheme>['motif']): ReactNode {
+  if (motif === 'wallet') return <Wallet className="h-4 w-4" />;
+  if (motif === 'drone') return <Radio className="h-4 w-4" />;
+  if (motif === 'racing') return <Zap className="h-4 w-4" />;
+  if (motif === 'smart-home') return <Home className="h-4 w-4" />;
+  if (motif === 'security') return <Cpu className="h-4 w-4" />;
   return <Shield className="h-4 w-4" />;
 }
 
@@ -160,7 +157,7 @@ export default function GeneratedBlogVisual({
       <div className="relative flex h-full flex-col justify-between gap-6 p-5 sm:p-6">
         <div className="flex items-center justify-between gap-4">
           <div className="inline-flex items-center gap-2 border border-white/15 bg-black/20 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.22em] text-white/85">
-            {getIcon(category)}
+            {getIcon(theme.motif)}
             <span>{theme.label}</span>
           </div>
           <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-white/45">
