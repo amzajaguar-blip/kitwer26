@@ -30,7 +30,7 @@ const CAT_ACCENT: Record<string, {
     colorGlow:   'rgba(0,212,255,0.22)',
     badgeText:   'FPV · VERIFICATO',
     badgeBg:     'rgba(0,212,255,0.90)',
-    placeholder: '/images/placeholder-fpv.svg',
+    placeholder: 'https://images.unsplash.com/photo-1508614589041-895b88991e3e?auto=format&fit=crop&w=300&q=80',
     Icon:        Radio,
   },
   'Sim Racing': {
@@ -39,7 +39,7 @@ const CAT_ACCENT: Record<string, {
     colorGlow:   'rgba(245,158,11,0.22)',
     badgeText:   'SIM · VERIFICATO',
     badgeBg:     'rgba(245,158,11,0.90)',
-    placeholder: '/images/placeholder-sim.svg',
+    placeholder: 'https://images.unsplash.com/photo-1614200187524-dc4b892acf16?auto=format&fit=crop&w=300&q=80',
     Icon:        Zap,
   },
   'Crypto Wallets': {
@@ -48,7 +48,7 @@ const CAT_ACCENT: Record<string, {
     colorGlow:   'rgba(0,255,148,0.22)',
     badgeText:   'CRYPTO · SICURO',
     badgeBg:     'rgba(0,255,148,0.90)',
-    placeholder: '/images/placeholder-crypto.svg',
+    placeholder: 'https://images.unsplash.com/photo-1621416894569-0f39ed31d247?auto=format&fit=crop&w=300&q=80',
     Icon:        Lock,
   },
   'Cyber Security': {
@@ -57,7 +57,7 @@ const CAT_ACCENT: Record<string, {
     colorGlow:   'rgba(255,68,68,0.22)',
     badgeText:   'CYBER · DEFCON 1',
     badgeBg:     'rgba(255,68,68,0.90)',
-    placeholder: '/images/placeholder-cyber.svg',
+    placeholder: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=300&q=80',
     Icon:        ShieldCheck,
   },
 };
@@ -68,7 +68,7 @@ const DEFAULT_ACCENT = {
   colorGlow:   'rgba(161,161,170,0.15)',
   badgeText:   'VERIFICATO',
   badgeBg:     'rgba(6,182,212,0.90)',
-  placeholder: '/placeholder.svg',
+  placeholder: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=300&q=80',
   Icon:        ShieldCheck,
 };
 

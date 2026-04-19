@@ -29,7 +29,7 @@ function HomepageInner({ productCount }: { productCount: number }) {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const initialCat    = (searchParams.get('cat') ?? 'all') as Category;
+  const initialCat    = (searchParams.get('cat') ?? 'Cyber Security') as Category;
   const initialSubCat = searchParams.get('sub') ?? '';
 
   const {
@@ -51,7 +51,7 @@ function HomepageInner({ productCount }: { productCount: number }) {
 
   const MAX_HOMEPAGE_PAGES = 4;
   const [bypassHomepageCap, setBypassHomepageCap] = useState(false);
-  const isHomepageDefault  = category === 'all' && !search && !subCategory;
+  const isHomepageDefault  = category === 'Cyber Security' && !search && !subCategory;
   const homepageCap        = MAX_HOMEPAGE_PAGES * PAGE_SIZE; // 48
   const capActive          = isHomepageDefault && !bypassHomepageCap;
   const cappedHasMore      = hasMore && !(capActive && products.length >= homepageCap);
@@ -72,7 +72,7 @@ function HomepageInner({ productCount }: { productCount: number }) {
     setCategory(cat);
     setSubCategory('');
     const params = new URLSearchParams();
-    if (cat !== 'all') params.set('cat', cat);
+    params.set('cat', cat);
     const qs = params.toString();
     router.push(qs ? `/?${qs}` : '/', { scroll: false });
   }, [setCategory, setSubCategory, router]);
@@ -81,14 +81,14 @@ function HomepageInner({ productCount }: { productCount: number }) {
   const handleSubCategoryChange = useCallback((sub: string) => {
     setSubCategory(sub);
     const params = new URLSearchParams();
-    if (category !== 'all') params.set('cat', category);
+    params.set('cat', category);
     if (sub) params.set('sub', sub);
     const qs = params.toString();
     router.push(qs ? `/?${qs}` : '/', { scroll: false });
   }, [category, setSubCategory, router]);
 
   useEffect(() => {
-    if (!category || category === 'all') { setSubCounts({}); return; }
+    if (!category) { setSubCounts({}); return; }
     fetchSubCategoryCounts(category).then(setSubCounts);
   }, [category]);
 
@@ -125,14 +125,12 @@ function HomepageInner({ productCount }: { productCount: number }) {
         <SearchBar value={search} onChange={setSearch} placeholder={t('search')} />
         <CategoryFilter active={category} onChange={handleCategoryChange} />
         {/* Sub-category pills — visibili solo quando una categoria specifica è attiva */}
-        {category !== 'all' && (
-          <SubCategoryFilter
-            category={category}
-            active={subCategory}
-            onChange={handleSubCategoryChange}
-            activeCounts={subCounts}
-          />
-        )}
+        <SubCategoryFilter
+          category={category}
+          active={subCategory}
+          onChange={handleSubCategoryChange}
+          activeCounts={subCounts}
+        />
       </div>
 
       {/* Product grid header */}
@@ -141,9 +139,7 @@ function HomepageInner({ productCount }: { productCount: number }) {
           {t('database')}
         </span>
         <span className="font-mono text-[9px] tracking-widest text-cyan-500/80 uppercase">
-          {category === 'all'
-            ? t('allProtocols')
-            : category === 'UNSORTED'
+          {category === 'UNSORTED'
             ? t('uncategorized')
             : category.replace(/-/g, ' ').toUpperCase()
           }

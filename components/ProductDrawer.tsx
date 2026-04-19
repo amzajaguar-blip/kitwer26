@@ -30,13 +30,10 @@ export default function ProductDrawer({ product, onClose }: Props) {
 
   const images = useMemo(() => {
     if (!product) return ['/placeholder.svg'];
-    // Priorità: image_urls (DB gallery) → images (legacy) → image_url singola
-    if (Array.isArray(product.image_urls) && product.image_urls.length > 0) {
-      const filtered = product.image_urls.filter((u) => typeof u === 'string' && u.trim());
-      if (filtered.length > 0) return filtered;
-    }
     const arr: string[] = [];
-    if (Array.isArray(product.images) && product.images.length > 0) {
+    if (Array.isArray(product.image_urls) && product.image_urls.length > 0) {
+      arr.push(...product.image_urls.filter((u) => typeof u === 'string' && u.trim()));
+    } else if (Array.isArray(product.images) && product.images.length > 0) {
       arr.push(...product.images.filter((u) => typeof u === 'string' && u.trim()));
     }
     const thumb = product.image_url || product.thumbnailImage;
