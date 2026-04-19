@@ -5,10 +5,11 @@ import { getAllPosts } from '@/lib/blog/posts';
 const BASE = 'https://kitwer26.com';
 
 const SITE_UPDATED = new Date('2026-04-08');
+const NOW = new Date();
 
 // ── Static pages ──────────────────────────────────────────────────────────────
 const STATIC_PAGES: MetadataRoute.Sitemap = [
-  { url: BASE,                         lastModified: SITE_UPDATED, changeFrequency: 'weekly',  priority: 1.0 },
+  { url: BASE,                         lastModified: NOW,          changeFrequency: 'daily',   priority: 1.0 },
   { url: `${BASE}/about`,              lastModified: SITE_UPDATED, changeFrequency: 'monthly', priority: 0.6 },
   { url: `${BASE}/spedizioni`,         lastModified: SITE_UPDATED, changeFrequency: 'yearly',  priority: 0.3 },
   { url: `${BASE}/reso`,               lastModified: SITE_UPDATED, changeFrequency: 'yearly',  priority: 0.3 },

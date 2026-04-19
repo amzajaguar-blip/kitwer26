@@ -63,7 +63,7 @@ export default function StructuredData() {
         '@type': 'SearchAction',
         target: {
           '@type':     'EntryPoint',
-          urlTemplate: 'https://kitwer26.com/?q={search_term_string}',
+          urlTemplate: 'https://kitwer26.com/?cat={search_term_string}',
         },
         'query-input': 'required name=search_term_string',
       },

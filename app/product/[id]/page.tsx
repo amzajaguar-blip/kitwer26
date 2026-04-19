@@ -110,7 +110,6 @@ export default async function ProductPage({ params }: PageProps) {
     }),
     image: product.image_url ?? product.image_urls?.[0],
     url: `https://kitwer26.com/product/${product.id}`,
-    brand: { '@type': 'Brand', name: 'KITWER26' },
     ...(priceNum && !isNaN(priceNum) && !product.is_price_pending && {
       offers: {
         '@type': 'Offer',
@@ -118,7 +117,7 @@ export default async function ProductPage({ params }: PageProps) {
         priceCurrency: 'EUR',
         availability: 'https://schema.org/InStock',
         url: product.product_url ?? `https://kitwer26.com/product/${product.id}`,
-        seller: { '@type': 'Organization', name: 'KITWER26' },
+        seller: { '@type': 'Organization', name: 'Amazon' },
       },
     }),
   };

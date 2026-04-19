@@ -444,7 +444,7 @@ export default function ProductPageClient({ product, relatedProducts = [] }: Pro
                 height={12}
                 className="w-3 h-3 object-contain invert opacity-60"
               />
-              <span>Spedizione Rapida — Garanzia 24 mesi</span>
+              <span>Spedizione Rapida — Garanzia Amazon</span>
             </p>
             <p className="flex items-center justify-center gap-1.5 mt-0.5 font-mono text-th-subtle text-[10px]">
               <Image
@@ -455,7 +455,7 @@ export default function ProductPageClient({ product, relatedProducts = [] }: Pro
                 height={12}
                 className="w-3 h-3 object-contain invert opacity-60"
               />
-              <span><span className="text-cyan-400 font-semibold">Supporto Tecnico</span> Prioritario incluso</span>
+              <span><span className="text-cyan-400 font-semibold">Supporto</span> via support@kitwer26.com</span>
             </p>
           </div>
 

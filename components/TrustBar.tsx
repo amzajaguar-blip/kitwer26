@@ -6,7 +6,7 @@ const SIGNALS = [
   { icon: ShieldCheck, label: 'Pagamento sicuro',     sub: 'Carte & bonifico' },
   { icon: Truck,       label: 'Spedizione EU',        sub: 'In tutta Europa' },
   { icon: BadgeCheck,  label: 'Prodotti verificati',   sub: 'Fonti certificate' },
-  { icon: Headphones,  label: 'Supporto rapido',       sub: 'WhatsApp attivo' },
+  { icon: Headphones,  label: 'Supporto rapido',       sub: 'Email entro 24h' },
 ] as const;
 
 export default function TrustBar() {

@@ -62,7 +62,7 @@ export default function BlogPreviewSection() {
               >
                 <Link
                   href={`/blog/${post.slug}`}
-                  className="group flex h-full flex-col gap-3 border border-zinc-800 bg-zinc-900/40 p-4 transition-all duration-300 hover:border-zinc-700 hover:bg-zinc-900"
+                  className="group relative flex h-full flex-col gap-3 border border-zinc-800 bg-zinc-900/40 p-4 transition-all duration-300 hover:border-zinc-700 hover:bg-zinc-900"
                 >
                   {/* Neon corner */}
                   <div className="pointer-events-none absolute right-0 top-0 h-12 w-12 overflow-hidden">

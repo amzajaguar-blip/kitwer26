@@ -1,4 +1,4 @@
-# Google AdSense
-# Sostituisci XXXXXXXXXXXXXXXX con il tuo Publisher ID (senza "ca-pub-" come prefisso, solo le cifre)
-# Esempio: google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0
-google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0
+# Google AdSense — ads.txt
+# Inserisci qui il tuo Publisher ID reale una volta approvato AdSense.
+# Formato: google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0
+# Finché AdSense non è attivo, questo file resta vuoto per evitare blocchi.

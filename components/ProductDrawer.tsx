@@ -290,7 +290,7 @@ export default function ProductDrawer({ product, onClose }: Props) {
                   height={14}
                   className="w-3.5 h-3.5 object-contain invert opacity-60"
                 />
-                <span>Spedizione Rapida — Garanzia 24 mesi</span>
+                <span>Spedizione Rapida — Garanzia Amazon</span>
               </p>
               <p className="flex items-center justify-center gap-1.5 mt-0.5">
                 <Image
@@ -302,8 +302,8 @@ export default function ProductDrawer({ product, onClose }: Props) {
                   className="w-3.5 h-3.5 object-contain invert opacity-60"
                 />
                 <span>
-                  <span className="font-semibold text-[#00D4FF]">Supporto Tecnico</span>{' '}
-                  Prioritario incluso
+                  <span className="font-semibold text-[#00D4FF]">Supporto</span>{' '}
+                  via support@kitwer26.com
                 </span>
               </p>
             </div>

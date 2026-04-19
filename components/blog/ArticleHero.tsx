@@ -2,9 +2,11 @@
 
 import { motion } from 'framer-motion';
 import { Clock, Tag } from 'lucide-react';
+import GeneratedBlogVisual from './GeneratedBlogVisual';
 import TrustBadge from './TrustBadge';
 
 interface ArticleHeroProps {
+  slug:        string;
   title:       string;
   excerpt:     string;
   author:      string;
@@ -23,7 +25,7 @@ function getCategoryVariant(category: string): 'defcon' | 'verified' | 'top-rate
 }
 
 export default function ArticleHero({
-  title, excerpt, author, authorRole, updatedAt, category, tags, winnerLabel,
+  slug, title, excerpt, author, authorRole, updatedAt, category, tags, winnerLabel,
 }: ArticleHeroProps) {
   const dateFormatted = new Date(updatedAt).toLocaleDateString('it-IT', {
     day: '2-digit', month: 'long', year: 'numeric',
@@ -45,7 +47,7 @@ export default function ArticleHero({
         className="mb-8 h-px origin-left bg-gradient-to-r from-cyan-500/80 via-cyan-500/20 to-transparent"
       />
 
-      <div className="space-y-5 pb-10">
+      <div className="space-y-6 pb-10">
         {/* Category + winner badges */}
         <motion.div
           initial={{ opacity: 0, x: -16 }}
@@ -118,6 +120,20 @@ export default function ArticleHero({
             ))}
           </motion.div>
         )}
+
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, delay: 0.18, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <GeneratedBlogVisual
+            title={title}
+            category={category}
+            excerpt={excerpt}
+            badge={`${slug.slice(0, 18).replace(/-/g, ' ')} / review`}
+            variant="hero"
+          />
+        </motion.div>
       </div>
 
       {/* Bottom divider */}

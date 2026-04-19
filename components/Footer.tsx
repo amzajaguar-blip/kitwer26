@@ -59,7 +59,7 @@ export default function Footer() {
         </p>
 
         <p className="font-mono text-[9px] text-center text-zinc-800 mt-3 tracking-[0.4em] uppercase select-none">
-          ENCRYPTED ENVIRONMENT // KITWER26 // NO LOGS RECORDED
+          ENCRYPTED ENVIRONMENT // KITWER26 // GDPR COMPLIANT
         </p>
       </div>
     </footer>
