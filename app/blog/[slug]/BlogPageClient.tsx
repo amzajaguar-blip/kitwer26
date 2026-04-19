@@ -1,10 +1,12 @@
 'use client';
 
 import { memo } from 'react';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import ArticleHero from '@/components/blog/ArticleHero';
 import ComparisonTable from '@/components/blog/ComparisonTable';
 import BlogProductCard from '@/components/blog/BlogProductCard';
+import GeneratedBlogVisual from '@/components/blog/GeneratedBlogVisual';
 import StickyWinnerBar from '@/components/blog/StickyWinnerBar';
 import type { BlogPost } from '@/lib/blog/types';
 import type { BlogProductData } from '@/lib/blog/db';
@@ -79,6 +81,7 @@ export default function BlogPageClient({ post, productMap, winnerData }: Props) 
     <>
       <article className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
         <ArticleHero
+          slug={post.slug}
           title={post.title}
           excerpt={post.excerpt}
           author={post.author}
@@ -150,14 +153,15 @@ export default function BlogPageClient({ post, productMap, winnerData }: Props) 
                   initial="hidden"
                   whileInView="visible"
                   viewport={{ once: true, margin: '-40px' }}
-                  className="my-8 flex h-52 items-center justify-center rounded-none border border-zinc-700/60 bg-zinc-900/40 sm:h-64"
+                  className="my-8"
                 >
-                  <div className="flex flex-col items-center gap-2 text-center">
-                    <div className="font-mono text-xs uppercase tracking-widest text-zinc-600">
-                      [IMAGE {section.id}]
-                    </div>
-                    <div className="max-w-xs text-xs text-zinc-700">{section.alt}</div>
-                  </div>
+                  <GeneratedBlogVisual
+                    title={section.alt}
+                    category={post.category}
+                    alt={section.alt}
+                    badge={`scene ${section.id.toString().padStart(2, '0')}`}
+                    variant="inline"
+                  />
                 </motion.div>
               );
             }
@@ -193,6 +197,15 @@ export default function BlogPageClient({ post, productMap, winnerData }: Props) 
           </motion.section>
         )}
       </article>
+
+      <div className="mx-auto max-w-3xl px-4 pb-16 sm:px-6 lg:px-8">
+        <Link
+          href={`/?cat=${encodeURIComponent(post.category)}`}
+          className="inline-flex items-center gap-2 border border-zinc-800 bg-zinc-900 px-4 py-2 font-mono text-xs text-zinc-500 transition-all hover:border-zinc-600 hover:text-zinc-300"
+        >
+          ← Esplora {post.category} nel catalogo
+        </Link>
+      </div>
 
       {/* Sticky winner bar — mobile only */}
       {winnerData && post.winnerLabel && (

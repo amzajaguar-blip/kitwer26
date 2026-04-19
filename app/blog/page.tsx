@@ -3,9 +3,10 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUpRight, Shield, Zap, Radio, Cpu } from 'lucide-react';
+import { ArrowUpRight, Shield, Zap, Radio, Cpu, LockKeyhole, Home } from 'lucide-react';
 import { getAllPosts } from '@/lib/blog/posts';
 import type { BlogPost } from '@/lib/blog/types';
+import GeneratedBlogVisual from '@/components/blog/GeneratedBlogVisual';
 
 // Category → icon + color mapping
 const CAT_META: Record<string, { icon: React.ReactNode; accent: string; label: string }> = {
@@ -28,6 +29,16 @@ const CAT_META: Record<string, { icon: React.ReactNode; accent: string; label: s
     icon:   <Cpu className="h-3.5 w-3.5" />,
     accent: 'text-red-400 border-red-500/40 bg-red-500/10',
     label:  'Cyber Security',
+  },
+  'Crypto Security': {
+    icon:   <LockKeyhole className="h-3.5 w-3.5" />,
+    accent: 'text-sky-300 border-sky-500/40 bg-sky-500/10',
+    label:  'Crypto Security',
+  },
+  'Smart Security': {
+    icon:   <Home className="h-3.5 w-3.5" />,
+    accent: 'text-emerald-300 border-emerald-500/40 bg-emerald-500/10',
+    label:  'Smart Security',
   },
 };
 const DEFAULT_META = {
@@ -69,6 +80,14 @@ function PostCard({ post, index }: { post: BlogPost; index: number }) {
         href={`/blog/${post.slug}`}
         className="group relative flex flex-col gap-4 overflow-hidden border border-zinc-800 bg-zinc-950 p-5 transition-all duration-300 hover:border-zinc-600 hover:bg-zinc-900/80"
       >
+        <GeneratedBlogVisual
+          title={post.title}
+          category={post.category}
+          excerpt={post.excerpt}
+          variant="card"
+          className="min-h-[11rem]"
+        />
+
         {/* Neon corner accent */}
         <div className="pointer-events-none absolute right-0 top-0 h-16 w-16 overflow-hidden">
           <div className="absolute right-0 top-0 h-px w-8 bg-gradient-to-l from-cyan-500/60 to-transparent" />
@@ -197,6 +216,29 @@ export default function BlogIndexPage() {
           <span className="font-mono text-xs uppercase tracking-widest text-zinc-700">Nessun articolo trovato</span>
         </div>
       )}
+
+      {/* Catalog links — internal linking */}
+      <div className="mt-16 border-t border-zinc-800 pt-10">
+        <p className="mb-4 font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-600">
+          Esplora il catalogo
+        </p>
+        <div className="flex flex-wrap gap-3">
+          {([
+            { cat: 'Crypto Wallets', label: 'Hardware Wallet' },
+            { cat: 'FPV Drones',     label: 'FPV Drones'     },
+            { cat: 'Sim Racing',     label: 'Sim Racing'      },
+            { cat: 'Cyber Security', label: 'Cyber Security'  },
+          ] as const).map(({ cat, label }) => (
+            <Link
+              key={cat}
+              href={`/?cat=${encodeURIComponent(cat)}`}
+              className="border border-zinc-800 bg-zinc-900 px-3 py-1.5 font-mono text-xs text-zinc-500 transition-all hover:border-zinc-600 hover:text-zinc-300"
+            >
+              {label} →
+            </Link>
+          ))}
+        </div>
+      </div>
     </main>
   );
 }
