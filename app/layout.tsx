@@ -82,7 +82,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`dark ${jetbrainsMono.variable} ${inter.variable}`} suppressHydrationWarning>
+    <html lang="it" className={`dark ${jetbrainsMono.variable} ${inter.variable}`} suppressHydrationWarning>
       <head>
         {/* Anti-flash: forza dark prima che React idrati */}
         <script
