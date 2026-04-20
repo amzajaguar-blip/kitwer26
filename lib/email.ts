@@ -18,7 +18,11 @@ import { MissionDebriefing } from '@/components/emails/MissionDebriefing';
 import { generateOperationalPdf } from '@/lib/pdf';
 import type { TacticalDealItem } from '@/lib/pdf';
 
-const resend        = new Resend(process.env.RESEND_API_KEY);
+let _resend: Resend | null = null;
+function getResend(): Resend {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY);
+  return _resend;
+}
 const FROM          = process.env.FROM_EMAIL
   ? `Kitwer26 <${process.env.FROM_EMAIL.trim()}>`
   : 'Kitwer26 <info@kitwer26.com>';
@@ -78,7 +82,7 @@ export async function sendOrderConfirmationEmail(opts: SendConfirmationOpts): Pr
   const attachments = pdfAttachment ? [pdfAttachment] : [];
 
   // 2. Invia al cliente
-  const { error } = await resend.emails.send({
+  const { error } = await getResend().emails.send({
     from: FROM, to: opts.customerEmail, subject, react: reactEl, attachments,
   });
 
@@ -88,7 +92,7 @@ export async function sendOrderConfirmationEmail(opts: SendConfirmationOpts): Pr
   }
 
   // 3. Copia admin (fire-and-forget)
-  resend.emails.send({
+  getResend().emails.send({
     from: FROM, to: ADMIN_NOTIFY, subject: `[COPIA ADMIN] ${subject}`, react: reactEl, attachments,
   }).catch(e => console.warn('[email] Copia admin confirmation fallita:', e));
 }
@@ -104,7 +108,7 @@ export async function sendShippingEmail(opts: AssetDispatchedProps): Promise<voi
   const subject = `🛰️ [KITWER26] LOGISTICA: Asset #${shortId} in movimento`;
   const reactEl = AssetDispatched(opts);
 
-  const { error } = await resend.emails.send({
+  const { error } = await getResend().emails.send({
     from: FROM, to: opts.customerEmail ?? '', subject, react: reactEl,
   });
 
@@ -113,7 +117,7 @@ export async function sendShippingEmail(opts: AssetDispatchedProps): Promise<voi
   }
 
   // Copia admin
-  resend.emails.send({
+  getResend().emails.send({
     from: FROM, to: ADMIN_NOTIFY, subject: `[COPIA ADMIN] ${subject}`, react: reactEl,
   }).catch(e => console.warn('[email] Copia admin shipping fallita:', e));
 }
@@ -138,7 +142,7 @@ export async function sendPaymentFailedEmail(opts: {
     checkoutUrl:  opts.checkoutUrl,
   });
 
-  const { error } = await resend.emails.send({
+  const { error } = await getResend().emails.send({
     from: FROM, to: opts.customerEmail, subject, react: reactEl,
   });
 
@@ -147,7 +151,7 @@ export async function sendPaymentFailedEmail(opts: {
   }
 
   // Copia admin
-  resend.emails.send({
+  getResend().emails.send({
     from: FROM, to: ADMIN_NOTIFY, subject: `[ALERT ADMIN] ${subject}`, react: reactEl,
   }).catch(e => console.warn('[email] Copia admin failure fallita:', e));
 }
@@ -172,14 +176,14 @@ export async function sendDebriefingEmail(opts: {
     reviewUrl:    opts.reviewUrl,
   });
 
-  const { error } = await resend.emails.send({
+  const { error } = await getResend().emails.send({
     from: FROM, to: opts.customerEmail, subject, react: reactEl,
   });
 
   if (error) throw new Error(`[email] sendDebriefingEmail failed: ${error.message}`);
 
   // Copia admin
-  resend.emails.send({
+  getResend().emails.send({
     from: FROM, to: ADMIN_NOTIFY, subject: `[COPIA ADMIN] ${subject}`, react: reactEl,
   }).catch(e => console.warn('[email] Copia admin debriefing fallita:', e));
 }
@@ -191,7 +195,7 @@ export async function sendDebriefingEmail(opts: {
  * Non blocca il flusso in caso di errore.
  */
 export async function sendAdminEmail(opts: { subject: string; html: string }): Promise<void> {
-  const { error } = await resend.emails.send({
+  const { error } = await getResend().emails.send({
     from:    FROM,
     to:      ADMIN_NOTIFY,
     subject: opts.subject,

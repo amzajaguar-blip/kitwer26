@@ -57,7 +57,18 @@ export async function GET(
     .single();
 
   // 2. Build affiliate URL
-  const affiliateUrl = buildAffiliateLink(product?.product_url ?? null);
+  const rawAffiliateUrl = buildAffiliateLink(product?.product_url ?? null);
+
+  // buildAffiliateLink may return a relative /go/{slug} — make it absolute
+  let destination: string;
+  if (!rawAffiliateUrl) {
+    destination = fallbackUrl;
+  } else if (rawAffiliateUrl.startsWith('/')) {
+    const origin = new URL(req.url).origin;
+    destination = `${origin}${rawAffiliateUrl}`;
+  } else {
+    destination = rawAffiliateUrl;
+  }
 
   // 3. Log click (best-effort — if clicks table missing, silently skip)
   if (product?.id) {
@@ -76,6 +87,5 @@ export async function GET(
   }
 
   // 4. Redirect
-  const destination = affiliateUrl ?? fallbackUrl;
   return NextResponse.redirect(destination, { status: 302 });
 }
